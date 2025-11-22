@@ -124,7 +124,7 @@
     </tr>
 </template>
 
-@section('scripts')
+@push('scripts')
 <script>
 $(function() {
     console.log('schedules.edit script loaded, jQuery version:', typeof jQuery !== 'undefined' ? jQuery.fn.jquery : 'no-jquery');
@@ -216,6 +216,6 @@ $(function() {
     });
 });
 </script>
-@endsection
+@endpush
 
 @endsection
