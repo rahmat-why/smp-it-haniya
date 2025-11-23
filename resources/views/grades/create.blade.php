@@ -3,113 +3,79 @@
 @section('content')
 <div class="container-fluid">
     <div class="row">
-        <div class="col-md-10">
+        <div class="col-md-8">
             <div class="card">
                 <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">Record Grades for Class</h5>
+                    <h5 class="mb-0">Record Grades by Class</h5>
                 </div>
                 <div class="card-body">
                     @if ($errors->any())
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <h6 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Validation Errors</h6>
+                        <div class="alert alert-danger">
                             <ul class="mb-0">
                                 @foreach ($errors->all() as $error)
                                     <li>{{ $error }}</li>
                                 @endforeach
                             </ul>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
                     @endif
 
-                    <form action="{{ route('employee.grades.store') }}" method="POST">
+                    <form id="grade-form" action="{{ route('employee.grades.store') }}" method="POST">
                         @csrf
 
-                        <div class="row mb-3">
-                            <div class="col-md-3">
-                                <label for="class_id" class="form-label">Class <span class="text-danger">*</span></label>
-                                <select class="form-select @error('class_id') is-invalid @enderror" id="class_id" name="class_id" required>
-                                    <option value="">-- Select Class --</option>
-                                    @foreach ($classes as $class)
-                                        <option value="{{ $class->class_id }}" {{ old('class_id') == $class->class_id ? 'selected' : '' }}>
-                                            {{ $class->class_name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('class_id')
-                                    <small class="text-danger d-block mt-1">{{ $message }}</small>
-                                @enderror
-                            </div>
-
-                            <div class="col-md-3">
-                                <label for="subject_id" class="form-label">Subject <span class="text-danger">*</span></label>
-                                <select class="form-select @error('subject_id') is-invalid @enderror" id="subject_id" name="subject_id" required>
-                                    <option value="">-- Select Subject --</option>
-                                    @foreach ($subjects as $subject)
-                                        <option value="{{ $subject->subject_id }}" {{ old('subject_id') == $subject->subject_id ? 'selected' : '' }}>
-                                            {{ $subject->subject_name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('subject_id')
-                                    <small class="text-danger d-block mt-1">{{ $message }}</small>
-                                @enderror
-                            </div>
-
-                            <div class="col-md-3">
-                                <label for="teacher_id" class="form-label">Teacher <span class="text-danger">*</span></label>
-                                <select class="form-select @error('teacher_id') is-invalid @enderror" id="teacher_id" name="teacher_id" required>
-                                    <option value="">-- Select Teacher --</option>
-                                    @foreach ($teachers as $teacher)
-                                        <option value="{{ $teacher->teacher_id }}" {{ old('teacher_id') == $teacher->teacher_id ? 'selected' : '' }}>
-                                            {{ $teacher->first_name }} {{ $teacher->last_name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('teacher_id')
-                                    <small class="text-danger d-block mt-1">{{ $message }}</small>
-                                @enderror
-                            </div>
-
-                            <div class="col-md-3">
-                                <label for="grade_type" class="form-label">Grade Type <span class="text-danger">*</span></label>
-                                <select class="form-select @error('grade_type') is-invalid @enderror" id="grade_type" name="grade_type" required>
-                                    <option value="">-- Select Type --</option>
-                                    <option value="Midterm" {{ old('grade_type') == 'Midterm' ? 'selected' : '' }}>Midterm</option>
-                                    <option value="Final" {{ old('grade_type') == 'Final' ? 'selected' : '' }}>Final</option>
-                                    <option value="Assignment" {{ old('grade_type') == 'Assignment' ? 'selected' : '' }}>Assignment</option>
-                                    <option value="Practical" {{ old('grade_type') == 'Practical' ? 'selected' : '' }}>Practical</option>
-                                </select>
-                                @error('grade_type')
-                                    <small class="text-danger d-block mt-1">{{ $message }}</small>
-                                @enderror
-                            </div>
+                        <div class="mb-3">
+                            <label for="class_id" class="form-label">Class <span class="text-danger">*</span></label>
+                            <select class="form-select" id="class_id" name="class_id" required>
+                                <option value="">-- Select Class --</option>
+                                @foreach ($classes as $class)
+                                    <option value="{{ $class->class_id }}">{{ $class->class_name }} (Level {{ $class->class_level }})</option>
+                                @endforeach
+                            </select>
                         </div>
 
-                        <!-- Students list will be loaded here via AJAX -->
-                        <div id="students-container" class="mb-3" style="display: none;">
-                            <label class="form-label">Student Grades <span class="text-danger">*</span></label>
-                            <div class="table-responsive">
-                                <table class="table table-sm" id="grades-table">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Student Name</th>
-                                            <th>Grade (0-100)</th>
-                                            <th>Attitude</th>
-                                            <th>Notes</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="students-list"></tbody>
-                                </table>
+                        <div class="mb-3">
+                            <label for="subject_id" class="form-label">Subject <span class="text-danger">*</span></label>
+                            <select class="form-select" id="subject_id" name="subject_id" required>
+                                <option value="">-- Select Subject --</option>
+                                @foreach ($subjects as $sub)
+                                    <option value="{{ $sub->subject_id }}">{{ $sub->subject_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="teacher_id" class="form-label">Teacher <span class="text-danger">*</span></label>
+                            <select class="form-select" id="teacher_id" name="teacher_id" required>
+                                <option value="">-- Select Teacher --</option>
+                                @foreach ($teachers as $t)
+                                    <option value="{{ $t->teacher_id }}">{{ $t->first_name }} {{ $t->last_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="grade_type" class="form-label">Grade Type <span class="text-danger">*</span></label>
+                            <select class="form-select" id="grade_type" name="grade_type" required>
+                                <option value="">-- Select Grade Type --</option>
+                                @if(!empty($gradeTypes))
+                                    @foreach($gradeTypes as $gt)
+                                        <option value="{{ $gt->item_code }}">{{ $gt->item_name }}</option>
+                                    @endforeach
+                                @endif
+                            </select>
+                        </div>
+
+                        <div id="students-container" class="mb-3" style="display:none;">
+                            <label class="form-label">Student Grades</label>
+                            <div id="students-list" class="border rounded p-3" style="max-height:400px; overflow-y:auto;">
+                                <p class="text-muted text-center">Select a class to load students</p>
                             </div>
                         </div>
 
                         <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-success" id="submit-btn" disabled>
+                            <button type="submit" class="btn btn-success" id="save-btn" disabled>
                                 <i class="fas fa-save"></i> Save Grades
                             </button>
-                            <a href="{{ route('employee.grades.index') }}" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> Cancel
-                            </a>
+                            <a href="{{ route('employee.grades.index') }}" class="btn btn-secondary">Cancel</a>
                         </div>
                     </form>
                 </div>
@@ -118,66 +84,97 @@
     </div>
 </div>
 
+@push('scripts')
 <script>
-    document.getElementById('class_id').addEventListener('change', loadStudents);
+    $(function(){
+        const $container = $('#students-container');
+        const $studentsList = $('#students-list');
+        const $saveBtn = $('#save-btn');
 
-    function loadStudents() {
-        const classId = document.getElementById('class_id').value;
-        const container = document.getElementById('students-container');
-        const studentsList = document.getElementById('students-list');
-        const submitBtn = document.getElementById('submit-btn');
+        function renderStudents(students) {
+            if (!Array.isArray(students) || students.length === 0) {
+                $studentsList.html('<p class="text-muted text-center">No students in this class</p>');
+                $container.show();
+                $saveBtn.prop('disabled', true);
+                return;
+            }
 
-        if (!classId) {
-            container.style.display = 'none';
-            submitBtn.disabled = true;
-            return;
+            let html = '<table class="table table-sm table-bordered"><thead class="table-light"><tr><th>NIS</th><th>Name</th><th>Grade</th><th>Attitude</th><th>Notes</th></tr></thead><tbody>';
+
+            students.forEach(function(s){
+                const id = s.student_class_id;
+                html += '<tr>' +
+                    `<td><span class="badge bg-info">${s.student_id}</span></td>` +
+                    `<td>${s.first_name} ${s.last_name}</td>` +
+                    `<td><input type="number" step="0.01" name="grades[${id}][grade_value]" class="form-control form-control-sm"></td>` +
+                    `<td><input type="text" name="grades[${id}][grade_attitude]" class="form-control form-control-sm"></td>` +
+                    `<td><input type="text" name="grades[${id}][notes]" class="form-control form-control-sm"></td>` +
+                    `<input type="hidden" name="grades[${id}][student_class_id]" value="${id}">` +
+                    '</tr>';
+            });
+
+            html += '</tbody></table>';
+            $studentsList.html(html);
+            $container.show();
+            $saveBtn.prop('disabled', false);
         }
 
-        fetch(`/employee/api/grades/students/${classId}`)
-            .then(response => response.json())
-            .then(students => {
-                if (students.length === 0) {
-                    studentsList.innerHTML = '<tr><td colspan="4" class="text-muted text-center">No students in this class</td></tr>';
-                    submitBtn.disabled = true;
+        $('#class_id').on('change', function(){
+            console.log('grade create: class change');
+            const classId = $(this).val();
+            if (!classId) { $container.hide(); $saveBtn.prop('disabled', true); return; }
+
+            $studentsList.html('<p class="text-muted text-center">Loading...</p>');
+
+            $.ajax({
+                url: '/api/grade/students/' + encodeURIComponent(classId),
+                method: 'GET',
+                dataType: 'json'
+            }).done(function(students){
+                renderStudents(students);
+            }).fail(function(xhr){
+                let msg = 'Error loading students';
+                try { msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : xhr.responseText; } catch(e){}
+                $studentsList.html(`<p class="text-danger">${msg}</p>`);
+                $saveBtn.prop('disabled', true);
+                $container.show();
+            });
+        });
+
+        // trigger on page load if class already selected
+        const pre = $('#class_id').val();
+        if (pre) { $('#class_id').trigger('change'); }
+    
+        // AJAX submit for grade form
+        $(document).on('submit', '#grade-form', function(e){
+            e.preventDefault();
+            const $form = $(this);
+            const url = '{{ route("employee.grades.store") }}';
+            const $btn = $form.find('button[type=submit]');
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+
+            $.ajax({
+                url: url,
+                method: 'POST',
+                data: $form.serialize(),
+                dataType: 'json'
+            }).done(function(res){
+                if (res && res.redirect) {
+                    window.location.href = res.redirect;
                     return;
                 }
-
-                let html = '';
-                students.forEach(student => {
-                    html += `
-                        <tr>
-                            <td>
-                                ${student.first_name} ${student.last_name}
-                                <input type="hidden" name="grades[${student.student_class_id}][student_class_id]" value="${student.student_class_id}">
-                            </td>
-                            <td>
-                                <input type="number" class="form-control form-control-sm" 
-                                       name="grades[${student.student_class_id}][grade_value]" 
-                                       min="0" max="100" step="0.01" required 
-                                       placeholder="0-100">
-                            </td>
-                            <td>
-                                <input type="text" class="form-control form-control-sm" 
-                                       name="grades[${student.student_class_id}][grade_attitude]" 
-                                       placeholder="e.g., Excellent" maxlength="255">
-                            </td>
-                            <td>
-                                <input type="text" class="form-control form-control-sm" 
-                                       name="grades[${student.student_class_id}][notes]" 
-                                       placeholder="Notes (optional)" maxlength="500">
-                            </td>
-                        </tr>
-                    `;
-                });
-
-                studentsList.innerHTML = html;
-                container.style.display = 'block';
-                submitBtn.disabled = false;
-            })
-            .catch(error => {
-                studentsList.innerHTML = `<tr><td colspan="4" class="text-danger">Error loading students: ${error.message}</td></tr>`;
-                submitBtn.disabled = true;
+                // fallback: if server returns success message
+                alert(res.message || 'Grades saved');
+                window.location.reload();
+            }).fail(function(xhr){
+                let msg = 'Error saving grades';
+                try { msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : xhr.responseText; } catch(e){}
+                alert(msg);
+            }).always(function(){
+                $btn.prop('disabled', false).html('<i class="fas fa-save"></i> Save Grades');
             });
-    }
+        });
+
+    });
 </script>
-@endsection
+@endpush

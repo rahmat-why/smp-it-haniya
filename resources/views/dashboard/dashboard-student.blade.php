@@ -154,6 +154,24 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Payments Summary -->
+            <div class="card shadow-sm mt-3">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Payments</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <h6 class="text-muted mb-1">Outstanding</h6>
+                            <h4 class="text-danger mb-0">Rp 1,250,000</h4>
+                        </div>
+                        <i class="fas fa-wallet fa-2x text-danger opacity-50"></i>
+                    </div>
+
+                    <p class="mb-1"><strong>Last payment:</strong> Rp 500,000 on {{ date('Y-m-d') }}</p>
+                </div>
+            </div>
         </div>
     </div>
 
