@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Employee;
 
 use App\Models\TxnPayment;
-use App\Models\TxnPaymentInstallment;
+use App\Models\TxnPaymentInstalment;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
@@ -13,301 +13,298 @@ use App\Http\Requests\StorePaymentInstallmentRequest;
 
 class PaymentController extends Controller
 {
-    // Check authentication before accessing
-    public function __construct()
+    private function getNewPaymentId()
     {
-        if (session('user_type') !== 'Employee') {
-            return redirect('/employee/login');
+        $last = DB::table('txn_payments')
+            ->orderBy('payment_id', 'desc')
+            ->first();
+
+        if ($last) {
+            $num = intval(substr($last->payment_id, 3)) + 1;
+            return 'PAY' . str_pad($num, 6, '0', STR_PAD_LEFT);
         }
+
+        return 'PAY000001';
     }
 
-    /**
-     * Display all payments with status tracking
-     */
+    private function getNewPaymentInstalmentId($paymentId)
+    {
+        // Count existing instalments for this payment
+        $count = DB::table('txn_payment_instalments')
+            ->where('payment_id', $paymentId)
+            ->count();
+
+        // Next instalment number
+        $nextInstalmentNumber = $count + 1;
+
+        // Combine payment_id and instalment number
+        return $paymentId . '_' . $nextInstalmentNumber;
+    }
+    
+    private function getUserId()
+    {
+        return session('employee_id')
+            ?? session('teacher_id')
+            ?? session('student_id');
+    }
+
     public function index()
     {
-        $payments = DB::select('
-            SELECT TOP (1000) p.*, sc.student_id, s.first_name, s.last_name, 
-                   c.class_name,
-                   COUNT(pi.installment_id) as installment_count,
-                   SUM(pi.total_payment) as paid_amount
-            FROM txn_payments p
-            JOIN mst_student_classes sc ON p.student_class_id = sc.student_class_id
-            JOIN mst_students s ON sc.student_id = s.student_id
-            JOIN mst_classes c ON sc.class_id = c.class_id
-            LEFT JOIN txn_payment_installments pi ON p.payment_id = pi.payment_id
-            GROUP BY p.payment_id, p.student_class_id, p.payment_type, p.total_payment, 
-                     p.remaining_payment, p.status, p.notes, p.created_at, p.updated_at, 
-                     p.created_by, p.updated_by, sc.student_id, s.first_name, s.last_name, c.class_name
-            ORDER BY p.created_at DESC
-        ');
+        $sql = <<<'SQL'
+        SELECT 
+            p.payment_id,
+            p.student_class_id,
+            CAST(ds.item_name AS NVARCHAR(MAX)) as payment_type,
+            p.payment_method,
+            p.total_payment,
+            p.payment_date,
+            p.remaining_payment,
+            p.status,
+            p.notes,
+            p.created_at,
+            p.updated_at,
+            sc.student_id,
+            s.first_name,
+            s.last_name,
+            c.class_name,
+            COUNT(pi.instalment_id) AS instalment_count,
+            COALESCE(SUM(pi.total_payment),0) AS paid_amount
+        FROM txn_payments p
+        JOIN mst_student_classes sc ON p.student_class_id = sc.student_class_id
+        JOIN mst_students s ON sc.student_id = s.student_id
+        LEFT JOIN mst_academic_classes ac ON sc.academic_class_id = ac.academic_class_id
+        LEFT JOIN mst_classes c ON ac.class_id = c.class_id
+        LEFT JOIN txn_payment_instalments pi ON p.payment_id = pi.payment_id
+        LEFT JOIN mst_detail_settings ds ON p.payment_type = ds.item_code AND ds.header_id = 'PAYMENT_TYPE'
+        GROUP BY 
+            p.payment_id, p.student_class_id, p.payment_type, p.total_payment,
+            p.payment_date, p.remaining_payment, p.payment_method, p.status,
+            p.notes, p.created_at, p.updated_at,
+            sc.student_id, s.first_name, s.last_name, c.class_name, CAST(ds.item_name AS NVARCHAR(MAX))
+        ORDER BY p.created_at DESC
+        SQL;
 
-        return view('employee.payments.index', compact('payments'));
+        $payments = DB::select($sql);
+
+        $paymentTypes = DB::table('mst_detail_settings')
+            ->where('header_id', 'PAYMENT_TYPE')
+            ->where('status', 'Active')
+            ->pluck('item_code')
+            ->toArray();
+
+        return view('payments.index', compact('payments', 'paymentTypes'));
     }
 
-    /**
-     * Show form for creating new payment
-     */
     public function create()
     {
         $students = DB::select('
             SELECT sc.student_class_id, s.student_id, s.first_name, s.last_name, c.class_name
             FROM mst_student_classes sc
             JOIN mst_students s ON sc.student_id = s.student_id
-            JOIN mst_classes c ON sc.class_id = c.class_id
-            WHERE sc.status = ?
+            LEFT JOIN mst_academic_classes ac ON sc.academic_class_id = ac.academic_class_id
+            LEFT JOIN mst_classes c ON ac.class_id = c.class_id
             ORDER BY s.first_name ASC
-        ', ['Active']);
+        ');
 
-        $paymentTypes = ['Tuition', 'Activity Fee', 'Facility Fee', 'Development Fee', 'Uniform', 'Books'];
+        $paymentTypes = DB::table('mst_detail_settings')
+            ->select('item_code', 'item_name', 'item_desc')
+            ->where('header_id', 'PAYMENT_TYPE')
+            ->where('status', 'ACTIVE')
+            ->get();
 
-        return view('employee.payments.create', compact('students', 'paymentTypes'));
+        return view('payments.create', compact('students', 'paymentTypes'));
     }
 
-    /**
-     * Store new payment
-     */
     public function store(StorePaymentRequest $request)
     {
-        $validated = $request->validated();
-
         try {
-            $paymentId = $validated['student_class_id'] . '_' . date('YmdHis');
+            DB::beginTransaction();
 
-            $validated['payment_id'] = $paymentId;
-            $validated['remaining_payment'] = $validated['total_payment'];
-            $validated['created_by'] = session('employee_id');
-            $validated['updated_by'] = session('employee_id');
-            $validated['created_at'] = now();
-            $validated['updated_at'] = now();
+            // 1) Get new payment ID
+            $paymentId = $this->getNewPaymentId();
 
-            TxnPayment::create($validated);
+            // 2) Validate form input
+            $validated = $request->validated();
 
-            return redirect()->route('employee.payments.index')
-                           ->with('success', 'Payment record created successfully!');
+            // 3) Determine user ID (employee / teacher / student)
+            $userId = $this->getUserId();
 
-        } catch (\Exception $e) {
-            return back()->with('error', 'Error creating payment: ' . $e->getMessage());
-        }
-    }
+            // 4) Get payment type to extract total price from item_desc
+            $paymentType = DB::table('mst_detail_settings')
+                ->where('header_id', 'PAYMENT_TYPE')
+                ->where('item_code', $validated['payment_type'])
+                ->first();
 
-    /**
-     * Show payment details and installments
-     */
-    public function show($id)
-    {
-        $payment = DB::select('
-            SELECT p.*, sc.student_id, s.first_name, s.last_name, c.class_name
-            FROM txn_payments p
-            JOIN mst_student_classes sc ON p.student_class_id = sc.student_class_id
-            JOIN mst_students s ON sc.student_id = s.student_id
-            JOIN mst_classes c ON sc.class_id = c.class_id
-            WHERE p.payment_id = ?
-        ', [$id]);
-
-        if (empty($payment)) {
-            return redirect()->route('employee.payments.index')
-                           ->with('error', 'Payment not found!');
-        }
-
-        $installments = DB::select(
-            'SELECT * FROM txn_payment_installments WHERE payment_id = ? ORDER BY installment_number ASC',
-            [$id]
-        );
-
-        $totalPaid = collect($installments)->sum('total_payment');
-
-        return view('employee.payments.show', [
-            'payment' => $payment[0],
-            'installments' => $installments,
-            'totalPaid' => $totalPaid
-        ]);
-    }
-
-    /**
-     * Show form for editing payment
-     */
-    public function edit($id)
-    {
-        $payment = DB::select(
-            'SELECT * FROM txn_payments WHERE payment_id = ?',
-            [$id]
-        );
-
-        if (empty($payment)) {
-            return redirect()->route('employee.payments.index')
-                           ->with('error', 'Payment not found!');
-        }
-
-        $paymentTypes = ['Tuition', 'Activity Fee', 'Facility Fee', 'Development Fee', 'Uniform', 'Books'];
-
-        return view('employee.payments.edit', [
-            'payment' => $payment[0],
-            'paymentTypes' => $paymentTypes
-        ]);
-    }
-
-    /**
-     * Update payment
-     */
-    public function update(UpdatePaymentRequest $request, $id)
-    {
-        $payment = TxnPayment::findOrFail($id);
-
-        $validated = $request->validated();
-
-        $validated['updated_by'] = session('employee_id');
-        $validated['updated_at'] = now();
-
-        $payment->update($validated);
-
-        return redirect()->route('employee.payments.show', $id)
-                       ->with('success', 'Payment updated successfully!');
-    }
-
-    /**
-     * Delete payment and all installments
-     */
-    public function destroy($id)
-    {
-        $payment = TxnPayment::findOrFail($id);
-
-        // Delete all installments first
-        TxnPaymentInstallment::where('payment_id', $id)->delete();
-
-        // Delete payment
-        $payment->delete();
-
-        return redirect()->route('employee.payments.index')
-                       ->with('success', 'Payment and all installments deleted successfully!');
-    }
-
-    // ============ PAYMENT INSTALLMENT CRUD ============
-
-    /**
-     * Show form for recording installment payment
-     */
-    public function createInstallment($paymentId)
-    {
-        $payment = DB::select(
-            'SELECT * FROM txn_payments WHERE payment_id = ?',
-            [$paymentId]
-        );
-
-        if (empty($payment)) {
-            return redirect()->route('employee.payments.index')
-                           ->with('error', 'Payment not found!');
-        }
-
-        // Get existing installments to determine next number
-        $installmentCount = DB::select(
-            'SELECT COUNT(*) as count FROM txn_payment_installments WHERE payment_id = ?',
-            [$paymentId]
-        );
-
-        $nextNumber = ($installmentCount[0]->count ?? 0) + 1;
-
-        // Calculate remaining amount
-        $paidAmount = DB::select(
-            'SELECT SUM(total_payment) as total FROM txn_payment_installments WHERE payment_id = ?',
-            [$paymentId]
-        );
-
-        $totalPaid = $paidAmount[0]->total ?? 0;
-        $remainingAmount = $payment[0]->total_payment - $totalPaid;
-
-        return view('employee.payments.create-installment', [
-            'payment' => $payment[0],
-            'nextNumber' => $nextNumber,
-            'remainingAmount' => $remainingAmount
-        ]);
-    }
-
-    /**
-     * Store installment payment
-     */
-    public function storeInstallment(StorePaymentInstallmentRequest $request, $paymentId)
-    {
-        $payment = TxnPayment::findOrFail($paymentId);
-
-        $validated = $request->validated();
-
-        try {
-            // Get current paid amount
-            $paidAmount = DB::select(
-                'SELECT SUM(total_payment) as total FROM txn_payment_installments WHERE payment_id = ?',
-                [$paymentId]
-            );
-
-            $currentPaid = $paidAmount[0]->total ?? 0;
-            $newTotal = $currentPaid + $validated['total_payment'];
-
-            // Check if payment exceeds total
-            if ($newTotal > $payment->total_payment) {
-                return back()->with('error', 'Installment amount exceeds remaining payment amount!');
+            if (!$paymentType) {
+                return response()->json(['success' => false, 'message' => 'Invalid payment type.']);
             }
 
-            // Create installment
-            $installmentId = $paymentId . '_' . $validated['installment_number'];
+            $totalPrice = (int) $paymentType->item_desc;
+            $amountPaid = (int) $validated['total_payment'];
 
-            TxnPaymentInstallment::create([
-                'installment_id' => $installmentId,
-                'payment_id' => $paymentId,
-                'installment_number' => $validated['installment_number'],
-                'total_payment' => $validated['total_payment'],
-                'payment_date' => $validated['payment_date'],
-                'notes' => $validated['notes'] ?? null,
-                'created_by' => session('employee_id'),
-                'updated_by' => session('employee_id'),
-                'created_at' => now(),
-                'updated_at' => now(),
+            // 5) Determine payment status
+            $status = $amountPaid >= $totalPrice ? 'PAID' : 'PARTIALLY PAID';
+
+            // 6) Calculate remaining balance
+            $remaining = max($totalPrice - $amountPaid, 0);
+
+            // 7) Insert payment record
+            DB::table('txn_payments')->insert([
+                'payment_id'        => $paymentId,
+                'student_class_id'  => $validated['student_class_id'],
+                'payment_type'      => $validated['payment_type'],
+                'total_price'       => $totalPrice,
+                'total_payment'     => $amountPaid,
+                'remaining_payment' => $remaining,
+                'payment_date'      => $validated['payment_date'],
+                'payment_method'    => $validated['payment_method'],
+                'status'            => $status,
+                'notes'             => $validated['notes'] ?? null,
+                'created_by'        => $userId,
+                'created_at'        => now(),
             ]);
 
-            // Update payment status and remaining amount
-            $newRemaining = $payment->total_payment - $newTotal;
-            $newStatus = $newTotal >= $payment->total_payment ? 'Paid' : 'Partial';
+            if($validated['payment_method'] === 'INSTALLMENT') {
+            // 8) Insert into instalment table (history)
+            $newInstalmentId = $this->getNewPaymentInstalmentId($paymentId);
+                DB::table('txn_payment_instalments')->insert([
+                    'instalment_id'   => $newInstalmentId,
+                    'payment_id'    => $paymentId,
+                    'total_payment'   => $amountPaid,
+                    'payment_date'     => $validated['payment_date'],
+                    'notes'         => $validated['notes'] ?? null,
+                    'created_by'    => $userId,
+                    'created_at'    => now(),
+                    'instalment_number' => 1
+                ]);
+            }
 
-            DB::update(
-                'UPDATE txn_payments SET remaining_payment = ?, status = ?, updated_by = ?, updated_at = ? WHERE payment_id = ?',
-                [$newRemaining, $newStatus, session('employee_id'), now(), $paymentId]
-            );
+            DB::commit();
 
-            return redirect()->route('employee.payments.show', $paymentId)
-                           ->with('success', 'Installment payment recorded successfully!');
+            return response()->json([
+                'success' => true,
+                'message' => 'Payment added successfully.',
+            ]);
 
-        } catch (\Exception $e) {
-            return back()->with('error', 'Error recording installment: ' . $e->getMessage());
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $th->getMessage(),
+            ]);
         }
     }
 
-    /**
-     * Delete installment payment
-     */
-    public function destroyInstallment($paymentId, $installmentId)
+    public function show($id)
     {
-        $installment = TxnPaymentInstallment::findOrFail($installmentId);
+        // Ambil data payment
+        $payment = DB::table('txn_payments as p')
+            ->select(
+                'p.*',
+                'dt.item_name'
+            )
+            ->leftJoin('mst_detail_settings as dt', 'p.payment_type', '=', 'dt.item_code')
+            ->where('payment_id', $id)
+            ->first();
+
+        if (!$payment) {
+            abort(404);
+        }
+
+        // Ambil instalments by payment_id
+        $instalments = DB::table('txn_payment_instalments')
+            ->where('payment_id', $id)
+            ->orderBy('instalment_number', 'ASC')
+            ->get();
+
+        // Tambahkan instalments ke object payment (menyerupai Eloquent)
+        $payment->instalments = $instalments;
+
+        return view('payments.show', compact('payment'));
+    }
+
+    public function destroy($id)
+    {
+        TxnPaymentInstalment::where('payment_id', $id)->delete();
+        TxnPayment::where('payment_id', $id)->delete();
+
+        return redirect()
+            ->route('employee.payments.index')
+            ->with('success', 'Payment and all instalments deleted successfully!');
+    }
+
+    public function createInstallment($paymentId)
+    {
+        $payment = DB::select('SELECT p.*, sc.student_id, s.first_name, s.last_name, c.class_name FROM txn_payments p JOIN mst_student_classes sc ON p.student_class_id = sc.student_class_id JOIN mst_students s ON sc.student_id = s.student_id LEFT JOIN mst_academic_classes ac ON sc.academic_class_id = ac.academic_class_id LEFT JOIN mst_classes c ON ac.class_id = c.class_id WHERE p.payment_id = ?', [$paymentId]);
+        if (empty($payment)) {
+            return redirect()->route('employee.payments.index')->with('error', 'Payment not found!');
+        }
+        $count = DB::select('SELECT COUNT(*) AS count FROM txn_payment_instalments WHERE payment_id = ?', [$paymentId]);
+        $nextNumber = ($count[0]->count ?? 0) + 1;
+
+        $paid = DB::select('SELECT SUM(total_payment) AS total FROM txn_payment_instalments WHERE payment_id = ?', [$paymentId]);
+        $totalPaid = $paid[0]->total ?? 0;
+        $remaining = $payment[0]->total_payment - $totalPaid;
+        return view('payments.create-installment', ['payment' => $payment[0], 'nextNumber' => $nextNumber, 'remainingAmount' => $remaining]);
+    }
+
+    public function storeInstalment(Request $request, $paymentId)
+    {
+        // process instalment recording
+        $request->validate([
+            'payment_date'   => 'required|date',
+            'total_payment'  => 'required|numeric|min:1',
+            'notes'          => 'nullable|string',
+        ]);
+
         $payment = TxnPayment::findOrFail($paymentId);
 
-        // Recalculate payment status
-        $paidAmount = DB::select(
-            'SELECT SUM(total_payment) as total FROM txn_payment_installments WHERE payment_id = ? AND installment_id != ?',
-            [$paymentId, $installmentId]
-        );
+        $instalmentNumber = $payment->instalments()->count() + 1;
+        $newId = $this->getNewPaymentInstalmentId($paymentId);
 
-        $newPaidTotal = $paidAmount[0]->total ?? 0;
-        $newStatus = $newPaidTotal == 0 ? 'Pending' : 'Partial';
+        $inst = TxnPaymentInstalment::create([
+            'instalment_id'     => $newId,
+            'payment_id'        => $paymentId,
+            'instalment_number' => $instalmentNumber,
+            'total_payment'     => $request->total_payment,
+            'payment_date'      => $request->payment_date,
+            'notes'             => $request->notes,
+            'created_at'        => now(),
+            'created_by'        => $this->getUserId(),
+        ]);
+
+        // Update remaining payment
+        $payment->remaining_payment -= $request->total_payment;
+        if ($payment->remaining_payment < 0) {
+            $payment->remaining_payment = 0;
+        }
+        $payment->status = $payment->remaining_payment == 0 ? 'PAID' : 'UNPAID';
+        $payment->save();
+
+        return response()->json([
+            'success' => true,
+            'instalment' => $inst,
+            'remaining' => $payment->remaining_payment,
+            'paid_total' => $payment->instalments()->sum('total_payment'),
+            'status' => $payment->status,
+        ]);
+    }
+
+    public function destroyInstallment($paymentId, $instalmentId)
+    {
+        $instalment = TxnPaymentInstalment::findOrFail($instalmentId);
+        $payment = TxnPayment::findOrFail($paymentId);
+
+        $paid = DB::select('SELECT SUM(total_payment) as total FROM txn_payment_instalments WHERE payment_id = ? AND instalment_id != ?', [$paymentId, $instalmentId]);
+        $newPaidTotal = $paid[0]->total ?? 0;
+        $newStatus = $newPaidTotal == 0 ? 'Pending' : 'Instalment';
         $newRemaining = $payment->total_payment - $newPaidTotal;
 
-        // Delete installment
-        $installment->delete();
+        $instalment->delete();
 
-        // Update payment status
-        DB::update(
-            'UPDATE txn_payments SET remaining_payment = ?, status = ?, updated_by = ?, updated_at = ? WHERE payment_id = ?',
-            [$newRemaining, $newStatus, session('employee_id'), now(), $paymentId]
-        );
+        DB::update('UPDATE txn_payments SET remaining_payment = ?, status = ?, updated_by = ?, updated_at = ? WHERE payment_id = ?', [$newRemaining, $newStatus, session('employee_id'), now(), $paymentId]);
 
-        return redirect()->route('employee.payments.show', $paymentId)
-                       ->with('success', 'Installment deleted successfully!');
+        return redirect()->route('employee.payments.show', $paymentId)->with('success', 'Instalment deleted successfully!');
     }
 }

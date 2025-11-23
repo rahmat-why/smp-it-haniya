@@ -4,18 +4,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class TxnPaymentInstallment extends Model
+class TxnPaymentInstalment extends Model
 {
-    protected $table = 'txn_payment_installments';
-    protected $primaryKey = 'installment_id';
+    protected $table = 'txn_payment_instalments';
+    protected $primaryKey = 'instalment_id';
     public $incrementing = false;
     protected $keyType = 'string';
     public $timestamps = false;
 
     protected $fillable = [
-        'installment_id',
+        'instalment_id',
         'payment_id',
-        'installment_number',
+        'instalment_number',
         'total_payment',
         'payment_date',
         'notes',
@@ -29,4 +29,9 @@ class TxnPaymentInstallment extends Model
         'total_payment' => 'decimal:2',
         'payment_date' => 'date',
     ];
+
+    public function payment()
+    {
+        return $this->belongsTo(TxnPayment::class, 'payment_id', 'payment_id');
+    }
 }

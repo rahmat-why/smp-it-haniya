@@ -13,7 +13,7 @@
                     <div class="row">
                         <div class="col-md-6">
                             <p><strong>Student:</strong></p>
-                            <p class="text-muted">{{ $payment->student->first_name }} {{ $payment->student->last_name }}</p>
+                            <p class="text-muted">{{ $payment->first_name }} {{ $payment->last_name }}</p>
                         </div>
                         <div class="col-md-6">
                             <p><strong>Payment Type:</strong></p>
@@ -56,14 +56,14 @@
                         </div>
                     @endif
 
-                    <form action="{{ route('employee.payments.store-installment', $payment->payment_id) }}" method="POST">
+                    <form action="{{ route('employee.payments.store-instalment', $payment->payment_id) }}" method="POST">
                         @csrf
 
                         <div class="mb-3">
                             <label for="installment_number" class="form-label">Installment Number</label>
                             <input type="number" class="form-control" id="installment_number" 
-                                   value="{{ $nextInstallmentNumber }}" disabled>
-                            <input type="hidden" name="installment_number" value="{{ $nextInstallmentNumber }}">
+                                   value="{{ $nextNumber }}" disabled>
+                            <input type="hidden" name="installment_number" value="{{ $nextNumber }}">
                             <small class="text-muted">Auto-calculated based on existing installments</small>
                         </div>
 

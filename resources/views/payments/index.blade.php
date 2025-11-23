@@ -11,6 +11,7 @@
                         <i class="fas fa-plus"></i> Create Payment
                     </a>
                 </div>
+
                 <div class="card-body">
                     @if ($message = Session::get('success'))
                         <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -29,52 +30,58 @@
                                     <th>Paid</th>
                                     <th>Remaining</th>
                                     <th>Status</th>
-                                    <th>Installments</th>
+                                    <th>Payment Method</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
+
                             <tbody>
-                                @forelse ($payments as $payment)
+                                @forelse($payments as $payment)
                                     <tr>
                                         <td>
                                             <strong>{{ $payment->first_name }} {{ $payment->last_name }}</strong>
                                             <br><small class="text-muted">{{ $payment->class_name }}</small>
                                         </td>
+
                                         <td>{{ $payment->payment_type }}</td>
+
                                         <td><strong>Rp {{ number_format($payment->total_payment, 2, ',', '.') }}</strong></td>
+
                                         <td>Rp {{ number_format($payment->paid_amount ?? 0, 2, ',', '.') }}</td>
+
                                         <td>
                                             <span class="badge bg-warning">
                                                 Rp {{ number_format($payment->remaining_payment, 2, ',', '.') }}
                                             </span>
                                         </td>
+
                                         <td>
-                                            @if ($payment->status === 'Paid')
-                                                <span class="badge bg-success">Paid</span>
-                                            @elseif ($payment->status === 'Partial')
-                                                <span class="badge bg-info">Partial</span>
-                                            @else
-                                                <span class="badge bg-danger">Pending</span>
+                                            {{ $payment->status }}
+                                        </td>
+
+                                        <td>
+                                            {{ $payment->payment_method }}
+
+                                            @if($payment->payment_method === 'Instalment')
+                                                <span class="badge bg-secondary">
+                                                    {{ $payment->instalment_count ?? 0 }}
+                                                </span>
                                             @endif
                                         </td>
+
                                         <td>
-                                            <span class="badge bg-secondary">{{ $payment->installment_count ?? 0 }}</span>
-                                        </td>
-                                        <td>
-                                            <div class="btn-group btn-group-sm" role="group">
+                                            <div class="btn-group btn-group-sm">
                                                 <a href="{{ route('employee.payments.show', $payment->payment_id) }}" 
-                                                   class="btn btn-info" title="View Details">
+                                                   class="btn btn-info">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
-                                                <a href="{{ route('employee.payments.edit', $payment->payment_id) }}" 
-                                                   class="btn btn-warning" title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
+
                                                 <form action="{{ route('employee.payments.destroy', $payment->payment_id) }}" 
                                                       method="POST" style="display:inline;">
                                                     @csrf
                                                     @method('DELETE')
-                                                    <button type="submit" class="btn btn-danger" title="Delete"
+
+                                                    <button type="submit" class="btn btn-danger"
                                                             onclick="return confirm('Are you sure?')">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
@@ -82,6 +89,7 @@
                                             </div>
                                         </td>
                                     </tr>
+
                                 @empty
                                     <tr>
                                         <td colspan="8" class="text-center text-muted py-4">
@@ -90,8 +98,10 @@
                                     </tr>
                                 @endforelse
                             </tbody>
+
                         </table>
                     </div>
+
                 </div>
             </div>
         </div>

@@ -1,163 +1,152 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-md-8">
-            <!-- Payment Details Card -->
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Payment Details</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <p><strong>Student:</strong></p>
-                            <p class="text-muted">{{ $payment->student->first_name }} {{ $payment->student->last_name }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>Class:</strong></p>
-                            <p class="text-muted">{{ $payment->studentClass->class->class_name }}</p>
-                        </div>
+<div class="container">
+
+    <div class="card">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">Payment Details</h5>
+        </div>
+
+        <div class="card-body">
+
+            {{-- Payment Summary --}}
+            <h5>{{ $payment->item_name }}</h5>
+
+            <p id="totalPayment"><strong>Total Payment:</strong> 
+                Rp {{ number_format($payment->total_payment, 2, ',', '.') }}
+            </p>
+
+            <p id="paidAmount"><strong>Paid:</strong> 
+                Rp {{ number_format($payment->instalments->sum('total_payment'), 2, ',', '.') }}
+            </p>
+
+            <p id="remainingPayment"><strong>Remaining:</strong> 
+                Rp {{ number_format($payment->remaining_payment, 2, ',', '.') }}
+            </p>
+
+            <p id="statusPayment"><strong>Status:</strong> {{ $payment->status }}</p>
+
+            <hr>
+
+            @if(strtolower($payment->payment_method) === 'instalment')
+
+                <h5>Installment History</h5>
+
+                <form id="instalmentForm" method="POST" action="{{ route('employee.payments.store-instalment', $payment->payment_id) }}">
+                    @csrf
+
+                    <table class="table table-bordered" id="instalmentTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Date</th>
+                                <th>Amount</th>
+                                <th>Note</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="instalmentBody">
+
+                            {{-- Existing instalments --}}
+                            @foreach ($payment->instalments as $i => $inst)
+                                <tr>
+                                    <td>{{ $i + 1 }}</td>
+                                    <td>{{ \Carbon\Carbon::parse($inst->payment_date)->format('d M Y') }}</td>
+                                    <td>Rp {{ number_format($inst->total_payment, 2, ',', '.') }}</td>
+                                    <td>{{ $inst->notes }}</td>
+                                </tr>
+                            @endforeach
+
+                            {{-- New instalment row --}}
+                            <tr id="newRow" class="bg-light">
+                                <td id="nextNo">{{ $payment->instalments->count() + 1 }}</td>
+
+                                <td>
+                                    <input type="date" name="payment_date" class="form-control" required>
+                                </td>
+
+                                <td>
+                                    <input type="number" step="0.01" name="total_payment" class="form-control" required>
+                                </td>
+
+                                <td>
+                                    <input type="text" name="notes" class="form-control">
+                                </td>
+                                <input type="hidden" name="installment_number" value="{{ $payment->instalments->count() + 1 }}">
+                            </tr>
+
+                        </tbody>
+                    </table>
+
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-success">
+                            Save Instalment
+                        </button>
                     </div>
+                </form>
 
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <p><strong>Payment Type:</strong></p>
-                            <p class="text-muted">{{ $payment->payment_type }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>Status:</strong></p>
-                            <p>
-                                @if ($payment->status === 'Paid')
-                                    <span class="badge bg-success">Paid</span>
-                                @elseif ($payment->status === 'Partial')
-                                    <span class="badge bg-info">Partial</span>
-                                @else
-                                    <span class="badge bg-danger">Pending</span>
-                                @endif
-                            </p>
-                        </div>
-                    </div>
+            @endif
 
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <p><strong>Total Payment:</strong></p>
-                            <h6 class="text-success">Rp {{ number_format($payment->total_payment, 2, ',', '.') }}</h6>
-                        </div>
-                        <div class="col-md-4">
-                            <p><strong>Total Paid:</strong></p>
-                            <h6 class="text-info">Rp {{ number_format($totalPaid, 2, ',', '.') }}</h6>
-                        </div>
-                        <div class="col-md-4">
-                            <p><strong>Remaining:</strong></p>
-                            <h6 class="text-warning">Rp {{ number_format($payment->remaining_payment, 2, ',', '.') }}</h6>
-                        </div>
-                    </div>
-
-                    <!-- Payment Progress -->
-                    <div class="mb-3">
-                        <p><strong>Payment Progress:</strong></p>
-                        <div class="progress" style="height: 25px;">
-                            <div class="progress-bar bg-success" role="progressbar" 
-                                 style="width: {{ ($totalPaid / $payment->total_payment) * 100 }}%"
-                                 aria-valuenow="{{ $totalPaid }}" aria-valuemin="0" 
-                                 aria-valuemax="{{ $payment->total_payment }}">
-                                {{ round(($totalPaid / $payment->total_payment) * 100) }}%
-                            </div>
-                        </div>
-                    </div>
-
-                    @if ($payment->notes)
-                        <div class="mb-3">
-                            <p><strong>Notes:</strong></p>
-                            <p class="text-muted">{{ $payment->notes }}</p>
-                        </div>
-                    @endif
-
-                    <div class="d-flex gap-2">
-                        <a href="{{ route('employee.payments.edit', $payment->payment_id) }}" class="btn btn-primary btn-sm">
-                            <i class="fas fa-edit"></i> Edit Payment
-                        </a>
-                        <a href="{{ route('employee.payments.index') }}" class="btn btn-secondary btn-sm">
-                            <i class="fas fa-arrow-left"></i> Back to List
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Installments Card -->
-            <div class="card">
-                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Payment Installments</h5>
-                    @if ($payment->status !== 'Paid')
-                        <a href="{{ route('employee.payments.create-installment', $payment->payment_id) }}" 
-                           class="btn btn-light btn-sm">
-                            <i class="fas fa-plus"></i> Add Installment
-                        </a>
-                    @endif
-                </div>
-                <div class="card-body">
-                    @if (count($installments) > 0)
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Amount (Rp)</th>
-                                        <th>Payment Date</th>
-                                        <th>Notes</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($installments as $installment)
-                                        <tr>
-                                            <td>
-                                                <span class="badge bg-secondary">{{ $installment->installment_number }}</span>
-                                            </td>
-                                            <td>
-                                                <strong>Rp {{ number_format($installment->total_payment, 2, ',', '.') }}</strong>
-                                            </td>
-                                            <td>
-                                                {{ $installment->payment_date->format('d M Y') }}
-                                            </td>
-                                            <td>
-                                                {{ $installment->notes ?? '-' }}
-                                            </td>
-                                            <td>
-                                                <form action="{{ route('employee.payments.destroy-installment', ['payment' => $payment->payment_id, 'installment' => $installment->installment_id]) }}" 
-                                                      method="POST" class="d-inline">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-danger btn-sm" 
-                                                            onclick="return confirm('Delete this installment?')">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </form>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div class="alert alert-info mt-3" role="alert">
-                            <strong>Summary:</strong> {{ count($installments) }} installment(s) recorded | 
-                            Total Paid: <strong>Rp {{ number_format($totalPaid, 2, ',', '.') }}</strong>
-                        </div>
-                    @else
-                        <div class="alert alert-warning" role="alert">
-                            <i class="fas fa-info-circle"></i> No installments recorded yet.
-                            @if ($payment->status !== 'Paid')
-                                <a href="{{ route('employee.payments.create-installment', $payment->payment_id) }}" 
-                                   class="alert-link">Add the first installment</a>
-                            @endif
-                        </div>
-                    @endif
-                </div>
-            </div>
         </div>
     </div>
+
 </div>
+
+@endsection
+
+@section('scripts')
+<script>
+$('#instalmentForm').on('submit', function(e){
+    e.preventDefault();
+
+    let formData = new FormData(this);
+    $.ajax({
+        url: "{{ route('employee.payments.store-instalment', $payment->payment_id) }}",
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(data){
+
+            if (!data.success) return;
+
+            // Format amount
+            let amountFormatted = parseFloat(data.instalment.total_payment)
+                .toLocaleString('id-ID', { minimumFractionDigits: 2 });
+
+            // Add new row
+            let row = `
+                <tr>
+                    <td>${data.instalment.instalment_number}</td>
+                    <td>${new Date(data.instalment.payment_date).toLocaleDateString('id-ID')}</td>
+                    <td>Rp ${amountFormatted}</td>
+                    <td>${data.instalment.notes ?? ''}</td>
+                </tr>
+            `;
+
+            $('#newRow').before(row);
+
+            // Update summary
+            $('#paidAmount').html("<strong>Paid:</strong> Rp " + 
+                parseFloat(data.paid_total).toLocaleString('id-ID', { minimumFractionDigits: 2 })
+            );
+
+            $('#remainingPayment').html("<strong>Remaining:</strong> Rp " + 
+                parseFloat(data.remaining).toLocaleString('id-ID', { minimumFractionDigits: 2 })
+            );
+
+            $('#statusPayment').html("<strong>Status:</strong> " + data.status);
+
+            // Reset inputs
+            $('input[name="payment_date"]').val('');
+            $('input[name="total_payment"]').val('');
+            $('input[name="notes"]').val('');
+
+            // Update next instalment number
+            $('#nextNo').text(data.instalment.instalment_number + 1);
+        }
+    });
+});
+</script>
 @endsection
