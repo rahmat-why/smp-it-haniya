@@ -11,7 +11,8 @@ class StorePaymentRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return session('user_type') === 'Employee';
+        // Allow only if employee session exists
+        return session()->has('employee_id');
     }
 
     /**
@@ -25,20 +26,29 @@ class StorePaymentRequest extends FormRequest
                 'string',
                 'exists:mst_student_classes,student_class_id',
             ],
+
             'payment_type' => [
                 'required',
                 'string',
                 'max:100',
             ],
+
             'total_payment' => [
                 'required',
                 'numeric',
                 'min:0.01',
             ],
-            'status' => [
+
+            'payment_date' => [
                 'required',
-                'in:Pending,Partial,Paid',
+                'date',
             ],
+
+            'payment_method' => [
+                'required',
+                'in:Paid,Instalment',
+            ],
+
             'notes' => [
                 'nullable',
                 'string',
@@ -55,13 +65,20 @@ class StorePaymentRequest extends FormRequest
         return [
             'student_class_id.required' => 'Student is required.',
             'student_class_id.exists' => 'Selected student does not exist.',
+
             'payment_type.required' => 'Payment type is required.',
             'payment_type.max' => 'Payment type cannot exceed 100 characters.',
+
             'total_payment.required' => 'Total payment amount is required.',
             'total_payment.numeric' => 'Total payment must be a valid number.',
             'total_payment.min' => 'Total payment must be greater than 0.',
-            'status.required' => 'Payment status is required.',
-            'status.in' => 'Invalid status. Must be Pending, Partial, or Paid.',
+
+            'payment_date.required' => 'Payment date is required.',
+            'payment_date.date' => 'Payment date must be a valid date.',
+
+            'payment_method.required' => 'Payment method is required.',
+            'payment_method.in' => 'Payment method must be either Paid or Instalment.',
+
             'notes.max' => 'Notes cannot exceed 500 characters.',
         ];
     }

@@ -11,7 +11,13 @@ class UpdatePaymentRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return session('user_type') === 'Employee';
+        // Only employees can update
+        if (session()->has('employee_id')) {
+            return true;
+        }
+
+        $userType = session('user_type');
+        return is_string($userType) && strtolower($userType) === 'employee';
     }
 
     /**
@@ -25,15 +31,29 @@ class UpdatePaymentRequest extends FormRequest
                 'string',
                 'max:100',
             ],
+
+            'payment_method' => [
+                'required',
+                'in:Paid,Instalment',
+            ],
+
             'total_payment' => [
                 'required',
                 'numeric',
                 'min:0.01',
             ],
-            'status' => [
-                'required',
-                'in:Pending,Partial,Paid',
+
+            'total_price' => [
+                'nullable',
+                'numeric',
+                'min:0',
             ],
+
+            'payment_date' => [
+                'required',
+                'date',
+            ],
+
             'notes' => [
                 'nullable',
                 'string',
@@ -43,18 +63,27 @@ class UpdatePaymentRequest extends FormRequest
     }
 
     /**
-     * Get the error messages for the defined validation rules.
+     * Custom error messages
      */
     public function messages(): array
     {
         return [
             'payment_type.required' => 'Payment type is required.',
             'payment_type.max' => 'Payment type cannot exceed 100 characters.',
+
+            'payment_method.required' => 'Payment method is required.',
+            'payment_method.in' => 'Payment method must be Paid or Instalment.',
+
             'total_payment.required' => 'Total payment amount is required.',
             'total_payment.numeric' => 'Total payment must be a valid number.',
             'total_payment.min' => 'Total payment must be greater than 0.',
-            'status.required' => 'Payment status is required.',
-            'status.in' => 'Invalid status. Must be Pending, Partial, or Paid.',
+
+            'total_price.numeric' => 'Total price must be numeric.',
+            'total_price.min' => 'Total price cannot be negative.',
+
+            'payment_date.required' => 'Payment date is required.',
+            'payment_date.date' => 'Payment date must be a valid date.',
+
             'notes.max' => 'Notes cannot exceed 500 characters.',
         ];
     }

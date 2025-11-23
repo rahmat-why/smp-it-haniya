@@ -11,7 +11,13 @@ class StorePaymentInstallmentRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return session('user_type') === 'Employee';
+        // Allow when an employee session exists or user_type is employee (case-insensitive)
+        if (session()->has('employee_id')) {
+            return true;
+        }
+
+        $userType = session('user_type');
+        return is_string($userType) && strcasecmp($userType, 'employee') === 0;
     }
 
     /**
