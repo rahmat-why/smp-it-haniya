@@ -115,86 +115,91 @@ class PaymentController extends Controller
         return view('payments.create', compact('students', 'paymentTypes'));
     }
 
-    public function store(StorePaymentRequest $request)
-    {
-        try {
-            DB::beginTransaction();
+   public function store(StorePaymentRequest $request)
+{
+    try {
+        DB::beginTransaction();
 
-            // 1) Get new payment ID
-            $paymentId = $this->getNewPaymentId();
+        // 1) Generate new payment ID
+        $paymentId = $this->getNewPaymentId();
 
-            // 2) Validate form input
-            $validated = $request->validated();
+        // 2) Validate input
+        $validated = $request->validated();
 
-            // 3) Determine user ID (employee / teacher / student)
-            $userId = $this->getUserId();
+        // 3) Get user ID
+        $userId = $this->getUserId();
 
-            // 4) Get payment type to extract total price from item_desc
-            $paymentType = DB::table('mst_detail_settings')
-                ->where('header_id', 'PAYMENT_TYPE')
-                ->where('item_code', $validated['payment_type'])
-                ->first();
+        // 4) Get payment type detail
+        $paymentType = DB::table('mst_detail_settings')
+            ->where('header_id', 'PAYMENT_TYPE')
+            ->where('item_code', $validated['payment_type'])
+            ->first();
 
-            if (!$paymentType) {
-                return response()->json(['success' => false, 'message' => 'Invalid payment type.']);
-            }
+        if (!$paymentType) {
+            return redirect()
+                ->back()
+                ->withErrors(['payment_type' => 'Invalid payment type.'])
+                ->withInput();
+        }
 
-            $totalPrice = (int) $paymentType->item_desc;
-            $amountPaid = (int) $validated['total_payment'];
+        $totalPrice = (int) $paymentType->item_desc;
+        $amountPaid = (int) $validated['total_payment'];
 
-            // 5) Determine payment status
-            $status = $amountPaid >= $totalPrice ? 'PAID' : 'PARTIALLY PAID';
+        // 5) Status payment
+        $status = $amountPaid >= $totalPrice ? 'PAID' : 'PARTIALLY PAID';
 
-            // 6) Calculate remaining balance
-            $remaining = max($totalPrice - $amountPaid, 0);
+        // 6) Sisa pembayaran
+        $remaining = max($totalPrice - $amountPaid, 0);
 
-            // 7) Insert payment record
-            DB::table('txn_payments')->insert([
+        // 7) Insert ke txn_payments
+        DB::table('txn_payments')->insert([
+            'payment_id'        => $paymentId,
+            'student_class_id'  => $validated['student_class_id'],
+            'payment_type'      => $validated['payment_type'],
+            'total_payment'     => $amountPaid,
+            'remaining_payment' => $remaining,
+            'payment_date'      => $validated['payment_date'],
+            'payment_method'    => $validated['payment_method'],
+            'status'            => $status,
+            'notes'             => $validated['notes'] ?? null,
+            'created_by'        => $userId,
+            'created_at'        => now(),
+        ]);
+
+        // 8) Jika metode installment, catat di instalment table
+        if ($validated['payment_method'] === 'Instalment') {
+
+            $newInstalmentId = $this->getNewPaymentInstalmentId($paymentId);
+
+            DB::table('txn_payment_instalments')->insert([
+                'instalment_id'     => $newInstalmentId,
                 'payment_id'        => $paymentId,
-                'student_class_id'  => $validated['student_class_id'],
-                'payment_type'      => $validated['payment_type'],
-                'total_price'       => $totalPrice,
                 'total_payment'     => $amountPaid,
-                'remaining_payment' => $remaining,
                 'payment_date'      => $validated['payment_date'],
-                'payment_method'    => $validated['payment_method'],
-                'status'            => $status,
                 'notes'             => $validated['notes'] ?? null,
                 'created_by'        => $userId,
                 'created_at'        => now(),
-            ]);
-
-            if($validated['payment_method'] === 'INSTALLMENT') {
-            // 8) Insert into instalment table (history)
-            $newInstalmentId = $this->getNewPaymentInstalmentId($paymentId);
-                DB::table('txn_payment_instalments')->insert([
-                    'instalment_id'   => $newInstalmentId,
-                    'payment_id'    => $paymentId,
-                    'total_payment'   => $amountPaid,
-                    'payment_date'     => $validated['payment_date'],
-                    'notes'         => $validated['notes'] ?? null,
-                    'created_by'    => $userId,
-                    'created_at'    => now(),
-                    'instalment_number' => 1
-                ]);
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Payment added successfully.',
-            ]);
-
-        } catch (\Throwable $th) {
-            DB::rollBack();
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Error: ' . $th->getMessage(),
+                'instalment_number' => 1
             ]);
         }
+
+        DB::commit();
+
+        // 9) Redirect berhasil
+        return redirect()
+            ->route('employee.payments.index')
+            ->with('success', 'Payment created successfully!');
+
+    } catch (\Throwable $th) {
+        DB::rollBack();
+
+        return redirect()
+            ->back()
+            ->withErrors(['error' => $th->getMessage()])
+            ->withInput();
     }
+}
+
 
     public function show($id)
     {

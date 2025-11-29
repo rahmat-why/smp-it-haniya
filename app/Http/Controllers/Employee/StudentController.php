@@ -21,15 +21,6 @@ class StudentController extends Controller
     /**
      * Middleware to ensure employee is logged in
      */
-    public function __construct()
-    {
-        $this->middleware(function ($request, $next) {
-            if (!session('user_type') || session('user_type') !== 'employee') {
-                return redirect()->route('employee.login');
-            }
-            return $next($request);
-        });
-    }
 
     /**
      * Display list of students
@@ -47,6 +38,18 @@ class StudentController extends Controller
         );
 
         return view('students.index', compact('students'));
+    }
+    
+    public function profile()
+    {
+        // Ambil semua siswa aktif
+        $students = DB::table('mst_students')
+            ->where('status', 'Active')
+            ->where('student_id', session('student_id'))
+            ->orderByDesc('student_id')
+            ->get();
+
+        return view('students.profile', compact('students'));
     }
 
     /**

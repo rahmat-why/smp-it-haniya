@@ -18,6 +18,7 @@ class MstEvent extends Model
         'description',
         'location',
         'status',
+          'profile_photo',
         'created_at',
         'updated_at',
         'created_by',

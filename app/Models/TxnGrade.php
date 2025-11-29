@@ -21,6 +21,7 @@ class TxnGrade extends Model
         'grade_value',
         'grade_attitude',
         'notes',
+        'minimum_value',
         'created_at',
         'updated_at',
         'created_by',

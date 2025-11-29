@@ -1,140 +1,203 @@
 @extends('layouts.app')
 
+@section('title', 'Create Academic Class')
+@section('page-title', 'Create New Academic Class')
+
 @section('content')
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h2><i class="fas fa-plus-circle"></i> Create New Academic Class</h2>
-        </div>
-        <div class="col-md-4 text-end">
-            <a href="{{ route('employee.academic_classes.index') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Academic Classes
-            </a>
-        </div>
-    </div>
+<div class="row">
+    <div class="col-md-10 offset-md-1">
 
-    <div class="card">
-        <div class="card-body">
-            <form action="{{ route('employee.academic_classes.store') }}" method="POST">
-                @csrf
+        {{-- Alert Boxes --}}
+        <div class="alert alert-danger d-none" id="error-box"></div>
+        <div class="alert alert-success d-none" id="success-box"></div>
 
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="academic_class_id" class="form-label">Academic Class ID <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control @error('academic_class_id') is-invalid @enderror" 
-                               id="academic_class_id" name="academic_class_id" value="{{ old('academic_class_id') }}" required>
-                        @error('academic_class_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-layer-group"></i> Add New Academic Class
+                </h5>
+            </div>
 
-                    <div class="col-md-6 mb-3">
-                        <label for="academic_year_id" class="form-label">Academic Year <span class="text-danger">*</span></label>
-                        <select class="form-select @error('academic_year_id') is-invalid @enderror" 
-                                id="academic_year_id" name="academic_year_id" required>
-                            <option value="">-- Select Academic Year --</option>
-                            @foreach ($academicYears as $year)
-                                <option value="{{ $year->academic_year_id }}" {{ old('academic_year_id') == $year->academic_year_id ? 'selected' : '' }}>
-                                    {{ $year->academic_year_id }} - Semester {{ $year->semester }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('academic_year_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-                </div>
+            <div class="card-body">
+                <form id="academicClassForm">
+                    @csrf
 
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="class_id" class="form-label">Class <span class="text-danger">*</span></label>
-                        <select class="form-select @error('class_id') is-invalid @enderror" 
-                                id="class_id" name="class_id" required>
-                            <option value="">-- Select Class --</option>
-                            @foreach ($classes as $class)
-                                <option value="{{ $class->class_id }}" {{ old('class_id') == $class->class_id ? 'selected' : '' }}>
-                                    {{ $class->class_name }} (Level {{ $class->class_level }})
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('class_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6 d-none">
+                            <label class="form-label">Academic Class ID *</label>
+                            <input type="text" name="academic_class_id" id="academic_class_id"
+                                   class="form-control" readonly>
+                            <small class="text-danger error" data-error="academic_class_id"></small>
+                        </div>
 
-                    <div class="col-md-6 mb-3">
-                        <label for="homeroom_teacher_id" class="form-label">Homeroom Teacher</label>
-                        <select class="form-select @error('homeroom_teacher_id') is-invalid @enderror" 
-                                id="homeroom_teacher_id" name="homeroom_teacher_id">
-                            <option value="">-- Select Teacher --</option>
-                            @foreach ($teachers as $teacher)
-                                <option value="{{ $teacher->employee_id }}" {{ old('homeroom_teacher_id') == $teacher->employee_id ? 'selected' : '' }}>
-                                    {{ $teacher->first_name }} {{ $teacher->last_name }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('homeroom_teacher_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-                </div>
-
-                    <hr />
-                    <h5>Assign Students to this Academic Class</h5>
-                    <p class="text-muted">Select students to add to this academic class. Students already assigned to another class for the same academic year will be disabled.</p>
-                    <div class="mb-3">
-                        <div class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">
-                            @forelse ($students as $student)
-                                <div class="form-check">
-                                    <input class="form-check-input student-checkbox" type="checkbox" name="student_ids[]"
-                                           value="{{ $student->student_id }}" id="student_{{ $student->student_id }}">
-                                    <label class="form-check-label" for="student_{{ $student->student_id }}">
-                                        {{ $student->first_name }} {{ $student->last_name }} <small class="text-muted">({{ $student->student_id }})</small>
-                                    </label>
-                                </div>
-                            @empty
-                                <p class="text-muted">No active students available</p>
-                            @endforelse
+                        <div class="col-md-6">
+                            <label class="form-label">Academic Year *</label>
+                            <select name="academic_year_id" id="academic_year_id" class="form-select">
+                                <option value="">-- Select Academic Year --</option>
+                                @foreach ($academicYears as $year)
+                                    <option value="{{ $year->academic_year_id }}">
+                                        {{ $year->academic_year_id }} - Semester {{ $year->semester }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <small class="text-danger error" data-error="academic_year_id"></small>
                         </div>
                     </div>
 
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Create Academic Class
-                    </button>
-                    <a href="{{ route('employee.academic_classes.index') }}" class="btn btn-secondary">
-                        <i class="fas fa-times"></i> Cancel
-                    </a>
-                </div>
-            </form>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Class *</label>
+                            <select name="class_id" id="class_id" class="form-select">
+                                <option value="">-- Select Class --</option>
+                                @foreach ($classes as $class)
+                                    <option value="{{ $class->class_id }}">
+                                        {{ $class->class_name }} (Level {{ $class->class_level }})
+                                    </option>
+                                @endforeach
+                            </select>
+                            <small class="text-danger error" data-error="class_id"></small>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Homeroom Teacher</label>
+                            <select name="homeroom_teacher_id" class="form-select">
+                                <option value="">-- Select Teacher --</option>
+                                @foreach ($teachers as $teacher)
+                                    <option value="{{ $teacher->employee_id }}">
+                                        {{ $teacher->first_name }} {{ $teacher->last_name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <small class="text-danger error" data-error="homeroom_teacher_id"></small>
+                        </div>
+                    </div>
+
+
+                    <hr>
+                    <h5>Assign Students</h5>
+                    <p class="text-muted">Students already assigned in this year will be disabled.</p>
+
+                    <div class="border rounded p-3 mb-4" style="max-height:400px;overflow-y:auto;">
+                        @forelse ($students as $student)
+                            <div class="form-check">
+                                <input class="form-check-input student-checkbox"
+                                       type="checkbox"
+                                       value="{{ $student->student_id }}"
+                                       id="student_{{ $student->student_id }}"
+                                       name="student_ids[]">
+
+                                <label for="student_{{ $student->student_id }}" class="form-check-label">
+                                    {{ $student->first_name }} {{ $student->last_name }}
+                                    <small class="text-muted">({{ $student->student_id }})</small>
+                                </label>
+                            </div>
+                        @empty
+                            <p class="text-muted">No active students available</p>
+                        @endforelse
+                    </div>
+
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" id="btnSave" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Academic Class
+                        </button>
+
+                        <a href="{{ route('employee.academic_classes.index') }}" class="btn btn-secondary">
+                            Cancel
+                        </a>
+                    </div>
+
+                </form>
+            </div>
         </div>
+
     </div>
 </div>
+@endsection
+
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const input = document.getElementById('academic_class_id');
-    if (input && !input.value) {
-        fetch('{{ route('employee.academic_classes.getNewId') }}')
-            .then(res => res.json())
-            .then(data => {
-                if (data.academic_class_id) input.value = data.academic_class_id;
-            }).catch(err => console.error(err));
+function validateForm() {
+    let errors = {};
+    let academic_class_id = $("[name=academic_class_id]").val().trim();
+    let academic_year_id  = $("[name=academic_year_id]").val().trim();
+    let class_id          = $("[name=class_id]").val().trim();
+
+    if (academic_class_id === "") errors.academic_class_id = "ID is required";
+    if (academic_year_id === "") errors.academic_year_id = "Academic Year is required";
+    if (class_id === "") errors.class_id = "Class is required";
+
+    $(".error").text("");
+    for (let key in errors) {
+        $(`[data-error=${key}]`).text(errors[key]);
     }
 
-    // When academic year changes, fetch student IDs already assigned in that year
-    const $year = document.getElementById('academic_year_id');
-    if ($year) {
-        $year.addEventListener('change', function() {
+    return Object.keys(errors).length === 0;
+}
+
+
+$("#academicClassForm").submit(function(e){
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    let formData = new FormData(this);
+
+    $("#btnSave").prop("disabled", true)
+        .html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+
+    $.ajax({
+        url: "{{ route('employee.academic_classes.store') }}",
+        method: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(){
+            $('#success-box').removeClass('d-none').text('Academic Class created successfully!');
+            setTimeout(() => window.location.href = "{{ route('employee.academic_classes.index') }}", 600);
+        },
+        error: function(xhr){
+            $("#btnSave").prop("disabled", false)
+                .html('<i class="fas fa-save"></i> Save Academic Class');
+
+            if (xhr.responseJSON?.errors) {
+                $.each(xhr.responseJSON.errors, function(key, val){
+                    $(`[data-error=${key}]`).text(val[0]);
+                });
+            }
+        }
+    });
+});
+
+
+
+// Auto-generate academic_class_id
+$(document).ready(function(){
+    $.ajax({
+        url: "{{ route('employee.academic_classes.getNewId') }}",
+        method: "GET",
+        success: function(res){
+            $('#academic_class_id').val(res.academic_class_id);
+        }
+    });
+});
+
+
+// Disable students already assigned in selected year
+document.addEventListener('DOMContentLoaded', function(){
+    const yearSelect = document.getElementById('academic_year_id');
+
+    if (yearSelect) {
+        yearSelect.addEventListener('change', function(){
             const yearId = this.value;
-            const url = '{{ url('academic-classes/api/assigned-students') }}' + '/' + encodeURIComponent(yearId);
+            const url = "{{ url('academic-classes/api/assigned-students') }}/" + yearId;
+
             if (!yearId) {
-                // enable all checkboxes
-                document.querySelectorAll('.student-checkbox').forEach(cb => {
+                document.querySelectorAll('.student-checkbox').forEach(cb=>{
                     cb.disabled = false;
                     cb.parentElement.classList.remove('text-muted');
-                    cb.title = '';
                 });
                 return;
             }
@@ -143,30 +206,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(res => res.json())
                 .then(assignedIds => {
                     const assignedSet = new Set(assignedIds);
+
                     document.querySelectorAll('.student-checkbox').forEach(cb => {
-                        const val = cb.value;
-                        if (assignedSet.has(val)) {
+                        if (assignedSet.has(cb.value)) {
                             cb.disabled = true;
                             cb.checked = false;
-                            cb.title = 'Already assigned in this academic year';
                             cb.parentElement.classList.add('text-muted');
                         } else {
                             cb.disabled = false;
-                            cb.title = '';
                             cb.parentElement.classList.remove('text-muted');
                         }
                     });
-                }).catch(err => {
-                    console.error('Failed to load assigned students', err);
-                });
-        });
 
-        // If a year was preselected (old input), trigger change to apply disabling
-        if ($year.value) {
-            $year.dispatchEvent(new Event('change'));
-        }
+                }).catch(err => console.error('Failed to load student data', err));
+        });
     }
 });
 </script>
 @endpush
-@endsection

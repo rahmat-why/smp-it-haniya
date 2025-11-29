@@ -58,43 +58,91 @@ class ClassController extends Controller
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function store(Request $request)
-    {
-        // Check if user is employee
-            if (session('user_type') !== 'employee') {
-            return redirect('/employee/login');
-        }
-
-        // Validate input (homeroom_teacher_id was moved to academic classes)
-        $validated = $request->validate([
-            'class_id' => 'required|string|max:50|unique:mst_classes,class_id',
-            'class_name' => 'required|string|max:100',
-            'class_level' => 'required|string|max:10',
-        ]);
-
-        // Add created_by and updated_by
-        $validated['created_by'] = session('employee_id');
-        $validated['updated_by'] = session('employee_id');
-
-        // Create class using Eloquent
-        try {
-            MstClass::create($validated);
-
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['success' => true, 'message' => 'Class created successfully']);
-            }
-
-            return redirect()->route('employee.classes.index')
-                           ->with('success', 'Class created successfully!');
-        } catch (\Exception $e) {
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['success' => false, 'message' => 'Failed to create class: ' . $e->getMessage()], 500);
-            }
-
-            return back()->withInput()
-                        ->with('error', 'Failed to create class: ' . $e->getMessage());
-        }
+   public function store(Request $request)
+{
+    if (session('user_type') !== 'employee') {
+        return redirect('/employee/login');
     }
+
+    // VALIDASI DENGAN PESAN LENGKAP
+    $validated = $request->validate([
+        'class_id' => [
+            'required',
+            'regex:/^[A-Za-z0-9]+$/',
+            'max:50',
+            'unique:mst_classes,class_id'
+        ],
+
+        'class_name' => [
+            'required',
+            'regex:/^[A-Za-z0-9 .,]+$/',
+            'max:100',
+        ],
+
+        'class_level' => [
+            'required',
+            'regex:/^[A-Za-z0-9]+$/',
+            'max:10',
+        ],
+    ], [
+        // CLASS ID
+        'class_id.required' => 'Class ID wajib diisi.',
+        'class_id.regex'    => 'Class ID hanya boleh berisi huruf dan angka.',
+        'class_id.max'      => 'Class ID maksimal 50 karakter.',
+        'class_id.unique'   => 'Class ID sudah digunakan.',
+
+        // CLASS NAME
+        'class_name.required' => 'Class Name wajib diisi.',
+        'class_name.regex'    => 'Class Name hanya boleh berisi huruf, angka, spasi, titik, atau koma.',
+        'class_name.max'      => 'Class Name maksimal 100 karakter.',
+
+        // CLASS LEVEL
+        'class_level.required' => 'Class Level wajib diisi.',
+        'class_level.regex'    => 'Class Level hanya boleh huruf atau angka.',
+        'class_level.max'      => 'Class Level maksimal 10 karakter.',
+    ]);
+
+    $validated['created_by'] = session('employee_id');
+    $validated['updated_by'] = session('employee_id');
+    $validated['created_at'] = now();
+    $validated['updated_at'] = now();
+
+    DB::beginTransaction();
+    try {
+        MstClass::create($validated);
+        DB::commit();
+
+        // JIKA AJAX
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Class created successfully!'
+            ]);
+        }
+
+        // JIKA NORMAL
+        return redirect()
+            ->route('employee.classes.index')
+            ->with('success', 'Class created successfully!');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+
+        // JIKA AJAX ERROR
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create class: ' . $e->getMessage()
+            ], 500);
+        }
+
+        // NORMAL ERROR
+        return back()
+            ->withErrors(['error' => 'Failed to create class: ' . $e->getMessage()])
+            ->withInput();
+    }
+}
+
 
     /**
      * Show form to edit class (fetch data with raw SELECT)

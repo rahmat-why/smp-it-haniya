@@ -163,7 +163,19 @@ class AcademicClassController extends Controller
                         ->with('error', 'Failed to create academic class: ' . $e->getMessage());
         }
     }
+ public function getNewAcademicClassId()
+    {
+        $last = DB::table('mst_academic_classes')->orderBy('academic_class_id', 'desc')->first();
 
+        if ($last && preg_match('/(\d+)/', $last->academic_class_id, $m)) {
+            $num = intval($m[1]) + 1;
+            $nextId = 'ACC' . str_pad($num, 5, '0', STR_PAD_LEFT);
+        } else {
+            $nextId = 'ACC00001';
+        }
+
+        return response()->json(['academic_class_id' => $nextId]);
+    }
     /**
      * Show form to edit academic class
      */
@@ -299,35 +311,34 @@ class AcademicClassController extends Controller
     /**
      * Delete academic class
      */
-    public function destroy($id)
-    {
-        try {
-            $academicClass = MstAcademicClass::findOrFail($id);
-            $academicClass->delete();
+   public function destroy($id)
+{
+    try {
+        DB::beginTransaction();
 
-            return redirect()->route('employee.academic_classes.index')
-                           ->with('success', 'Academic Class deleted successfully!');
-        } catch (\Exception $e) {
-            return back()->with('error', 'Failed to delete academic class: ' . $e->getMessage());
-        }
+        // Hapus dulu data relasi di tabel anak
+        DB::table('mst_student_classes')
+            ->where('academic_class_id', $id)
+            ->delete();
+
+        // Baru hapus data master
+        $academicClass = MstAcademicClass::findOrFail($id);
+        $academicClass->delete();
+
+        DB::commit();
+
+        return redirect()->route('employee.academic_classes.index')
+                        ->with('success', 'Academic Class deleted successfully!');
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return back()->with('error', 'Failed to delete academic class: ' . $e->getMessage());
     }
+}
 
     /**
      * Generate next academic class id
      */
-    public function getNewAcademicClassId()
-    {
-        $last = DB::table('mst_academic_classes')->orderBy('academic_class_id', 'desc')->first();
-
-        if ($last && preg_match('/(\d+)/', $last->academic_class_id, $m)) {
-            $num = intval($m[1]) + 1;
-            $nextId = 'ACC' . str_pad($num, 5, '0', STR_PAD_LEFT);
-        } else {
-            $nextId = 'ACC00001';
-        }
-
-        return response()->json(['academic_class_id' => $nextId]);
-    }
+   
 
     /**
      * API: return list of active academic years (JSON)

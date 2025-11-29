@@ -152,7 +152,7 @@ class StudentClassController extends Controller
                 ]);
             }
 
-            return redirect()->route('employee.academic_classes.detail', $validated['academic_class_id'])
+            return redirect()->route('employee.student_classes.index', $validated['academic_class_id'])
                            ->with('success', count($validated['student_ids']) . ' student(s) assigned to class successfully!');
         } catch (\Exception $e) {
             return back()->withInput()
@@ -243,7 +243,7 @@ class StudentClassController extends Controller
             // Update student class assignment
             $studentClass->update($validated);
 
-            return redirect()->route('employee.academic_classes.detail', $oldAcademicClassId)
+            return redirect()->route('employee.student_classes.index', $oldAcademicClassId)
                            ->with('success', 'Student Class assignment updated successfully!');
         } catch (\Exception $e) {
             return back()->withInput()

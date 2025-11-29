@@ -50,6 +50,7 @@ class MstSubject extends Model
         'subject_code',
         'class_level',
         'description',
+        'minimum_value',
         'created_by',
         'updated_by',
     ];

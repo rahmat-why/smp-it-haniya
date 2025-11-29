@@ -7,260 +7,427 @@ use App\Models\MstTagEvent;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
-
+use Yajra\DataTables\Facades\DataTables;
+use Illuminate\Support\Facades\Storage;
 class EventController extends Controller
 {
-    // Check authentication before accessing
-    public function __construct()
-    {
-        if (session('user_type') !== 'Employee') {
-            return redirect('/employee/login');
-        }
-    }
+  public function index()
+{
+    return view('events.index');
+}
 
-    // ============ EVENT CRUD ============
+public function getData()
+{
+    $events = DB::table('mst_events as e')
+        ->select(
+            'e.event_id',
+            'e.event_name',
+            'e.location',
+            'e.status',
+            DB::raw("
+                (
+                    SELECT STRING_AGG(
+                        COALESCE(d.item_name, t.tag_code), ', '
+                    )
+                    FROM mst_tag_events t
+                    LEFT JOIN mst_detail_settings d 
+                        ON t.tag_code = d.item_code 
+                       AND d.header_id = 'TAG_EVENT'
+                    WHERE t.event_id = e.event_id
+                ) AS tags
+            ")
+        );
 
-    /**
-     * Display all events with tag count
-     */
-    public function index()
-    {
-        // Avoid grouping/sorting on text/ntext columns (SQL Server restriction)
-        // Aggregate the potentially large text column (description) with MAX after casting
-        $events = DB::select('
-            SELECT e.event_id, e.event_name,
-                   MAX(CAST(e.description AS NVARCHAR(MAX))) AS description,
-                   e.location, e.status, e.created_at, e.updated_at, e.created_by, e.updated_by,
-                   COUNT(t.tag_id) as tag_count
-            FROM mst_events e
-            LEFT JOIN mst_tag_events t ON e.event_id = t.event_id
-            GROUP BY e.event_id, e.event_name, e.location, e.status, e.created_at, e.updated_at, e.created_by, e.updated_by
-            ORDER BY e.event_id DESC
-        ');
+    return DataTables::of($events)
 
-        // Fetch all tags for the returned events in one query and attach them to each event
-        $eventIds = array_map(function ($e) { return $e->event_id; }, $events);
-        $tagsByEvent = [];
-        if (!empty($eventIds)) {
-            // Use parameter placeholders
-            $placeholders = implode(',', array_fill(0, count($eventIds), '?'));
-            $tagRows = DB::select(
-                "SELECT t.event_id, t.tag_code, d.item_name FROM mst_tag_events t LEFT JOIN mst_detail_settings d ON t.tag_code = d.item_code AND d.header_id = 'TAG_EVENT' WHERE t.event_id IN ($placeholders) ORDER BY t.tag_id DESC",
-                $eventIds
-            );
+        // Status Badge
+        ->addColumn('status_badge', function ($row) {
 
-            foreach ($tagRows as $r) {
-                $label = $r->item_name ?? $r->tag_code;
-                $tagsByEvent[$r->event_id][] = $label;
+            $color = 'secondary';
+
+            if ($row->status === 'Ongoing') $color = 'danger';
+            elseif ($row->status === 'Upcoming') $color = 'warning';
+            elseif ($row->status === 'Completed') $color = 'success';
+
+            return "<span class='badge bg-{$color}'>{$row->status}</span>";
+        })
+
+        // Tag badge
+        ->addColumn('tags_badge', function ($row) {
+
+            if (!$row->tags) {
+                return '<span class="text-muted">-</span>';
             }
-        }
 
-        // Attach tags array to each event (empty array if none)
-        foreach ($events as $e) {
-            $e->tags = $tagsByEvent[$e->event_id] ?? [];
-        }
+            // Pisah berdasarkan koma
+            $tagList = explode(',', $row->tags);
 
-        return view('employee.events.index', compact('events'));
-    }
+            return collect($tagList)
+                ->map(fn($t) => "<span class='badge bg-info'>".trim($t)."</span>")
+                ->implode(' ');
+        })
+
+        // Action buttons
+        ->addColumn('action', function ($row) {
+
+            $edit   = route('employee.events.edit', $row->event_id);
+            $delete = route('employee.events.destroy', $row->event_id);
+            $csrf   = csrf_token();
+
+            $btn  = "<a href='{$edit}' class='btn btn-sm btn-warning me-1'>
+                        <i class='fas fa-edit'></i>
+                     </a>";
+
+            $btn .= "<form action='{$delete}' method='POST' style='display:inline;' 
+                        onsubmit=\"return confirm('Are you sure?')\">
+                        <input type='hidden' name='_token' value='{$csrf}'>
+                        <input type='hidden' name='_method' value='DELETE'>
+                        <button type='submit' class='btn btn-sm btn-danger'>
+                            <i class='fas fa-trash'></i>
+                        </button>
+                    </form>";
+
+            return $btn;
+        })
+
+        ->rawColumns(['status_badge', 'tags_badge', 'action'])
+        ->make(true);
+}
+
+
+
+
 
     /**
      * Show form for creating new event
      */
-    public function create()
-    {
-        // Load tag options from settings for the create form
-        $availableTags = DB::select(
-            "SELECT item_code AS tag_code, item_name FROM mst_detail_settings WHERE header_id = ? AND status = ? ORDER BY item_name",
-            ['TAG_EVENT', 'Active']
-        );
+  public function create()
+{
+    // ===============================
+    // Ambil data Tag untuk dropdown
+    // ===============================
+    $availableTags = DB::select("
+        SELECT item_code AS tag_code, item_name
+        FROM mst_detail_settings
+        WHERE header_id = ? AND status = ?
+        ORDER BY item_name ASC
+    ", ['TAG_EVENT', 'Active']);
 
-        return view('employee.events.create', compact('availableTags'));
+    // ===============================
+    // Generate New Event ID
+    // Format: EVT00001, EVT00002, dst
+    // ===============================
+
+    $last = DB::table('mst_events')
+        ->orderBy('event_id', 'desc')
+        ->first();
+
+    if ($last && preg_match('/(\d+)/', $last->event_id, $m)) {
+        $num = intval($m[1]) + 1;
+        $newEventId = 'EVT' . str_pad($num, 5, '0', STR_PAD_LEFT);
+    } else {
+        $newEventId = 'EVT00001';
     }
 
-    /**
-     * Store new event in database
-     */
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'event_id' => 'required|string|max:50|unique:mst_events',
-            'event_name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'location' => 'required|string|max:255',
-            'status' => 'required|in:Upcoming,Ongoing,Completed,Cancelled',
-            'tag_codes' => 'nullable|array',
-            'tag_codes.*' => 'required_with:tag_codes|string|max:50',
-        ]);
+    // ===============================
+    // Kirim data ke view
+    // ===============================
+    return view('events.create', [
+        'availableTags' => $availableTags,
+        'newEventId' => $newEventId
+    ]);
+}
 
-        // If tag_codes provided, ensure they exist in mst_detail_settings for TAG_EVENT
-        if (!empty($validated['tag_codes'])) {
-            $rows = DB::select(
-                "SELECT item_code FROM mst_detail_settings WHERE header_id = ? AND status = ? AND item_code IN (" .
-                implode(',', array_fill(0, count($validated['tag_codes']), '?')) . ")",
-                array_merge(['TAG_EVENT', 'Active'], $validated['tag_codes'])
-            );
-            $found = array_map(function ($r) { return $r->item_code; }, $rows);
-            $diff = array_diff($validated['tag_codes'], $found);
-            if (!empty($diff)) {
-                return back()->withInput()->withErrors(['tag_codes' => 'One or more selected tags are invalid.']);
+public function store(Request $request)
+{
+    // === VALIDATION ===
+    $validated = $request->validate([
+        'event_name'   => 'required|string|max:255',
+        'description'  => 'required|string',
+        'location'     => 'required|string|max:255',
+        'status'       => 'required|in:Upcoming,Ongoing,Completed,Cancelled',
+
+        'tag_codes'    => 'nullable|array',
+        'tag_codes.*'  => 'required_with:tag_codes|string|max:50',
+
+        'event_id'     => 'nullable|string|max:50',
+
+        'profile_photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048', 
+    ]);
+
+    // === UPLOAD FOTO (SEBELUM LOOPING SUPAYA TIDAK DUPLIKAT FILE) ===
+    $photoPath = null;
+    if ($request->hasFile('profile_photo')) {
+        $photoPath = $request->file('profile_photo')->store('events', 'public');
+    }
+
+    // === VALIDATE TAGS FROM DB ===
+    if (!empty($validated['tag_codes'])) {
+        $placeholders = implode(',', array_fill(0, count($validated['tag_codes']), '?'));
+
+        $rows = DB::select(
+            "SELECT item_code FROM mst_detail_settings
+             WHERE header_id = ? AND status = ? AND item_code IN ($placeholders)",
+            array_merge(['TAG_EVENT', 'Active'], $validated['tag_codes'])
+        );
+
+        $found = array_map(fn($r) => $r->item_code, $rows);
+        $diff  = array_diff($validated['tag_codes'], $found);
+
+        if (!empty($diff)) {
+            return back()->withInput()->withErrors([
+                'tag_codes' => 'One or more selected tags are invalid.'
+            ]);
+        }
+    }
+
+    // === META ===
+    $createdBy = session('employee_id');
+    $now = now();
+
+    // === GENERATE NEXT EVT ID ===
+    $generateNextEventId = function() {
+        $row = DB::selectOne("
+            SELECT MAX(CONVERT(INT, SUBSTRING(event_id, 4, LEN(event_id)))) as maxnum
+            FROM mst_events
+            WHERE ISNUMERIC(SUBSTRING(event_id,4, LEN(event_id))) = 1
+        ");
+
+        $max = $row->maxnum ?? 0;
+        $nextNum = intval($max) + 1;
+
+        return 'EVT' . str_pad($nextNum, 5, '0', STR_PAD_LEFT);
+    };
+
+    $baseEventId = $validated['event_id'] ?? null;
+
+    // === TRY INSERT WITH RETRY ===
+    $attempts = 0;
+    $maxAttempts = 5;
+    while ($attempts < $maxAttempts) {
+        $attempts++;
+
+        if ($baseEventId) {
+            $eventIdToTry = $baseEventId;
+            if (DB::table('mst_events')->where('event_id', $eventIdToTry)->exists()) {
+                $eventIdToTry = $generateNextEventId();
             }
+        } else {
+            $eventIdToTry = $generateNextEventId();
         }
 
-        $validated['created_by'] = session('employee_id');
-        $validated['updated_by'] = session('employee_id');
-        $validated['created_at'] = now();
-        $validated['updated_at'] = now();
-
-        // Use transaction: create event and insert tags if provided
         DB::beginTransaction();
         try {
-            MstEvent::create($validated);
 
+            // === INSERT EVENT ===
+            MstEvent::create([
+                'event_id'      => $eventIdToTry,
+                'event_name'    => $validated['event_name'],
+                'description'   => $validated['description'],
+                'location'      => $validated['location'],
+                'status'        => $validated['status'],
+                'profile_photo' => $photoPath,   // <== FOTO MASUK DB DI SINI
+
+                'created_by'    => $createdBy,
+                'updated_by'    => $createdBy,
+                'created_at'    => $now,
+                'updated_at'    => $now,
+            ]);
+
+            // === INSERT TAGS ===
             if (!empty($validated['tag_codes'])) {
                 foreach ($validated['tag_codes'] as $tagCode) {
-                    $tagId = $validated['event_id'] . '_' . $tagCode;
+                    $tagId = $eventIdToTry . '_' . $tagCode;
 
-                    // Avoid duplicate
-                    $exists = DB::select('SELECT TOP (1) 1 AS found FROM mst_tag_events WHERE tag_id = ?', [$tagId]);
-                    if (empty($exists)) {
+                    if (! DB::table('mst_tag_events')->where('tag_id', $tagId)->exists()) {
                         MstTagEvent::create([
-                            'tag_id' => $tagId,
-                            'event_id' => $validated['event_id'],
-                            'tag_code' => $tagCode,
-                            'created_by' => session('employee_id'),
-                            'updated_by' => session('employee_id'),
-                            'created_at' => now(),
-                            'updated_at' => now(),
+                            'tag_id'     => $tagId,
+                            'event_id'   => $eventIdToTry,
+                            'tag_code'   => $tagCode,
+                            'created_by' => $createdBy,
+                            'updated_by' => $createdBy,
+                            'created_at' => $now,
+                            'updated_at' => $now,
                         ]);
                     }
                 }
             }
 
             DB::commit();
-
             return redirect()->route('employee.events.index')
-                           ->with('success', 'Event created successfully!');
+                             ->with('success', 'Event created successfully!');
+
         } catch (\Exception $e) {
+
             DB::rollBack();
+
+            if (str_contains($e->getMessage(), 'duplicate')) {
+                $baseEventId = null;
+                continue;
+            }
+
             throw $e;
         }
     }
 
+    return back()->withInput()->with('error', 'Failed to create event (please try again).');
+}
+
+
+
+
     /**
      * Show form for editing event
      */
-    public function edit($id)
-    {
-        $event = DB::select(
-            'SELECT * FROM mst_events WHERE event_id = ?',
-            [$id]
-        );
+   public function edit($id)
+{
+    $event = DB::select(
+        'SELECT event_id, event_name, description, location, status, profile_photo 
+         FROM mst_events WHERE event_id = ?',
+        [$id]
+    );
 
-        if (empty($event)) {
-            return redirect()->route('employee.events.index')
-                           ->with('error', 'Event not found!');
-        }
-
-        // Load tag options and assigned tags for edit form
-        $availableTags = DB::select(
-            "SELECT item_code AS tag_code, item_name FROM mst_detail_settings WHERE header_id = ? AND status = ? ORDER BY item_name",
-            ['TAG_EVENT', 'Active']
-        );
-
-        $assignedTags = DB::select('SELECT tag_code FROM mst_tag_events WHERE event_id = ?', [$id]);
-        $assignedTagCodes = array_map(function($t){ return $t->tag_code; }, $assignedTags);
-
-        return view('employee.events.edit', [
-            'event' => $event[0],
-            'availableTags' => $availableTags,
-            'assignedTags' => $assignedTagCodes,
-        ]);
+    if (empty($event)) {
+        return redirect()->route('events.index')
+                       ->with('error', 'Event not found!');
     }
 
-    /**
-     * Update event in database
-     */
-    public function update(Request $request, $id)
-    {
-        $event = MstEvent::findOrFail($id);
+    $availableTags = DB::select(
+        "SELECT item_code AS tag_code, item_name 
+         FROM mst_detail_settings 
+         WHERE header_id = ? AND status = ? 
+         ORDER BY item_name",
+        ['TAG_EVENT', 'Active']
+    );
 
-        $validated = $request->validate([
-            'event_name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'location' => 'required|string|max:255',
-            'status' => 'required|in:Upcoming,Ongoing,Completed,Cancelled',
-            'tag_codes' => 'nullable|array',
-            'tag_codes.*' => 'required_with:tag_codes|string|max:50',
+    $assignedTags = DB::select(
+        'SELECT tag_code FROM mst_tag_events WHERE event_id = ?',
+        [$id]
+    );
+    $assignedTagCodes = array_map(fn($t) => $t->tag_code, $assignedTags);
+
+    return view('events.edit', [
+        'event' => $event[0],
+        'availableTags' => $availableTags,
+        'assignedTags' => $assignedTagCodes,
+    ]);
+}
+public function update(Request $request, $id)
+{
+    $event = MstEvent::findOrFail($id);
+
+    $validated = $request->validate([
+        'event_name' => 'required|string|max:255',
+        'description' => 'required|string',
+        'location' => 'required|string|max:255',
+        'status' => 'required|in:Upcoming,Ongoing,Completed,Cancelled',
+        'tag_codes' => 'nullable|array',
+        'tag_codes.*' => 'required_with:tag_codes|string|max:50',
+        'profile_photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048'
+    ]);
+
+    $validated['updated_by'] = session('employee_id');
+    $validated['updated_at'] = now();
+
+    DB::beginTransaction();
+    try {
+
+        // ================================
+        //  📌 HANDLE UPLOAD PROFILE PHOTO
+        // ================================
+        if ($request->hasFile('profile_photo')) {
+
+            // Delete old photo if exists
+            if ($event->profile_photo && Storage::exists('public/'.$event->profile_photo)) {
+                Storage::delete('public/'.$event->profile_photo);
+            }
+
+            // Save new photo
+            $path = $request->file('profile_photo')->store('event_photos', 'public');
+            $validated['profile_photo'] = $path;
+        }
+
+        // ================================
+        //  📌 UPDATE EVENT
+        // ================================
+        $event->update([
+            'event_name'    => $validated['event_name'],
+            'description'   => $validated['description'],
+            'location'      => $validated['location'],
+            'status'        => $validated['status'],
+            'profile_photo' => $validated['profile_photo'] ?? $event->profile_photo,
+            'updated_by'    => $validated['updated_by'],
+            'updated_at'    => $validated['updated_at'],
         ]);
 
-        $validated['updated_by'] = session('employee_id');
-        $validated['updated_at'] = now();
+        // ================================
+        //  📌 VALIDASI TAG
+        // ================================
+        $submittedTags = $validated['tag_codes'] ?? [];
 
-        DB::beginTransaction();
-        try {
-            // Update event fields
-            $event->update([
-                'event_name' => $validated['event_name'],
-                'description' => $validated['description'],
-                'location' => $validated['location'],
-                'status' => $validated['status'],
-                'updated_by' => $validated['updated_by'],
-                'updated_at' => $validated['updated_at'],
-            ]);
+        if (!empty($submittedTags)) {
+            $rows = DB::select(
+                "SELECT item_code FROM mst_detail_settings 
+                 WHERE header_id = ? AND status = ? 
+                 AND item_code IN (" . implode(',', array_fill(0, count($submittedTags), '?')) . ")",
+                array_merge(['TAG_EVENT', 'Active'], $submittedTags)
+            );
 
-            // Validate provided tag_codes exist in settings
-            $submittedTags = $validated['tag_codes'] ?? [];
-            if (!empty($submittedTags)) {
-                $rows = DB::select(
-                    "SELECT item_code FROM mst_detail_settings WHERE header_id = ? AND status = ? AND item_code IN (" .
-                    implode(',', array_fill(0, count($submittedTags), '?')) . ")",
-                    array_merge(['TAG_EVENT', 'Active'], $submittedTags)
-                );
-                $found = array_map(function ($r) { return $r->item_code; }, $rows);
-                $diff = array_diff($submittedTags, $found);
-                if (!empty($diff)) {
-                    DB::rollBack();
-                    return back()->withInput()->withErrors(['tag_codes' => 'One or more selected tags are invalid.']);
-                }
-            }
+            $found = array_map(fn($r) => $r->item_code, $rows);
+            $diff = array_diff($submittedTags, $found);
 
-            // Sync tags: compute existing, to add, to remove
-            $existing = DB::select('SELECT tag_code FROM mst_tag_events WHERE event_id = ?', [$id]);
-            $existingCodes = array_map(function($r){ return $r->tag_code; }, $existing);
-
-            $toAdd = array_diff($submittedTags, $existingCodes);
-            $toRemove = array_diff($existingCodes, $submittedTags);
-
-            if (!empty($toRemove)) {
-                DB::delete(
-                    'DELETE FROM mst_tag_events WHERE event_id = ? AND tag_code IN (' . implode(',', array_fill(0, count($toRemove), '?')) . ')',
-                    array_merge([$id], $toRemove)
-                );
-            }
-
-            foreach ($toAdd as $tagCode) {
-                $tagId = $id . '_' . $tagCode;
-                MstTagEvent::create([
-                    'tag_id' => $tagId,
-                    'event_id' => $id,
-                    'tag_code' => $tagCode,
-                    'created_by' => session('employee_id'),
-                    'updated_by' => session('employee_id'),
-                    'created_at' => now(),
-                    'updated_at' => now(),
+            if (!empty($diff)) {
+                DB::rollBack();
+                return back()->withInput()->withErrors([
+                    'tag_codes' => 'One or more selected tags are invalid.'
                 ]);
             }
-
-            DB::commit();
-
-            return redirect()->route('employee.events.index')
-                           ->with('success', 'Event updated successfully!');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Error updating event: ' . $e->getMessage());
         }
+
+        // ================================
+        //  📌 SYNC TAGS
+        // ================================
+        $existing = DB::select(
+            'SELECT tag_code FROM mst_tag_events WHERE event_id = ?',
+            [$id]
+        );
+        $existingCodes = array_map(fn($r) => $r->tag_code, $existing);
+
+        $toAdd = array_diff($submittedTags, $existingCodes);
+        $toRemove = array_diff($existingCodes, $submittedTags);
+
+        if (!empty($toRemove)) {
+            DB::delete(
+                'DELETE FROM mst_tag_events WHERE event_id = ? 
+                 AND tag_code IN (' . implode(',', array_fill(0, count($toRemove), '?')) . ')',
+                array_merge([$id], $toRemove)
+            );
+        }
+
+        foreach ($toAdd as $tagCode) {
+            $tagId = $id . '_' . $tagCode;
+            MstTagEvent::create([
+                'tag_id'      => $tagId,
+                'event_id'    => $id,
+                'tag_code'    => $tagCode,
+                'created_by'  => session('employee_id'),
+                'updated_by'  => session('employee_id'),
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ]);
+        }
+
+        DB::commit();
+
+        return redirect()->route('employee.events.index')
+                       ->with('success', 'Event updated successfully!');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return back()->with('error', 'Error updating event: ' . $e->getMessage());
     }
+}
+
 
     /**
      * Delete event and all its tags
@@ -275,7 +442,7 @@ class EventController extends Controller
         // Delete event
         $event->delete();
 
-        return redirect()->route('employee.events.index')
+        return redirect()->route('events.index')
                        ->with('success', 'Event and all tags deleted successfully!');
     }
 
@@ -293,7 +460,7 @@ class EventController extends Controller
         );
 
         if (empty($event)) {
-            return redirect()->route('employee.events.index')
+            return redirect()->route('events.index')
                            ->with('error', 'Event not found!');
         }
 
@@ -310,7 +477,7 @@ class EventController extends Controller
                 ['TAG_EVENT', 'Active']
             );
 
-        return view('employee.events.index-tag', [
+        return view('events.index-tag', [
             'event' => $event[0],
             'tags' => $tags,
             'availableTags' => $availableTags
@@ -329,7 +496,7 @@ class EventController extends Controller
         );
 
         if (empty($event)) {
-            return redirect()->route('employee.events.index')
+            return redirect()->route('events.index')
                            ->with('error', 'Event not found!');
         }
 
@@ -349,7 +516,7 @@ class EventController extends Controller
             return $tag->tag_code;
         }, $assignedTags);
 
-        return view('employee.events.create-tag', [
+        return view('events.create-tag', [
             'event' => $event[0],
             'availableTags' => $availableTags,
             'assignedTags' => $assignedTagCodes
@@ -404,7 +571,7 @@ class EventController extends Controller
             ]);
         }
 
-        return redirect()->route('employee.events.tag', $eventId)
+        return redirect()->route('events.tag', $eventId)
                        ->with('success', count($tagsToAdd) . ' tag(s) added successfully!');
     }
 
@@ -416,7 +583,7 @@ class EventController extends Controller
         $tag = MstTagEvent::findOrFail($tagId);
         $tag->delete();
 
-        return redirect()->route('employee.events.tag', $eventId)
+        return redirect()->route('events.tag', $eventId)
                        ->with('success', 'Tag deleted successfully!');
     }
 }

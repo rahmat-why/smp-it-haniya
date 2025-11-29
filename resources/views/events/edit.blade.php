@@ -1,92 +1,145 @@
 @extends('layouts.app')
 
+@section('title', 'Edit Event')
+@section('page-title', 'Event Management')
+
 @section('content')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
 <div class="container-fluid">
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0">Edit Event</h5>
+
+    <div class="card shadow-lg border-0 rounded-3 overflow-hidden">
+
+        <div class="card-header bg-white border-0 py-3 px-4 d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0">
+                <i class="fas fa-calendar-edit text-warning"></i> Edit Event: {{ $event->event_name }}
+            </h5>
+        </div>
+
+        <div class="card-body px-4">
+
+            @if ($errors->any())
+                <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+                    <ul class="mb-0 ps-3">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
-                <div class="card-body">
-                    @if ($errors->any())
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <h6 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Validation Errors</h6>
-                            <ul class="mb-0">
-                                @foreach ($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    @endif
+            @endif
 
-                    <form action="{{ route('employee.events.update', $event->event_id) }}" method="POST">
-                        @csrf
-                        @method('PUT')
+            <!-- FORM MULAI -->
+            <form action="{{ route('employee.events.update', $event->event_id) }}" 
+                  method="POST" 
+                  enctype="multipart/form-data"> {{-- WAJIB UNTUK UPLOAD --}}
+                  
+                @csrf
+                @method('PUT')
 
-                        <div class="mb-3">
-                            <label for="event_id" class="form-label">Event ID</label>
-                            <input type="text" class="form-control" id="event_id" 
-                                   value="{{ $event->event_id }}" disabled>
-                            <small class="text-muted">Cannot be changed</small>
-                        </div>
+                <div class="row">
 
-                        <div class="mb-3">
-                            <label for="event_name" class="form-label">Event Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control @error('event_name') is-invalid @enderror" 
-                                   id="event_name" name="event_name" placeholder="e.g., Annual Gathering"
-                                   value="{{ old('event_name', $event->event_name) }}" required>
-                            @error('event_name')
-                                <small class="text-danger">{{ $message }}</small>
-                            @enderror
-                        </div>
+                    <!-- FOTO EVENT -->
+                    <div class="col-12 mb-4 text-center">
+                        <img id="photoPreview"
+                             src="{{ $event->profile_photo ? asset('storage/'.$event->profile_photo) : asset('no-image.png') }}"
+                             class="rounded mb-2"
+                             width="150"
+                             height="150"
+                             style="object-fit: cover; border:3px solid #ddd;">
+                        
+                        <input type="file" 
+                               name="profile_photo" 
+                               id="profile_photo"
+                               accept="image/*"
+                               class="form-control mt-2">
 
-                        <div class="mb-3">
-                            <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
-                            <textarea class="form-control @error('description') is-invalid @enderror" 
-                                      id="description" name="description" rows="4" placeholder="Event description" required>{{ old('description', $event->description) }}</textarea>
-                            @error('description')
-                                <small class="text-danger">{{ $message }}</small>
-                            @enderror
-                        </div>
+                        <small class="text-muted">Upload photo event (optional)</small>
+                    </div>
 
-                        <div class="mb-3">
-                            <label for="location" class="form-label">Location <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control @error('location') is-invalid @enderror" 
-                                   id="location" name="location" placeholder="e.g., School Auditorium"
-                                   value="{{ old('location', $event->location) }}" required>
-                            @error('location')
-                                <small class="text-danger">{{ $message }}</small>
-                            @enderror
-                        </div>
+                    <!-- EVENT NAME -->
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label fw-semibold">Event Name <span class="text-danger">*</span></label>
+                        <input type="text"
+                               name="event_name"
+                               class="form-control"
+                               value="{{ old('event_name', $event->event_name) }}"
+                               required>
+                    </div>
 
-                        <div class="mb-3">
-                            <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
-                            <select class="form-select @error('status') is-invalid @enderror" id="status" name="status" required>
-                                <option value="">-- Select Status --</option>
-                                <option value="Upcoming" {{ old('status', $event->status) == 'Upcoming' ? 'selected' : '' }}>Upcoming</option>
-                                <option value="Ongoing" {{ old('status', $event->status) == 'Ongoing' ? 'selected' : '' }}>Ongoing</option>
-                                <option value="Completed" {{ old('status', $event->status) == 'Completed' ? 'selected' : '' }}>Completed</option>
-                                <option value="Cancelled" {{ old('status', $event->status) == 'Cancelled' ? 'selected' : '' }}>Cancelled</option>
-                            </select>
-                            @error('status')
-                                <small class="text-danger">{{ $message }}</small>
-                            @enderror
-                        </div>
+                    <!-- DESCRIPTION -->
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label fw-semibold">Description <span class="text-danger">*</span></label>
+                        <textarea name="description"
+                                  class="form-control"
+                                  rows="4"
+                                  required>{{ old('description', $event->description) }}</textarea>
+                    </div>
 
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-warning">
-                                <i class="fas fa-save"></i> Update Event
-                            </button>
-                            <a href="{{ route('employee.events.index') }}" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> Cancel
-                            </a>
-                        </div>
-                    </form>
+                    <!-- LOCATION -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Location <span class="text-danger">*</span></label>
+                        <input type="text"
+                               name="location"
+                               value="{{ old('location', $event->location) }}"
+                               class="form-control"
+                               required>
+                    </div>
+
+                    <!-- STATUS -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
+                        <select name="status" class="form-select" required>
+                            <option value="Upcoming"  {{ $event->status == 'Upcoming' ? 'selected' : '' }}>Upcoming</option>
+                            <option value="Ongoing"   {{ $event->status == 'Ongoing' ? 'selected' : '' }}>Ongoing</option>
+                            <option value="Completed" {{ $event->status == 'Completed' ? 'selected' : '' }}>Completed</option>
+                            <option value="Cancelled" {{ $event->status == 'Cancelled' ? 'selected' : '' }}>Cancelled</option>
+                        </select>
+                    </div>
+
+                    <!-- TAGS -->
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label fw-semibold">Tags</label>
+                        <select name="tag_codes[]" id="tag_codes" class="form-select" multiple>
+                            @foreach ($availableTags as $tag)
+                                <option value="{{ $tag->tag_code }}"
+                                    {{ in_array($tag->tag_code, $assignedTags ?? []) ? 'selected' : '' }}>
+                                    {{ $tag->item_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
                 </div>
-            </div>
+
+                <div class="d-flex gap-2 mt-3">
+                    <button type="submit" class="btn btn-warning shadow-sm">
+                        <i class="fas fa-save"></i> Update
+                    </button>
+                    <a href="{{ route('employee.events.index') }}" class="btn btn-secondary shadow-sm">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                </div>
+
+            </form>
+            <!-- FORM SELESAI -->
+
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function(){
+        $('#tag_codes').select2({ width: '100%' });
+
+        // PREVIEW FOTO BARU
+        $('#profile_photo').on('change', function(e){
+            let file = e.target.files[0];
+            if (!file) return;
+            $('#photoPreview').attr('src', URL.createObjectURL(file));
+        });
+    });
+</script>
+
 @endsection

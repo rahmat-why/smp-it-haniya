@@ -7,144 +7,206 @@ use App\Models\MstTagArticle;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
+use Yajra\DataTables\Facades\DataTables;
 
 class ArticleController extends Controller
 {
-    // Check authentication before accessing
-    public function __construct()
-    {
-        if (session('user_type') !== 'Employee') {
-            return redirect('/employee/login');
-        }
-    }
-
-    // ============ ARTICLE CRUD ============
-
-    /**
-     * Display all articles with tag count
-     */
     public function index()
-    {
-        // Avoid grouping/sorting on text/ntext columns (SQL Server restriction)
-        // Aggregate the potentially large text column (content) with MAX after casting
-        $articles = DB::select('
-            SELECT a.article_id, a.title, a.slug,
-                   MAX(CAST(a.content AS NVARCHAR(MAX))) AS content,
-                   a.image, a.status, a.created_at, a.updated_at, a.created_by, a.updated_by,
-                   COUNT(t.tag_id) as tag_count
-            FROM mst_articles a
-            LEFT JOIN mst_tag_articles t ON a.article_id = t.article_id
-            GROUP BY a.article_id, a.title, a.slug, a.image, a.status, a.created_at, a.updated_at, a.created_by, a.updated_by
-            ORDER BY a.article_id DESC
-        ');
+{
+    // Halaman akan memuat DataTables AJAX
+    return view('articles.index');
+}
 
-        // Fetch all tags for the returned articles in one query and attach them to each article
-        $articleIds = array_map(function ($a) { return $a->article_id; }, $articles);
-        $tagsByArticle = [];
-        if (!empty($articleIds)) {
-            $placeholders = implode(',', array_fill(0, count($articleIds), '?'));
-            $tagRows = DB::select(
-                "SELECT t.article_id, t.tag_code, d.item_name FROM mst_tag_articles t LEFT JOIN mst_detail_settings d ON t.tag_code = d.item_code AND d.header_id = 'TAG_ARTICLE' WHERE t.article_id IN ($placeholders) ORDER BY t.tag_id DESC",
-                $articleIds
-            );
+/**
+ * Return JSON untuk DataTables / AJAX
+ */
+public function getData()
+{
+    // Ambil data dasar terlebih dahulu
+    $articles = DB::table('mst_articles as a')
+        ->select(
+            'a.article_id',
+            'a.title',
+            'a.slug',
+            'a.content',
+            'a.image',
+            'a.status',
+            'a.created_at',
+            'a.updated_at',
+            'a.created_by',
+            'a.updated_by',
+            DB::raw('(SELECT COUNT(*) FROM mst_tag_articles WHERE article_id = a.article_id) AS tag_count')
+        );
 
-            foreach ($tagRows as $r) {
-                $label = $r->item_name ?? $r->tag_code;
-                $tagsByArticle[$r->article_id][] = $label;
+    return DataTables::of($articles)
+        ->addColumn('tags', function ($row) {
+            // Ambil tag untuk setiap artikel
+            $tags = DB::table('mst_tag_articles as t')
+                ->leftJoin('mst_detail_settings as d', function ($join) {
+                    $join->on('t.tag_code', '=', 'd.item_code')
+                        ->where('d.header_id', '=', 'TAG_ARTICLE');
+                })
+                ->where('t.article_id', $row->article_id)
+                ->orderBy('t.tag_id', 'DESC')
+                ->get();
+
+            // Ambil label tag
+            $list = [];
+            foreach ($tags as $t) {
+                $list[] = $t->item_name ?? $t->tag_code;
             }
-        }
 
-        // Attach tags array to each article (empty array if none)
-        foreach ($articles as $a) {
-            $a->tags = $tagsByArticle[$a->article_id] ?? [];
-        }
+            return implode(', ', $list);
+        })
+        ->addColumn('action', function ($row) {
 
-        return view('employee.articles.index', compact('articles'));
-    }
+            $editUrl = url('articles/edit/' . $row->article_id);
+            $deleteUrl = url('articles/' . $row->article_id);
+            $csrf = csrf_token();
+
+            $form  = "<form action='{$deleteUrl}' method='POST' style='display:inline;' onsubmit=\"return confirm('Yakin hapus data ini?');\">";
+            $form .= "<input type='hidden' name='_token' value='{$csrf}'>";
+            $form .= "<input type='hidden' name='_method' value='DELETE'>";
+            $form .= "<button type='submit' class='btn btn-sm btn-danger'><i class='fas fa-trash'></i> Delete</button>";
+            $form .= "</form>";
+
+            return "<a href='{$editUrl}' class='btn btn-sm btn-warning me-1'><i class='fas fa-edit'></i> Edit</a>" . $form;
+        })
+        ->rawColumns(['action'])
+        ->make(true);
+}
+
 
     /**
      * Show form for creating new article
      */
-    public function create()
-    {
-        // Load tag options from settings for the create form
-        $availableTags = DB::select(
-            "SELECT item_code AS tag_code, item_name FROM mst_detail_settings WHERE header_id = ? AND status = ? ORDER BY item_name",
-            ['TAG_ARTICLE', 'Active']
-        );
+   public function create()
+{
+    // Load tag options from settings for the create form
+    $availableTags = DB::select(
+        "SELECT item_code AS tag_code, item_name 
+         FROM mst_detail_settings 
+         WHERE header_id = ? AND status = ? 
+         ORDER BY item_name",
+        ['TAG_ARTICLE', 'Active']
+    );
 
-        return view('employee.articles.create', compact('availableTags'));
+    // Generate New Article ID
+    $last = DB::table('mst_articles')->orderBy('article_id', 'desc')->first();
+
+    if ($last && preg_match('/(\d+)/', $last->article_id, $m)) {
+        $num = intval($m[1]) + 1;
+        $newArticleId = 'ART' . str_pad($num, 5, '0', STR_PAD_LEFT);
+    } else {
+        $newArticleId = 'ART00001';
     }
+
+    return view('articles.create', compact('availableTags', 'newArticleId'));
+}
+
 
     /**
      * Store new article in database
      */
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'article_id' => 'required|string|max:50|unique:mst_articles',
-            'title' => 'required|string|max:255',
-            'slug' => 'required|string|max:255|unique:mst_articles',
-            'content' => 'required|string',
-            'image' => 'nullable|string|max:500',
-            'status' => 'required|in:Draft,Published,Archived',
-            'tag_codes' => 'nullable|array',
-            'tag_codes.*' => 'required_with:tag_codes|string|max:50',
-        ]);
+   public function store(Request $request)
+{
+   $validated = $request->validate([
+    // ARTICLE ID – wajib string dan unik
+    'article_id' => [
+        'required',
+        'string',
+        'unique:mst_articles,article_id',
+    ],
 
-        // If tag_codes provided, ensure they exist in mst_detail_settings for TAG_ARTICLE
-        if (!empty($validated['tag_codes'])) {
-            $rows = DB::select(
-                "SELECT item_code FROM mst_detail_settings WHERE header_id = ? AND status = ? AND item_code IN (" .
-                implode(',', array_fill(0, count($validated['tag_codes']), '?')) . ")",
-                array_merge(['TAG_ARTICLE', 'Active'], $validated['tag_codes'])
-            );
-            $found = array_map(function ($r) { return $r->item_code; }, $rows);
-            $diff = array_diff($validated['tag_codes'], $found);
-            if (!empty($diff)) {
-                return back()->withInput()->withErrors(['tag_codes' => 'One or more selected tags are invalid.']);
-            }
-        }
+    // TITLE – hanya huruf, angka, dan spasi
+    'title' => [
+        'required',
+        'regex:/^[A-Za-z0-9 ]+$/',
+        'max:255',
+    ],
 
-        $validated['created_by'] = session('employee_id');
-        $validated['updated_by'] = session('employee_id');
-        $validated['created_at'] = now();
-        $validated['updated_at'] = now();
+    // SLUG – huruf kecil, angka, dan tanda minus
+  'slug' => ['nullable', 'string', 'max:255'],
 
-        // Use transaction: create article and insert tags if provided
-        DB::beginTransaction();
-        try {
-            MstArticle::create($validated);
 
-            if (!empty($validated['tag_codes'])) {
-                foreach ($validated['tag_codes'] as $tagCode) {
-                    $tagId = $validated['article_id'] . '_' . $tagCode;
+    // CONTENT
+    'content' => ['required', 'string'],
 
-                    // Avoid duplicate
-                    $exists = DB::select('SELECT TOP (1) 1 AS found FROM mst_tag_articles WHERE tag_id = ?', [$tagId]);
-                    if (empty($exists)) {
-                        MstTagArticle::create([
-                            'tag_id' => $tagId,
-                            'article_id' => $validated['article_id'],
-                            'tag_code' => $tagCode,
-                            'created_by' => session('employee_id'),
-                            'updated_by' => session('employee_id'),
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ]);
-                    }
-                }
-            }
+    // IMAGE opsional
+    'image' => ['nullable', 'string', 'max:500'],
 
-            DB::commit();
+    // STATUS
+    'status' => ['required', 'in:Draft,Published,Archived'],
 
-            return redirect()->route('employee.articles.index')
-                           ->with('success', 'Article created successfully!');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            throw $e;
+    // TAGS
+    'tag_codes' => ['nullable', 'array'],
+    'tag_codes.*' => ['required_with:tag_codes', 'string', 'max:50'],
+]);
+
+// Pastikan ID tetap dari input readonly
+$validated['article_id'] = $request->input('article_id');
+
+
+
+    // VALIDASI: Pastikan tag benar-benar ada di mst_detail_settings
+    if (!empty($validated['tag_codes'])) {
+        $rows = DB::select(
+            "SELECT item_code FROM mst_detail_settings WHERE header_id = ? AND status = ? AND item_code IN (" .
+            implode(',', array_fill(0, count($validated['tag_codes']), '?')) . ")",
+            array_merge(['TAG_ARTICLE', 'Active'], $validated['tag_codes'])
+        );
+
+        $found = array_map(fn($r) => $r->item_code, $rows);
+        $diff  = array_diff($validated['tag_codes'], $found);
+
+        if (!empty($diff)) {
+            return back()->withInput()->withErrors(['tag_codes' => 'One or more selected tags are invalid.']);
         }
     }
+
+    $validated['created_by'] = session('employee_id');
+    $validated['updated_by'] = session('employee_id');
+    $validated['created_at'] = now();
+    $validated['updated_at'] = now();
+
+    DB::beginTransaction();
+    try {
+        MstArticle::create($validated);
+
+        if (!empty($validated['tag_codes'])) {
+            foreach ($validated['tag_codes'] as $tagCode) {
+                $tagId = $validated['article_id'] . '_' . $tagCode;
+
+                $exists = DB::select(
+                    'SELECT TOP (1) 1 AS found FROM mst_tag_articles WHERE tag_id = ?',
+                    [$tagId]
+                );
+
+                if (empty($exists)) {
+                    MstTagArticle::create([
+                        'tag_id' => $tagId,
+                        'article_id' => $validated['article_id'],
+                        'tag_code' => $tagCode,
+                        'created_by' => session('employee_id'),
+                        'updated_by' => session('employee_id'),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+        }
+
+        DB::commit();
+
+        return redirect()
+            ->route('employee.articles.index')
+            ->with('success', 'Article created successfully!');
+    } catch (\Exception $e) {
+        DB::rollBack();
+        throw $e;
+    }
+}
+
 
     /**
      * Show form for editing article
@@ -170,7 +232,7 @@ class ArticleController extends Controller
         $assignedTags = DB::select('SELECT tag_code FROM mst_tag_articles WHERE article_id = ?', [$id]);
         $assignedTagCodes = array_map(function($t){ return $t->tag_code; }, $assignedTags);
 
-        return view('employee.articles.edit', [
+        return view('articles.edit', [
             'article' => $article[0],
             'availableTags' => $availableTags,
             'assignedTags' => $assignedTagCodes,
@@ -184,14 +246,20 @@ class ArticleController extends Controller
     {
         $article = MstArticle::findOrFail($id);
         $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'slug' => 'required|string|max:255|unique:mst_articles,slug,' . $id . ',article_id',
-            'content' => 'required|string',
-            'image' => 'nullable|string|max:500',
-            'status' => 'required|in:Draft,Published,Archived',
-            'tag_codes' => 'nullable|array',
-            'tag_codes.*' => 'required_with:tag_codes|string|max:50',
-        ]);
+    'title' => ['required', 'regex:/^[A-Za-z0-9 ]+$/', 'max:255'],
+    'slug'  => [
+        'required', 
+        'regex:/^[a-z0-9-]+$/',
+        'max:255',
+        'unique:mst_articles,slug,' . $id . ',article_id'
+    ],
+    'content' => ['required'],
+    'image' => ['nullable', 'regex:/^[A-Za-z0-9._\/\-]+$/', 'max:500'],
+    'status' => ['required', 'in:Draft,Published,Archived'],
+    'tag_codes' => ['nullable', 'array'],
+    'tag_codes.*' => ['required_with:tag_codes', 'regex:/^[A-Za-z0-9]+$/', 'max:50'],
+]);
+
 
         $validated['updated_by'] = session('employee_id');
         $validated['updated_at'] = now();
@@ -294,7 +362,7 @@ class ArticleController extends Controller
         );
 
         if (empty($article)) {
-            return redirect()->route('employee.articles.index')
+            return redirect()->route('articles.index')
                            ->with('error', 'Article not found!');
         }
 
@@ -310,7 +378,7 @@ class ArticleController extends Controller
             ['TAG_ARTICLE', 'Active']
         );
 
-        return view('employee.articles.index-tag', [
+        return view('articles.index-tag', [
             'article' => $article[0],
             'tags' => $tags,
             'availableTags' => $availableTags
@@ -349,7 +417,7 @@ class ArticleController extends Controller
             return $tag->tag_code;
         }, $assignedTags);
 
-        return view('employee.articles.create-tag', [
+        return view('articles.create-tag', [
             'article' => $article[0],
             'availableTags' => $availableTags,
             'assignedTags' => $assignedTagCodes

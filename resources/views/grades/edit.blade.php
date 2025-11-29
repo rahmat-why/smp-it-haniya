@@ -31,15 +31,17 @@
 
                         <div class="mb-3">
                             <label class="form-label">Subject</label>
-                            <select class="form-select" name="subject_id" required>
-                                <option value="">-- Select Subject --</option>
-                                @foreach ($subjects as $s)
-                                <option value="{{ $s->subject_id }}" 
-                                    {{ $s->subject_id == $grade->subject_id ? 'selected' : '' }}>
-                                    {{ $s->subject_name }}
-                                </option>
-                                @endforeach
-                            </select>
+                           <select class="form-select" name="subject_id" id="subject_id" required>
+    <option value="">-- Select Subject --</option>
+    @foreach ($subjects as $s)
+    <option value="{{ $s->subject_id }}" 
+        data-min="{{ $s->minimum_value }}"
+        {{ $s->subject_id == $grade->subject_id ? 'selected' : '' }}>
+        {{ $s->subject_name }} (Min: {{ $s->minimum_value }})
+    </option>
+    @endforeach
+</select>
+
                         </div>
 
                         <div class="mb-3">
@@ -77,44 +79,44 @@
                                         <tr>
                                             <th>NIS</th>
                                             <th>Name</th>
+                                            <th>Minimum Velue</th>
                                             <th>Grade</th>
                                             <th>Attitude</th>
                                             <th>Notes</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach ($details as $d)
-                                        <tr>
-                                            <td><span class="badge bg-info">{{ $d->student_id }}</span></td>
-                                            <td>{{ $d->first_name }} {{ $d->last_name }}</td>
+@foreach ($details as $d)
+<tr>
+    <td><span class="badge bg-info">{{ $d->student_id }}</span></td>
+    <td>{{ $d->first_name }} {{ $d->last_name }}</td>
+<td>
+    <input type="number" step="0.01"
+        min="{{ $subjects->firstWhere('subject_id', $grade->subject_id)->minimum_value ?? 0 }}"
+        name="grades[{{ $d->student_class_id }}][grade_value]"
+        class="form-control form-control-sm grade-input"
+        value="{{ $d->grade_value }}">
+</td>
 
-                                            <td>
-                                                <input type="number" step="0.01"
-                                                    name="grades[{{ $d->student_class_id }}][grade_value]"
-                                                    class="form-control form-control-sm"
-                                                    value="{{ $d->grade_value }}">
-                                            </td>
+    <td>
+        <input type="text"
+            name="grades[{{ $d->student_class_id }}][grade_attitude]"
+            class="form-control form-control-sm"
+            value="{{ $d->grade_attitude }}">
+    </td>
+    <td>
+        <input type="text"
+            name="grades[{{ $d->student_class_id }}][notes]"
+            class="form-control form-control-sm"
+            value="{{ $d->notes }}">
+    </td>
+    <input type="hidden"
+        name="grades[{{ $d->student_class_id }}][student_class_id]"
+        value="{{ $d->student_class_id }}">
+</tr>
+@endforeach
+</tbody>
 
-                                            <td>
-                                                <input type="text"
-                                                    name="grades[{{ $d->student_class_id }}][grade_attitude]"
-                                                    class="form-control form-control-sm"
-                                                    value="{{ $d->grade_attitude }}">
-                                            </td>
-
-                                            <td>
-                                                <input type="text"
-                                                    name="grades[{{ $d->student_class_id }}][notes]"
-                                                    class="form-control form-control-sm"
-                                                    value="{{ $d->notes }}">
-                                            </td>
-
-                                            <input type="hidden"
-                                                name="grades[{{ $d->student_class_id }}][student_class_id]"
-                                                value="{{ $d->student_class_id }}">
-                                        </tr>
-                                        @endforeach
-                                    </tbody>
                                 </table>
                             </div>
                         </div>
@@ -137,6 +139,7 @@
 
 @push('scripts')
 <script>
+    
 $(document).on('submit', '#grade-form', function(e){
     e.preventDefault();
     const $form = $(this);
@@ -155,6 +158,14 @@ $(document).on('submit', '#grade-form', function(e){
     }).always(function(){
         $btn.prop('disabled', false).html('<i class="fas fa-save"></i> Update Grades');
     });
+    $('#subject_id').on('change', function(){
+    const min = $(this).find(':selected').data('min') || 0;
+    $('.grade-input').each(function () {
+        $(this).attr('min', min);
+        $(this).attr('placeholder', 'Min: ' + min);
+    });
+});
+
 });
 </script>
 @endpush

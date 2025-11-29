@@ -1,89 +1,102 @@
 @extends('layouts.app')
 
+@section('title', 'Assign Students')
+@section('page-title', 'Assign Students to Class')
+
 @section('content')
 <div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h2><i class="fas fa-plus-circle"></i> Assign Students to Class</h2>
+    <div class="card shadow-lg border-0 rounded-3 overflow-hidden">
+        <div class="card-header bg-white border-0 py-3 px-4 d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0">
+                <i class="fas fa-plus-circle text-primary"></i> Assign Students to Class
+            </h5>
         </div>
-        <div class="col-md-4 text-end">
-            <a href="{{ route('employee.academic_classes.index') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Academic Classes
-            </a>
-        </div>
-    </div>
 
-    <div class="card">
-        <div class="card-body">
-            <form action="{{ route('employee.student_classes.store') }}" method="POST">
-                @csrf
+        <div class="card-body px-4">
 
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="academic_year_id" class="form-label">Academic Year <span class="text-danger">*</span></label>
-                        <select class="form-select @error('academic_year_id') is-invalid @enderror" 
-                                id="academic_year_id" name="academic_year_id" required>
-                            <option value="">-- Select Academic Year --</option>
-                        </select>
-                        @error('academic_year_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
+            {{-- Alert Messages --}}
+            @if (session('error'))
+                <div class="alert alert-danger">{{ session('error') }}</div>
+            @endif
+            @if (session('success'))
+                <div class="alert alert-success">{{ session('success') }}</div>
+            @endif
+
+            <div class="bg-white border rounded p-4 shadow-sm">
+                <form action="{{ route('employee.student_classes.store') }}" method="POST" id="assign-student-form">
+                    @csrf
+
+                    {{-- ROW 1: Academic Year & Class --}}
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Academic Year <span class="text-danger">*</span></label>
+                            <select name="academic_year_id" id="academic_year_id" class="form-select" required
+                                    oninvalid="this.classList.add('is-invalid')"
+                                    oninput="this.classList.remove('is-invalid')">
+                                <option value="">-- Select Academic Year --</option>
+                            </select>
+                            <small class="text-muted d-block">Required. Select an academic year.</small>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Academic Class <span class="text-danger">*</span></label>
+                            <select name="academic_class_id" id="academic_class_id" class="form-select" required
+                                    oninvalid="this.classList.add('is-invalid')"
+                                    oninput="this.classList.remove('is-invalid')">
+                                <option value="">-- Select Academic Class --</option>
+                            </select>
+                            <small class="text-muted d-block">Required. Select an academic class.</small>
+                        </div>
                     </div>
-                </div>
 
-                <div class="mb-3">
-                    <label for="academic_class_id" class="form-label">Academic Class <span class="text-danger">*</span></label>
-                    <select class="form-select @error('academic_class_id') is-invalid @enderror" 
-                            id="academic_class_id" name="academic_class_id" required>
-                        <option value="">-- Select Academic Class --</option>
-                    </select>
-                    @error('academic_class_id')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Select Students <span class="text-danger">*</span></label>
-                    <div class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">
-                        @forelse ($students as $student)
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="student_ids[]" 
-                                       value="{{ $student->student_id }}" 
-                                       id="student_{{ $student->student_id }}"
-                                       {{ in_array($student->student_id, old('student_ids', [])) ? 'checked' : '' }}>
-                                <label class="form-check-label" for="student_{{ $student->student_id }}">
-                                    {{ $student->first_name }} {{ $student->last_name }} 
-                                    <small class="text-muted">({{ $student->student_id }})</small>
-                                </label>
-                            </div>
-                        @empty
-                            <p class="text-muted">No active students available</p>
-                        @endforelse
+                    {{-- STUDENT LIST --}}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Select Students <span class="text-danger">*</span></label>
+                        <div class="border rounded p-3" style="max-height: 420px; overflow-y: auto;">
+                            @forelse ($students as $student)
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" name="student_ids[]" value="{{ $student->student_id }}"
+                                           id="student_{{ $student->student_id }}"
+                                           class="form-check-input"
+                                           {{ in_array($student->student_id, old('student_ids', [])) ? 'checked' : '' }}
+                                           required
+                                           oninvalid="this.classList.add('is-invalid')"
+                                           oninput="this.classList.remove('is-invalid')">
+                                    <label class="form-check-label" for="student_{{ $student->student_id }}">
+                                        {{ $student->first_name }} {{ $student->last_name }}
+                                        <small class="text-muted">({{ $student->student_id }})</small>
+                                    </label>
+                                </div>
+                            @empty
+                                <p class="text-muted">No active students available.</p>
+                            @endforelse
+                        </div>
+                        <small class="text-muted d-block">Required. Select at least one student.</small>
                     </div>
-                    @error('student_ids')
-                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                    @enderror
-                </div>
 
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Assign Students
-                    </button>
-                    <a href="{{ route('employee.academic_classes.index') }}" class="btn btn-secondary">
-                        <i class="fas fa-times"></i> Cancel
-                    </a>
-                </div>
-            </form>
+                    {{-- BUTTONS --}}
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="submit" id="save-assign-btn" class="btn btn-primary shadow-sm">
+                            <i class="fas fa-save"></i> Assign Students
+                        </button>
+                        <a href="{{ route('employee.student_classes.index') }}" class="btn btn-secondary shadow-sm">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
+@endsection
 
 @push('scripts')
 <script>
 $(function(){
-    const selectedAcademicClassId = '{{ $selectedAcademicClassId ?? '' }}';
+    const selectedAcademicYearId = '{{ old('academic_year_id') ?? '' }}';
+    const selectedAcademicClassId = '{{ old('academic_class_id') ?? '' }}';
 
-    // Load academic years via AJAX
+    // Load academic years
     function loadYears() {
         $.getJSON('{{ route('employee.academic_classes.api.years') }}')
             .done(function(data){
@@ -92,46 +105,40 @@ $(function(){
                 data.forEach(function(y){
                     $year.append(`<option value="${y.academic_year_id}">${y.academic_year_id}</option>`);
                 });
+                if (selectedAcademicYearId) $year.val(selectedAcademicYearId).trigger('change');
             });
     }
 
-    // Load academic classes for a given year via AJAX
+    // Load classes based on year
     function loadAcademicClasses(yearId){
         const urlBase = '{{ url('academic-classes/api/by-year') }}';
-        if (!yearId) {
-            $('#academic_class_id').find('option:not(:first)').remove();
-            return;
-        }
-        $.getJSON(urlBase + '/' + encodeURIComponent(yearId))
+        const $ac = $('#academic_class_id');
+
+        $ac.find('option:not(:first)').remove();
+        if (!yearId) return;
+
+        $.getJSON(urlBase + '/' + yearId)
             .done(function(data){
-                const $ac = $('#academic_class_id');
-                $ac.find('option:not(:first)').remove();
                 data.forEach(function(item){
                     const text = `${item.class_name} (Level ${item.class_level})`;
-                    const option = $('<option>')
-                        .val(item.academic_class_id)
-                        .text(item.academic_class_id + ' - ' + text);
-                    $ac.append(option);
+                    $ac.append($('<option>').val(item.academic_class_id).text(item.academic_class_id + ' - ' + text));
                 });
                 if (selectedAcademicClassId) $ac.val(selectedAcademicClassId);
             });
     }
 
-    // Init
     loadYears();
 
     $('#academic_year_id').on('change', function(){
-        const year = $(this).val();
-        loadAcademicClasses(year);
+        loadAcademicClasses($(this).val());
     });
 
-    // Checkbox selection tracking
-    const checkboxes = document.querySelectorAll('input[name="student_ids[]"]');
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const selected = document.querySelectorAll('input[name="student_ids[]"]:checked').length;
-            console.log(selected + ' students selected');
-        });
+    // Client-side checkbox validation
+    $('#assign-student-form').on('submit', function(e){
+        if ($('input[name="student_ids[]"]:checked').length === 0){
+            alert('Please select at least one student.');
+            e.preventDefault();
+        }
     });
 });
 </script>

@@ -4,120 +4,128 @@
 
 @section('content')
 <div class="container-fluid mt-4">
-    <!-- Welcome Section -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card bg-primary text-white shadow-sm">
-                <div class="card-body">
-                    <h1 class="card-title mb-0">
-                        @if(Auth::check())
-                        Welcome, {{ Auth::user()->name }}
-                        @elseif(session()->has('name'))
-                        Welcome, {{ session('name') }}
-                        @else
-                        Welcome, Employee
-                        @endif
-                    </h1>
-                    <p class="card-text mt-2">Employee Dashboard - {{ now()->format('l, F d, Y') }}</p>
 
+    <!-- FILTER BULAN & TAHUN -->
+    <div class="card mb-4 shadow-sm border-primary">
+        <div class="card-body d-flex gap-2 flex-wrap align-items-center">
+            <form method="GET" class="d-flex gap-2 flex-wrap w-100">
+                <select name="year" class="form-control w-auto">
+                    @for($y=date('Y')-5; $y<=date('Y'); $y++)
+                        <option value="{{ $y }}" {{ $filter_year==$y?'selected':'' }}>{{ $y }}</option>
+                    @endfor
+                </select>
+                <select name="month" class="form-control w-auto">
+                    @for($m=1;$m<=12;$m++)
+                        <option value="{{ $m }}" {{ $filter_month==$m?'selected':'' }}>{{ date('F', mktime(0,0,0,$m,1)) }}</option>
+                    @endfor
+                </select>
+                <button class="btn btn-primary shadow-sm">Filter</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOTAL TAGIHAN / DIBAYAR -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card text-center shadow-sm border-primary h-100">
+                <div class="card-body">
+                    <h6 class="text-primary">Total Tagihan</h6>
+                    <h3 class="fw-bold">Rp {{ number_format($totalTagihan,0) }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card text-center shadow-sm border-primary h-100">
+                <div class="card-body">
+                    <h6 class="text-primary">Total Dibayar</h6>
+                    <h3 class="fw-bold">Rp {{ number_format($totalDibayar,0) }}</h3>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted mb-2">Total Students</h6>
-                            <h3 class="text-primary mb-0">125</h3>
-                        </div>
-                        <i class="fas fa-users fa-3x text-primary opacity-50"></i>
-                    </div>
+    <!-- DAFTAR KELAS -->
+    <div class="card mb-4 shadow-sm border-primary">
+        <div class="card-header bg-primary text-white fw-bold">Daftar Kelas</div>
+        <div class="card-body p-0">
+            <table class="table table-hover table-bordered mb-0">
+                <thead class="table-light text-center">
+                    <tr>
+                        <th>Kelas</th>
+                        <th>Total Siswa</th>
+                        <th>Total Sudah Bayar</th>
+                        <th>Total Belum Bayar</th>
+                        <th>Detail</th>
+                    </tr>
+                </thead>
+                <tbody class="text-center">
+                    @foreach($classes as $c)
+                        <tr>
+                            <td>{{ $c->class_name }}</td>
+                            <td>{{ $c->total_siswa }}</td>
+                            <td>{{ $c->total_sudah_bayar }}</td>
+                            <td>{{ $c->total_belum_bayar }}</td>
+                           
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- JADWAL MATA PELAJARAN & EVENTS -->
+    <div class="row g-3">
+        <!-- Jadwal Mata Pelajaran -->
+        <div class="col-md-8">
+            <h5 class="mb-3 text-primary fw-bold">Jadwal Mata Pelajaran</h5>
+            <div class="card shadow-sm border-primary">
+                <div class="card-body p-0">
+                    <table class="table table-hover table-bordered mb-0">
+                        <thead class="table-primary text-center">
+                            <tr>
+                                <th>Hari</th>
+                                <th>Pelajaran</th>
+                                <th>Guru</th>
+                                <th>Kelas</th>
+                                <th>Jam</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-center">
+                            @foreach($schedules as $s)
+                            <tr>
+                                <td>{{ $s->day }}</td>
+                                <td>{{ $s->subject_name }}</td>
+                                <td>{{ $s->teacher_name }}</td>
+                                <td>{{ $s->class_name }}</td>
+                                <td>{{ \Carbon\Carbon::parse($s->start_time)->format('H.i') }} - {{ \Carbon\Carbon::parse($s->end_time)->format('H.i') }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted mb-2">Total Teachers</h6>
-                            <h3 class="text-success mb-0">28</h3>
+
+        <!-- Event -->
+        <div class="col-md-4">
+            <h5 class="mb-3 text-primary fw-bold">Event</h5>
+            <div class="card shadow-sm border-primary" style="max-height: 500px; overflow-y: auto;">
+                <div class="card-body p-2">
+                    @foreach($events as $e)
+                        <div class="card mb-2 shadow-sm border-primary">
+                            @if($e->profile_photo)
+                                <img src="{{ asset('storage/'.$e->profile_photo) }}" class="card-img-top" alt="{{ $e->event_name }}">
+                            @endif
+                            <div class="card-body">
+                                <h6 class="fw-bold text-primary mb-1">{{ $e->event_name }}</h6>
+                                <p class="mb-0">{{ $e->description ?? '-' }}</p>
+                            </div>
                         </div>
-                        <i class="fas fa-chalkboard-user fa-3x text-success opacity-50"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted mb-2">Total Classes</h6>
-                            <h3 class="text-warning mb-0">12</h3>
-                        </div>
-                        <i class="fas fa-school fa-3x text-warning opacity-50"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted mb-2">Active Sessions</h6>
-                            <h3 class="text-danger mb-0">15</h3>
-                        </div>
-                        <i class="fas fa-heartbeat fa-3x text-danger opacity-50"></i>
-                    </div>
+                    @endforeach
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Main Content -->
-    <div class="row">
-        <!-- Quick Links -->
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-light">
-                    <h5 class="card-title mb-0">Quick Links</h5>
-                </div>
-                <div class="card-body">
-                    <div class="list-group">
-                        <a href="{{ route('employee.employees.index') }}" class="list-group-item list-group-item-action">
-                            <i class="fas fa-user-tie"></i> Manage Employees
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Additional Sections -->
-    <div class="row">
-        <div class="col-md-12 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-light">
-                    <h5 class="card-title mb-0">Recent Activity</h5>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted">No recent activity to display.</p>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
-
-<style>
-    .opacity-50 {
-        opacity: 0.5;
-    }
-</style>
 @endsection

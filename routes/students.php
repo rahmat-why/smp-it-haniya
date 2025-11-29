@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::prefix('students')->name('employee.students.')->middleware('auth:employee')->group(function () {
+Route::prefix('students')->name('employee.students.')->middleware('auth:employee,teacher')->group(function () {
     Route::get('/', [StudentController::class, 'index'])->name('index');
     Route::get('/data', [StudentController::class, 'getData'])->name('data');
     Route::get('/create', [StudentController::class, 'create'])->name('create');

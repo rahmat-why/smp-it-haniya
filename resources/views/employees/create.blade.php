@@ -48,11 +48,14 @@
 
 
                     <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Employee ID *</label>
-                            <input type="text" name="employee_id" id="employee_id" class="form-control" readonly>
-                            <small class="text-danger error" data-error="employee_id"></small>
-                        </div>
+                        <div class="col-md-6 d-none">
+    <label class="form-label">Employee ID *</label>
+    <input type="text" name="employee_id" id="employee_id"
+           class="form-control"
+           value="{{ session('employee_id') }}">
+    <small class="text-danger error" data-error="employee_id"></small>
+</div>
+
 
                         <div class="col-md-6">
                             <label class="form-label">Username *</label>

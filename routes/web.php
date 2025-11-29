@@ -58,6 +58,7 @@ require __DIR__ . '/events.php';
 require __DIR__ . '/articles.php';
 require __DIR__ . '/schedules.php';
 require __DIR__ . '/grades.php';
+require __DIR__ . '/payments.php';
 
 Route::prefix('employee')->name('employee.')->group(function () {
     Route::get('/login', [EmployeeLoginController::class, 'showLoginForm'])->name('login');
@@ -91,7 +92,7 @@ Route::prefix('student')->name('student.')->group(function () {
     // Student Dashboard
     Route::middleware('web')->group(function () {
         Route::get('/dashboard', [StudentDashboard::class, 'index'])->name('dashboard');
-        Route::get('/profile', [StudentDashboard::class, 'profile'])->name('profile');
+        Route::get('/profile', [StudentController::class, 'profile'])->name('profile');
         Route::post('/profile/update', [StudentDashboard::class, 'updateProfile'])->name('profile.update');
     });
 });

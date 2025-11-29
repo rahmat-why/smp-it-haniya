@@ -57,45 +57,45 @@ class SubjectController extends Controller
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function store(Request $request)
-    {
-        // Check if user is employee
-        if (session('user_type') !== 'employee') {
-            return redirect('/employee/login');
-        }
-
-        // Validate input
-        $validated = $request->validate([
-            'subject_id' => 'required|string|max:50|unique:mst_subjects,subject_id',
-            'subject_name' => 'required|string|max:100',
-            'subject_code' => 'required|string|max:20',
-            'class_level' => 'required|string|max:10',
-            'description' => 'nullable|string|max:500',
-        ]);
-
-        // Add created_by to data
-        $validated['created_by'] = session('employee_id');
-        $validated['updated_by'] = session('employee_id');
-
-        // Create subject using Eloquent
-        try {
-            MstSubject::create($validated);
-
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['success' => true, 'message' => 'Subject created successfully']);
-            }
-
-            return redirect()->route('employee.subjects.index')
-                           ->with('success', 'Subject created successfully!');
-        } catch (\Exception $e) {
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['success' => false, 'message' => 'Failed to create subject: ' . $e->getMessage()], 500);
-            }
-
-            return back()->withInput()
-                        ->with('error', 'Failed to create subject: ' . $e->getMessage());
-        }
+   public function store(Request $request)
+{
+    // Check if user is employee
+    if (session('user_type') !== 'employee') {
+        return redirect('/employee/login');
     }
+
+    // VALIDATION
+    $validated = $request->validate([
+        'subject_id' => 'required|string|max:50|unique:mst_subjects,subject_id',
+        'subject_name' => 'required|string|max:100',
+        'subject_code' => 'required|string|max:20',
+        'class_level' => 'required|string|max:10',
+        'minimum_value' => 'required|numeric|min:0',
+        'description' => 'nullable|string|max:500',
+    ]);
+
+    // Add created_by & updated_by
+    $validated['created_by'] = session('employee_id');
+    $validated['updated_by'] = session('employee_id');
+
+    try {
+        MstSubject::create($validated);
+
+        if ($request->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Subject created successfully']);
+        }
+
+        return redirect()->route('employee.subjects.index')
+                         ->with('success', 'Subject created successfully!');
+    } catch (\Exception $e) {
+
+        if ($request->ajax()) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+
+        return back()->withInput()->with('error', 'Failed to create subject: '.$e->getMessage());
+    }
+}
 
     /**
      * Show form to edit subject (fetch data with raw SELECT)
@@ -131,44 +131,42 @@ class SubjectController extends Controller
      * @return \Illuminate\Http\RedirectResponse
      */
     public function update(Request $request, $id)
-    {
-        // Check if user is employee
-        if (session('user_type') !== 'Employee') {
-            return redirect('/employee/login');
+{
+    $validated = $request->validate([
+        'subject_name' => 'required|string|max:100',
+        'subject_code' => 'required|string|max:20',
+        'class_level' => 'required|in:7,8,9',
+        'minimum_value' => 'required|numeric|min:0',
+        'description' => 'nullable|string|max:500',
+    ]);
+
+    $validated['updated_by'] = session('employee_id');
+
+    try {
+        $subject = MstSubject::findOrFail($id);
+        $subject->update($validated);
+
+        if ($request->ajax()) {
+            return response()->json(['success' => true]);
         }
 
-        // Validate input
-        $validated = $request->validate([
-            'subject_name' => 'required|string|max:100',
-            'subject_code' => 'required|string|max:20',
-            'class_level' => 'required|string|max:10',
-            'description' => 'nullable|string|max:500',
-        ]);
+        return redirect()->route('employee.subjects.index')
+                        ->with('success', 'Subject updated successfully!');
 
-        // Add updated_by
-        $validated['updated_by'] = session('employee_id');
+    } catch (\Exception $e) {
 
-        try {
-            // Find subject using Eloquent
-            $subject = MstSubject::findOrFail($id);
-
-            // Update subject
-            $subject->update($validated);
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['success' => true, 'message' => 'Subject updated successfully']);
-            }
-
-            return redirect()->route('employee.subjects.index')
-                           ->with('success', 'Subject updated successfully!');
-        } catch (\Exception $e) {
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['success' => false, 'message' => 'Failed to update subject: ' . $e->getMessage()], 500);
-            }
-
-            return back()->withInput()
-                        ->with('error', 'Failed to update subject: ' . $e->getMessage());
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => false, 
+                'message' => $e->getMessage()
+            ], 500);
         }
+
+        return back()->withInput()
+                     ->with('error', 'Failed: ' . $e->getMessage());
     }
+}
+
 
     /**
      * Delete subject using Eloquent Model

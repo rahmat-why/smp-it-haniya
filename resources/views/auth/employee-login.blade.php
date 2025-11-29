@@ -1,9 +1,9 @@
 @extends('layouts.app')
-
 @section('title', 'Employee Login - School Management System')
 
 @section('content')
 <div class="login-container">
+
     <div class="login-box">
 
         <!-- LOGO -->
@@ -25,8 +25,12 @@
 
             <div class="form-group">
                 <label for="username" class="form-label">Username</label>
-                <input type="text" class="form-control @error('username') is-invalid @enderror"
-                       id="username" name="username" value="{{ old('username') }}" required autofocus>
+                <input type="text"
+                       class="form-control @error('username') is-invalid @enderror"
+                       id="username"
+                       name="username"
+                       value="{{ old('username') }}"
+                       required autofocus>
                 @error('username')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
@@ -34,8 +38,11 @@
 
             <div class="form-group">
                 <label for="password" class="form-label">Password</label>
-                <input type="password" class="form-control @error('password') is-invalid @enderror"
-                       id="password" name="password" required>
+                <input type="password"
+                       class="form-control @error('password') is-invalid @enderror"
+                       id="password"
+                       name="password"
+                       required>
                 @error('password')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
@@ -44,6 +51,7 @@
             <button type="submit" class="btn btn-primary btn-lg btn-login">
                 <i class="fas fa-lock"></i> Login
             </button>
+
         </form>
 
         <hr class="my-3">
@@ -53,21 +61,29 @@
             <a href="{{ route('teacher.login') }}" class="btn btn-outline-secondary btn-sm">Teacher Login</a>
             <a href="{{ route('student.login') }}" class="btn btn-outline-secondary btn-sm">Student Login</a>
         </div>
+
     </div>
+
 </div>
 
 {{-- CSS --}}
 <style>
+    body {
+        background: url('{{ asset('assets/image/bg_hania.jpg') }}') no-repeat center center;
+        background-size: cover;
+        height: 100vh;
+    }
+
     .login-container {
         display: flex;
-        justify-content: center;
+        justify-content: flex-end; /* agar form berada di kanan */
         align-items: center;
-        padding-top: 60px;
-        padding-bottom: 60px;
+        height: 100%;
+        padding-right: 50px; /* jarak dari kanan */
     }
 
     .login-box {
-        width: 420px;
+        width: 360px;
         background: #ffffff;
         padding: 35px;
         border-radius: 12px;
@@ -75,9 +91,8 @@
         text-align: center;
     }
 
-    /* LOGO */
     .login-logo {
-        width: 120px;        /* BESARKAN LOGO */
+        width: 120px;
         height: auto;
         margin-bottom: 15px;
         display: block;
@@ -99,6 +114,13 @@
     .form-group {
         text-align: left;
         margin-bottom: 15px;
+    }
+
+    @media(max-width: 768px) {
+        .login-container {
+            justify-content: center;
+            padding-right: 0;
+        }
     }
 </style>
 @endsection

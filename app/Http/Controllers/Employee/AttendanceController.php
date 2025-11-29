@@ -7,40 +7,62 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 use App\Http\Requests\StoreAttendanceRequest;
-
+use Yajra\DataTables\Facades\DataTables;
 class AttendanceController extends Controller
 {
     public function index()
-    {
-        // List attendance headers (one row per attendance header) with aggregate counts
-        $attendances = DB::select(
-            "SELECT TOP (1000)
-                a.attendance_id,
-                a.attendance_date,
-                a.academic_class_id,
-                c.class_id,
-                c.class_name,
-                a.teacher_id,
-                t.first_name AS teacher_first_name,
-                t.last_name AS teacher_last_name,
-                (
-                    SELECT COUNT(*)
-                    FROM mst_student_classes sc
-                    WHERE sc.academic_class_id = a.academic_class_id
-                ) AS total_students,
-                (
-                    SELECT COUNT(*) FROM txn_attendance_details d WHERE d.attendance_id = a.attendance_id AND d.status = 'Present'
-                ) AS total_present
-            FROM txn_attendances a
-            LEFT JOIN mst_academic_classes ac ON a.academic_class_id = ac.academic_class_id
-            LEFT JOIN mst_classes c ON ac.class_id = c.class_id
-            LEFT JOIN mst_teachers t ON a.teacher_id = t.teacher_id
-            ORDER BY a.attendance_date DESC"
+{
+    // Hanya menampilkan view, data diambil via AJAX
+    return view('attendance.index');
+}
+
+
+public function getData()
+{
+    // Query tanpa ORDER BY di subquery/CTE
+    $query = DB::table('txn_attendances as a')
+        ->leftJoin('mst_academic_classes as ac', 'a.academic_class_id', '=', 'ac.academic_class_id')
+        ->leftJoin('mst_classes as c', 'ac.class_id', '=', 'c.class_id')
+        ->leftJoin('mst_teachers as t', 'a.teacher_id', '=', 't.teacher_id')
+        ->select(
+            'a.attendance_id',
+            'a.attendance_date',
+            'c.class_name',
+            't.first_name as teacher_first_name',
+            't.last_name as teacher_last_name',
+            DB::raw("(SELECT COUNT(*) FROM mst_student_classes sc WHERE sc.academic_class_id = a.academic_class_id) AS total_students"),
+            DB::raw("(SELECT COUNT(*) FROM txn_attendance_details d WHERE d.attendance_id = a.attendance_id AND d.status = 'Present') AS total_present")
         );
 
-        return view('attendance.index', compact('attendances'));
-    }
+    return DataTables::of($query)
+        ->addColumn('actions', function($row){
+            return '
+                <a href="'.route('employee.attendances.show', $row->attendance_id).'" class="btn btn-info btn-sm">
+                    <i class="fas fa-list"></i> Details
+                </a>
+                <form action="'.route('employee.attendances.destroy', $row->attendance_id).'" method="POST" style="display:inline;">
+                    '.csrf_field().method_field('DELETE').'
+                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm(\'Are you sure?\')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </form>
+            ';
+        })
+        ->editColumn('total_present', function($row){
+            $present = (int) $row->total_present;
+            $total   = (int) $row->total_students;
 
+            if($total > 0 && $present === $total){
+                return '<span class="badge bg-success">'.$present.' / '.$total.'</span>';
+            } elseif($present === 0){
+                return '<span class="badge bg-danger">'.$present.' / '.$total.'</span>';
+            } else {
+                return '<span class="badge bg-warning text-dark">'.$present.' / '.$total.'</span>';
+            }
+        })
+        ->rawColumns(['actions','total_present'])
+        ->make(true);
+}
     /**
      * Show form for bulk attendance input by class
      * Gets list of classes for selection

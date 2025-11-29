@@ -4,246 +4,275 @@
 
 @section('content')
 <div class="container-fluid mt-4">
-    <!-- Welcome Section -->
+
+    <!-- ========================= -->
+    <!-- HEADER -->
+    <!-- ========================= -->
     <div class="row mb-4">
         <div class="col-md-12">
-            <div class="card bg-info text-white shadow-sm">
-                <div class="card-body">
-                    <h1 class="card-title mb-0">
-                        @if(isset($student) && !empty($student->first_name))
-                            Welcome, {{ $student->first_name }} {{ $student->last_name }}
-                        @elseif(session()->has('name'))
-                            Welcome, {{ session('name') }}
-                        @elseif(Auth::check())
-                            Welcome, {{ Auth::user()->name }}
-                        @else
-                            Welcome, Student
-                        @endif
-                    </h1>
-                    <p class="card-text mt-2">Student Dashboard - {{ date('l, F d, Y') }}</p>
+            <div class="card bg-primary text-white shadow-sm rounded-3">
+                <div class="card-body py-4">
+                    <h2 class="mb-0 fw-bold">Welcome, {{ $student->first_name }} {{ $student->last_name }}</h2>
+                    <small class="opacity-75">{{ date('l, d F Y') }}</small>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Statistics Cards -->
+    <!-- ========================= -->
+    <!-- PEMBAYARAN -->
+    <!-- ========================= -->
     <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted mb-2">GPA</h6>
-                            <h3 class="text-info mb-0">3.85</h3>
+        <div class="col-md-12">
+            <div class="card shadow-sm rounded-3 border-0">
+
+                <div class="row g-0">
+
+                    <!-- Total Tagihan -->
+                    <div class="col-md-4 bg-primary text-white d-flex align-items-center justify-content-center p-4 rounded-start-3">
+                        <div class="text-center">
+                            <h6 class="mb-1 opacity-75">Total Tagihan</h6>
+                            <h2 class="fw-bold">Rp {{ number_format($totalBill) }}</h2>
                         </div>
-                        <i class="fas fa-chart-line fa-3x text-info opacity-50"></i>
+                    </div>
+
+                    <!-- Table -->
+                    <div class="col-md-8 p-3">
+                        <table class="table table-bordered table-striped mb-0">
+                            <thead class="bg-primary text-white">
+                                <tr>
+                                    <th>No</th>
+                                    <th>Bulan</th>
+                                    <th>Tipe</th>
+                                    <th>Nominal</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($payments as $i => $p)
+                                <tr>
+                                    <td>{{ $i+1 }}</td>
+                                    <td>{{ $p->payment_date }}</td>
+                                    <td>{{ $p->item_name }}</td>
+                                    <td>Rp {{ number_format($p->total_payment) }}</td>
+                                    <td>
+                                        <span class="badge 
+                                            {{ $p->status == 'Paid' ? 'bg-success' : 'bg-danger' }}">
+                                            {{ $p->status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+
+                <!-- Rincian Tetap -->
+                <div class="border-top p-3">
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <strong>Biaya SPP</strong><br> Rp 300.000
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Biaya Gedung</strong><br> Rp 400.000
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Biaya Seragam</strong><br> Rp 500.000
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted mb-2">Classes</h6>
-                            <h3 class="text-success mb-0">5</h3>
-                        </div>
-                        <i class="fas fa-book fa-3x text-success opacity-50"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted mb-2">Attendance</h6>
-                            <h3 class="text-warning mb-0">95%</h3>
-                        </div>
-                        <i class="fas fa-check-circle fa-3x text-warning opacity-50"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted mb-2">Assignments</h6>
-                            <h3 class="text-danger mb-0">3</h3>
-                        </div>
-                        <i class="fas fa-tasks fa-3x text-danger opacity-50"></i>
-                    </div>
-                </div>
+
             </div>
         </div>
     </div>
 
-    <!-- Main Content -->
-    <div class="row">
-        <!-- My Subjects -->
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-light">
-                    <h5 class="card-title mb-0">My Subjects</h5>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Subject</th>
-                                <th>Teacher</th>
-                                <th>Grade</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Mathematics</td>
-                                <td>Mr. Smith</td>
-                                <td><span class="badge bg-success">A+</span></td>
-                            </tr>
-                            <tr>
-                                <td>Science</td>
-                                <td>Ms. Johnson</td>
-                                <td><span class="badge bg-success">A</span></td>
-                            </tr>
-                            <tr>
-                                <td>English</td>
-                                <td>Mr. Brown</td>
-                                <td><span class="badge bg-info">B+</span></td>
-                            </tr>
-                            <tr>
-                                <td>History</td>
-                                <td>Ms. Davis</td>
-                                <td><span class="badge bg-success">A</span></td>
-                            </tr>
-                            <tr>
-                                <td>Physical Education</td>
-                                <td>Mr. Wilson</td>
-                                <td><span class="badge bg-warning">B</span></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+    <!-- ========================= -->
+    <!-- NILAI -->
+    <!-- ========================= -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card shadow-sm rounded-3 border-0">
 
-        <!-- Quick Links -->
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-light">
-                    <h5 class="card-title mb-0">Quick Links</h5>
+                <div class="card-header bg-primary text-white rounded-top-3">
+                    <h5 class="mb-0">Nilai</h5>
                 </div>
-                <div class="card-body">
-                    <div class="list-group">
-                        <a href="{{ route('student.profile') }}" class="list-group-item list-group-item-action">
-                            <i class="fas fa-user"></i> View Profile
-                        </a>
-                        <a href="#" class="list-group-item list-group-item-action">
-                            <i class="fas fa-star"></i> View Grades
-                        </a>
-                        <a href="#" class="list-group-item list-group-item-action">
-                            <i class="fas fa-calendar-alt"></i> View Schedule
-                        </a>
-                        <a href="#" class="list-group-item list-group-item-action">
-                            <i class="fas fa-files"></i> View Announcements
-                        </a>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Payments Summary -->
-            <div class="card shadow-sm mt-3">
-                <div class="card-header bg-light">
-                    <h5 class="card-title mb-0">Payments</h5>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div>
-                            <h6 class="text-muted mb-1">Outstanding</h6>
-                            <h4 class="text-danger mb-0">Rp 1,250,000</h4>
-                        </div>
-                        <i class="fas fa-wallet fa-2x text-danger opacity-50"></i>
+                <div class="row p-3">
+
+                    <div class="col-md-8">
+                        <canvas id="chartNilai"></canvas>
                     </div>
 
-                    <p class="mb-1"><strong>Last payment:</strong> Rp 500,000 on {{ date('Y-m-d') }}</p>
+                    <div class="col-md-4">
+                        <table class="table table-bordered table-striped">
+                            <thead class="bg-primary text-white">
+                                <tr>
+                                    <th>No</th>
+                                    <th>Academic Year</th>
+                                    <th>Nilai</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($grades as $i => $g)
+                                <tr>
+                                    <td>{{ $i+1 }}</td>
+                                    <td>{{ $g->academic_year }}</td>
+                                    <td>{{ $g->grade_value }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+
                 </div>
+
             </div>
         </div>
     </div>
 
-    <!-- Class Schedule -->
-    <div class="row">
-        <div class="col-md-12 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-light">
-                    <h5 class="card-title mb-0">Weekly Schedule</h5>
+    <!-- ========================= -->
+    <!-- KEHADIRAN -->
+    <!-- ========================= -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card shadow-sm rounded-3 border-0">
+
+                <div class="card-header bg-primary text-white rounded-top-3">
+                    <h5 class="mb-0">Kehadiran</h5>
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Time</th>
-                                <th>Monday</th>
-                                <th>Tuesday</th>
-                                <th>Wednesday</th>
-                                <th>Thursday</th>
-                                <th>Friday</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><strong>09:00 - 10:30</strong></td>
-                                <td>Mathematics</td>
-                                <td>English</td>
-                                <td>Science</td>
-                                <td>Mathematics</td>
-                                <td>History</td>
-                            </tr>
-                            <tr>
-                                <td><strong>10:45 - 12:15</strong></td>
-                                <td>Science</td>
-                                <td>History</td>
-                                <td>English</td>
-                                <td>PE</td>
-                                <td>Science</td>
-                            </tr>
-                            <tr>
-                                <td><strong>13:00 - 14:30</strong></td>
-                                <td>PE</td>
-                                <td>Mathematics</td>
-                                <td>History</td>
-                                <td>English</td>
-                                <td>Mathematics</td>
-                            </tr>
-                        </tbody>
-                    </table>
+
+                <div class="row p-3">
+                    <div class="col-md-8">
+                        <canvas id="chartAbsensi"></canvas>
+                    </div>
+
+                    <div class="col-md-4">
+                        <table class="table table-bordered table-striped">
+                            <thead class="bg-primary text-white">
+                                <tr>
+                                    <th>No</th>
+                                    <th>Tahun</th>
+                                    <th>Persentase</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($attendance as $i => $a)
+                                <tr>
+                                    <td>{{ $i+1 }}</td>
+                                    <td>{{ $a->academic_year }}</td>
+                                    <td><strong>{{ $a->total }}%</strong></td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+
             </div>
         </div>
     </div>
 
-    <!-- Announcements -->
-    <div class="row">
-        <div class="col-md-12 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-light">
-                    <h5 class="card-title mb-0">Recent Announcements</h5>
+    <!-- ========================= -->
+    <!-- JADWAL + EVENT -->
+    <!-- ========================= -->
+    <div class="row mb-4">
+
+        <!-- Jadwal -->
+        <div class="col-md-9">
+            <div class="card shadow-sm rounded-3 border-0">
+
+                <div class="card-header bg-primary text-white rounded-top-3">
+                    <h5 class="mb-0">Jadwal Mata Pelajaran</h5>
                 </div>
+
+                <table class="table table-bordered table-striped mb-0">
+                    <thead class="bg-primary text-white">
+                        <tr>
+                            <th>Hari</th>
+                            <th>Mapel</th>
+                            <th>Guru</th>
+                            <th>Jam</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($subjects as $s)
+                        <tr>
+                            <td>{{ $s->day }}</td>
+                            <td>{{ $s->subject_name }}</td>
+                            <td>{{ $s->first_name }} {{ $s->last_name }}</td>
+                            <td>{{ substr($s->start_time, 0, 5) }} - {{ substr($s->end_time, 0, 5) }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+
+            </div>
+        </div>
+
+        <!-- EVENT -->
+       <div class="col-md-3">
+
+    <!-- Wrapper agar bisa scroll -->
+    <div class="card shadow-sm rounded-3 border-0" style="max-height: 500px; overflow-y: auto;">
+
+        <!-- Header tetap -->
+        <div class="card-header bg-primary text-white rounded-top-3 sticky-top" style="top:0; z-index:10;">
+            <h5 class="mb-0">EVENT</h5>
+        </div>
+
+        <!-- List Event -->
+        <div class="p-2">
+            @foreach($events as $e)
+            <div class="card shadow-sm rounded-3 mb-3">
+                @if($e->profile_photo)
+                <img src="{{ asset('storage/' . $e->profile_photo) }}" class="card-img-top rounded-top-3">
+                @endif
                 <div class="card-body">
-                    <p class="text-muted">No announcements at this time.</p>
+                    <h6 class="fw-bold mb-1">{{ $e->event_name }}</h6>
+                   
                 </div>
             </div>
+            @endforeach
         </div>
+
     </div>
+
 </div>
 
-<style>
-    .opacity-50 {
-        opacity: 0.5;
+
+    </div>
+
+</div>
+
+<!-- SCRIPT CHART.JS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+new Chart(document.getElementById('chartNilai'), {
+    type: 'line',
+    data: {
+        labels: {!! json_encode(array_map(fn($g) => $g->academic_year, $attendance_chart)) !!},
+        datasets: [{
+            label: "Nilai Siswa",
+            data: {!! json_encode(array_map(fn($g) => $g->total, $attendance_chart)) !!},
+            borderWidth: 3
+        }]
     }
-</style>
+});
+
+new Chart(document.getElementById('chartAbsensi'), {
+    type: 'line',
+    data: {
+        labels: {!! json_encode(array_map(fn($a) => $a->academic_year, $attendance_chart)) !!},
+        datasets: [{
+            label: "Persentase Kehadiran",
+            data: {!! json_encode(array_map(fn($a) => $a->total, $attendance_chart)) !!},
+            borderWidth: 3
+        }]
+    }
+});
+</script>
+
 @endsection

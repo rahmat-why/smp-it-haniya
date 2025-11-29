@@ -19,6 +19,8 @@ Route::get('api/attendance/students/{classId}', [AttendanceController::class, 'g
 // Employee-area CRUD routes for attendances
 Route::prefix('attendances')->name('employee.attendances.')->middleware('auth:employee')->group(function () {
     Route::get('/', [AttendanceController::class, 'index'])->name('index');
+        Route::get('/data', [AttendanceController::class, 'getData'])->name('data');
+
     Route::get('/create', [AttendanceController::class, 'create'])->name('create');
     Route::post('/', [AttendanceController::class, 'store'])->name('store');
     // Show by attendance id (header) to view details

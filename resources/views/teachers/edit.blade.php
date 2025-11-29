@@ -15,112 +15,257 @@
                     @csrf
                     @method('PUT')
 
-                    <div class="row">
+                    <div class="row mb-3">
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="first_name" class="form-label">First Name *</label>
-                                <input type="text" class="form-control @error('first_name') is-invalid @enderror" 
-                                       id="first_name" name="first_name" value="{{ old('first_name', $teacher->first_name) }}" required>
-                                @error('first_name')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
+                            <label for="first_name" class="form-label fw-bold">
+                                First Name <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" 
+                                   name="first_name"
+                                   id="first_name"
+                                   class="form-control @error('first_name') is-invalid @enderror"
+                                   value="{{ old('first_name', $teacher->first_name) }}"
+                                   placeholder="Enter first name"
+                                   required
+                                   oninvalid="this.classList.add('is-invalid')"
+                                   oninput="this.classList.remove('is-invalid')">
+                            <small class="text-muted d-block">
+                                Required. Enter the teacher's first name.
+                            </small>
+                            @error('first_name')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
                         </div>
+
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="last_name" class="form-label">Last Name *</label>
-                                <input type="text" class="form-control @error('last_name') is-invalid @enderror" 
-                                       id="last_name" name="last_name" value="{{ old('last_name', $teacher->last_name) }}" required>
-                                @error('last_name')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
+                            <label for="last_name" class="form-label fw-bold">
+                                Last Name <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" 
+                                   name="last_name"
+                                   id="last_name"
+                                   class="form-control @error('last_name') is-invalid @enderror"
+                                   value="{{ old('last_name', $teacher->last_name) }}"
+                                   placeholder="Enter last name"
+                                   required
+                                   oninvalid="this.classList.add('is-invalid')"
+                                   oninput="this.classList.remove('is-invalid')">
+                            <small class="text-muted d-block">
+                                Required. Enter the teacher's last name.
+                            </small>
+                            @error('last_name')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="npk" class="form-label">NPK *</label>
-                        <input type="text" class="form-control @error('npk') is-invalid @enderror" 
-                               id="npk" name="npk" value="{{ old('npk', $teacher->npk) }}" required>
+                    <div class="mb-3">
+                        <label for="npk" class="form-label fw-bold">
+                            NPK <span class="text-danger">*</span>
+                        </label>
+                        <input type="text"
+                               name="npk"
+                               id="npk"
+                               class="form-control @error('npk') is-invalid @enderror"
+                               value="{{ old('npk', $teacher->npk) }}"
+                               placeholder="Enter NPK"
+                               required
+                               oninvalid="this.classList.add('is-invalid')"
+                               oninput="this.classList.remove('is-invalid')">
+                        <small class="text-muted d-block">
+                            Required. Enter the teacher's NPK number.
+                        </small>
                         @error('npk')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
 
-                    <div class="row">
+                    <div class="row mb-3">
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="password" class="form-label">Password (leave blank to keep current)</label>
-                                <input type="password" class="form-control @error('password') is-invalid @enderror" 
-                                       id="password" name="password">
-                                @error('password')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
+                            <label for="password" class="form-label fw-bold">
+                                Password
+                            </label>
+                            <input type="password"
+                                   name="password"
+                                   id="password"
+                                   class="form-control @error('password') is-invalid @enderror"
+                                   placeholder="Enter new password (leave blank to keep current)">
+                            <small class="text-muted d-block">
+                                Optional. Leave blank to keep the current password.
+                            </small>
+                            @error('password')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
                         </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="password_confirmation" class="form-label">Confirm Password</label>
-                                <input type="password" class="form-control" 
-                                       id="password_confirmation" name="password_confirmation">
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="row">
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="gender" class="form-label">Gender</label>
-                                <select class="form-select" id="gender" name="gender">
-                                    <option value="">-- Select Gender --</option>
-                                    <option value="M" @selected(old('gender', $teacher->gender) === 'M')>Male</option>
-                                    <option value="F" @selected(old('gender', $teacher->gender) === 'F')>Female</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="birth_date" class="form-label">Birth Date</label>
-                                <input type="date" class="form-control" id="birth_date" name="birth_date" 
-                                       value="{{ old('birth_date', $teacher->birth_date) }}">
-                            </div>
+                            <label for="password_confirmation" class="form-label fw-bold">
+                                Confirm Password
+                            </label>
+                            <input type="password"
+                                   name="password_confirmation"
+                                   id="password_confirmation"
+                                   class="form-control"
+                                   placeholder="Confirm new password">
+                            <small class="text-muted d-block">
+                                Optional. Re-enter new password to confirm.
+                            </small>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="birth_place" class="form-label">Birth Place</label>
-                        <input type="text" class="form-control" id="birth_place" name="birth_place" 
-                               value="{{ old('birth_place', $teacher->birth_place) }}">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="address" class="form-label">Address</label>
-                        <textarea class="form-control" id="address" name="address" rows="3">{{ old('address', $teacher->address) }}</textarea>
-                    </div>
-
-                    <div class="row">
+                    <div class="row mb-3">
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="phone" class="form-label">Phone</label>
-                                <input type="text" class="form-control" id="phone" name="phone" value="{{ old('phone', $teacher->phone) }}">
-                            </div>
+                            <label for="gender" class="form-label fw-bold">
+                                Gender <span class="text-danger">*</span>
+                            </label>
+                            <select name="gender"
+                                    id="gender"
+                                    class="form-select @error('gender') is-invalid @enderror"
+                                    required
+                                    oninvalid="this.classList.add('is-invalid')"
+                                    oninput="this.classList.remove('is-invalid')">
+                                <option value="">-- Select Gender --</option>
+                                <option value="M" @selected(old('gender', $teacher->gender) === 'M')>Male</option>
+                                <option value="F" @selected(old('gender', $teacher->gender) === 'F')>Female</option>
+                            </select>
+                            <small class="text-muted d-block">
+                                Required. Select the teacher's gender.
+                            </small>
+                            @error('gender')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
                         </div>
+
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="level" class="form-label">Level</label>
-                                <input type="text" class="form-control" id="level" name="level" value="{{ old('level', $teacher->level) }}">
-                            </div>
+                            <label for="birth_date" class="form-label fw-bold">
+                                Birth Date <span class="text-danger">*</span>
+                            </label>
+                            <input type="date"
+                                   name="birth_date"
+                                   id="birth_date"
+                                   class="form-control @error('birth_date') is-invalid @enderror"
+                                   value="{{ old('birth_date', $teacher->birth_date) }}"
+                                   required
+                                   oninvalid="this.classList.add('is-invalid')"
+                                   oninput="this.classList.remove('is-invalid')">
+                            <small class="text-muted d-block">
+                                Required. Enter the teacher's birth date.
+                            </small>
+                            @error('birth_date')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="entry_date" class="form-label">Entry Date</label>
-                        <input type="date" class="form-control" id="entry_date" name="entry_date" 
-                               value="{{ old('entry_date', $teacher->entry_date) }}">
+                    <div class="mb-3">
+                        <label for="birth_place" class="form-label fw-bold">
+                            Birth Place <span class="text-danger">*</span>
+                        </label>
+                        <input type="text"
+                               name="birth_place"
+                               id="birth_place"
+                               class="form-control @error('birth_place') is-invalid @enderror"
+                               value="{{ old('birth_place', $teacher->birth_place) }}"
+                               placeholder="Enter birth place"
+                               required
+                               oninvalid="this.classList.add('is-invalid')"
+                               oninput="this.classList.remove('is-invalid')">
+                        <small class="text-muted d-block">
+                            Required. Enter the teacher's birth place.
+                        </small>
+                        @error('birth_place')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
                     </div>
 
-                    <div class="form-group mt-3">
-                        <label for="profile_photo" class="form-label">Profile Photo</label>
+                    <div class="mb-3">
+                        <label for="address" class="form-label fw-bold">
+                            Address <span class="text-danger">*</span>
+                        </label>
+                        <textarea name="address"
+                                  id="address"
+                                  class="form-control @error('address') is-invalid @enderror"
+                                  rows="3"
+                                  placeholder="Enter address"
+                                  required
+                                  oninvalid="this.classList.add('is-invalid')"
+                                  oninput="this.classList.remove('is-invalid')">{{ old('address', $teacher->address) }}</textarea>
+                        <small class="text-muted d-block">
+                            Required. Enter the teacher's address.
+                        </small>
+                        @error('address')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="phone" class="form-label fw-bold">
+                                Phone <span class="text-danger">*</span>
+                            </label>
+                            <input type="text"
+                                   name="phone"
+                                   id="phone"
+                                   class="form-control @error('phone') is-invalid @enderror"
+                                   value="{{ old('phone', $teacher->phone) }}"
+                                   placeholder="Enter phone number"
+                                   required
+                                   oninvalid="this.classList.add('is-invalid')"
+                                   oninput="this.classList.remove('is-invalid')">
+                            <small class="text-muted d-block">
+                                Required. Enter the teacher's phone number.
+                            </small>
+                            @error('phone')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="level" class="form-label fw-bold">
+                                Level <span class="text-danger">*</span>
+                            </label>
+                            <input type="text"
+                                   name="level"
+                                   id="level"
+                                   class="form-control @error('level') is-invalid @enderror"
+                                   value="{{ old('level', $teacher->level) }}"
+                                   placeholder="Enter level"
+                                   required
+                                   oninvalid="this.classList.add('is-invalid')"
+                                   oninput="this.classList.remove('is-invalid')">
+                            <small class="text-muted d-block">
+                                Required. Enter the teacher's level (default: Teacher).
+                            </small>
+                            @error('level')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="entry_date" class="form-label fw-bold">
+                            Entry Date <span class="text-danger">*</span>
+                        </label>
+                        <input type="date"
+                               name="entry_date"
+                               id="entry_date"
+                               class="form-control @error('entry_date') is-invalid @enderror"
+                               value="{{ old('entry_date', $teacher->entry_date) }}"
+                               required
+                               oninvalid="this.classList.add('is-invalid')"
+                               oninput="this.classList.remove('is-invalid')">
+                        <small class="text-muted d-block">
+                            Required. Enter the teacher's entry date.
+                        </small>
+                        @error('entry_date')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="form-group mt-3 text-center">
+                        <label for="profile_photo" class="form-label fw-bold">
+                            Profile Photo
+                        </label>
                         <div class="mb-2 text-center">
                             @if(!empty($teacher->profile_photo))
                                 <img id="photoPreview" src="{{ asset('storage/' . $teacher->profile_photo) }}" alt="photo" width="120" height="120" class="rounded-circle mb-2" style="object-fit:cover;" />
@@ -129,6 +274,7 @@
                             @endif
                         </div>
                         <input type="file" class="form-control" id="profile_photo" name="profile_photo" accept="image/*">
+                        <small class="text-muted d-block">Optional. Upload a profile photo for the teacher.</small>
                     </div>
 
                     <div class="d-flex gap-2">
