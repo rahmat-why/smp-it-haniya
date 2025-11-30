@@ -147,34 +147,39 @@
 
     <!-- Daftar Kelas -->
     <div class="col-md-6">
-        <div class="card shadow-sm">
-            <div class="card-header bg-light">
-                <h5 class="mb-0">Daftar Kelas</h5>
-            </div>
-            <div class="table-responsive">
-                <table class="table mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Kelas</th>
-                            <th>Total Siswa</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($students_per_class as $item)
-                        <tr>
-                            <td>{{ $item->class_name ?? $item->class_id }}</td>
-                            <td>{{ $item->total }}</td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="2" class="text-center">Tidak ada data siswa</td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Daftar Kehadiran perkelas</h5>
+        </div>
+        <div class="table-responsive">
+      <table class="table mb-0">
+    <thead class="table-light">
+        <tr>
+            <th>Kelas</th>
+            <th>Total Siswa</th>
+            <th>Kehadiran (%)</th>
+        </tr>
+    </thead>
+    <tbody>
+        @forelse($students_per_class as $item)
+            <tr>
+                <td>{{ $item->class_name }}</td>
+                <td>{{ $item->total_students }}</td>
+                <td><strong>{{ $item->percentage }}%</strong></td>
+            </tr>
+        @empty
+            <tr>
+                <td colspan="3" class="text-center">Tidak ada data siswa</td>
+            </tr>
+        @endforelse
+    </tbody>
+</table>
+
+
         </div>
     </div>
+</div>
+
 </div>
 
 

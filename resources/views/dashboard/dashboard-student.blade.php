@@ -209,7 +209,7 @@
                 </table>
 
             </div>
-        </div>
+        </div>  
 
         <!-- EVENT -->
        <div class="col-md-3">

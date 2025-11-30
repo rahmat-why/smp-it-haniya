@@ -107,10 +107,7 @@
                         <i class="fas fa-newspaper me-2"></i> Articles
                     </a>
 
-                    <a class="list-group-item list-group-item-action {{ request()->routeIs('employee.attendances.*') ? 'active' : '' }}" 
-                       href="{{ route('employee.attendances.index') }}">
-                        <i class="fas fa-clipboard-check me-2"></i> Attendances
-                    </a>
+                  
 
                     <a class="list-group-item list-group-item-action {{ request()->routeIs('employee.classes.*') ? 'active' : '' }}" 
                        href="{{ route('employee.classes.index') }}">
@@ -162,6 +159,10 @@
                      <a class="list-group-item list-group-item-action {{ request()->routeIs('employee.students.*') ? 'active' : '' }}" 
                        href="{{ route('employee.students.index') }}">
                         <i class="fas fa-user-graduate me-2"></i> Students
+                    </a>
+                      <a class="list-group-item list-group-item-action {{ request()->routeIs('employee.attendances.*') ? 'active' : '' }}" 
+                       href="{{ route('employee.attendances.index') }}">
+                        <i class="fas fa-clipboard-check me-2"></i> Attendances
                     </a>
         <a class="list-group-item list-group-item-action {{ request()->routeIs('employee.schedules.*') ? 'active' : '' }}" 
                        href="{{ route('employee.schedules.index') }}">

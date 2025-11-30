@@ -40,28 +40,41 @@ public function index(Request $request)
     } elseif (in_array('kelas_id', $columns)) {
         $classColumn = 'kelas_id';
     } else {
-        $classColumn = null; // jika tidak ada kolom yang cocok
+        $classColumn = null;
     }
 
     // ================================
-    // STUDENT PER CLASS
+    // DAFTAR KEHADIRAN PER KELAS
     // ================================
-    if ($classColumn !== null) {
-        $studentsPerClass = DB::table('mst_students as s')
-            ->join('mst_academic_classes as ac', 's.' . $classColumn, '=', 'ac.academic_class_id')
-            ->join('mst_classes as c', 'ac.class_id', '=', 'c.class_id')
-            ->select('c.class_name', DB::raw('COUNT(s.student_id) as total'))
-            ->where('s.status', 'Active')
-            ->groupBy('c.class_name')
-            ->get();
-    } else {
-        $studentsPerClass = collect(); // kosong kalau kolom tidak ada
-    }
+   $studentsPerClass = collect();
+
+if ($classColumn !== null) {
+    $studentsPerClass = DB::table('mst_classes as c')
+        ->join('mst_academic_classes as ac', 'ac.class_id', '=', 'c.class_id')
+        ->leftJoin('mst_students as s', 's.' . $classColumn, '=', 'ac.academic_class_id')
+        ->leftJoin('txn_attendances as a', 'a.academic_class_id', '=', 'ac.academic_class_id')
+        ->leftJoin('txn_attendance_details as ad', 'ad.attendance_id', '=', 'a.attendance_id')
+        ->select(
+            'c.class_name',
+            DB::raw('COUNT(DISTINCT s.student_id) as total_students'),
+            DB::raw('COUNT(ad.attendance_detail_id) as total_present')
+        )
+        ->where('s.status', 'Active')
+        ->groupBy('c.class_name')
+        ->get()
+        ->map(function($item){
+            $item->percentage = $item->total_students > 0 
+                ? round(($item->total_present / $item->total_students) * 100, 2) 
+                : 0;
+            return $item;
+        });
+}
+
 
     // ================================
-    // ATTENDANCE CHART
+    // ATTENDANCE CHART (HARIAN) – jangan dihapus
     // ================================
-    $attendanceChart = DB::table('txn_attendances')
+    $attendance_chart = DB::table('txn_attendances')
         ->select(
             DB::raw('CONVERT(VARCHAR(10), created_at, 23) as date'),
             DB::raw('COUNT(*) as total')
@@ -69,6 +82,32 @@ public function index(Request $request)
         ->groupBy(DB::raw('CONVERT(VARCHAR(10), created_at, 23)'))
         ->orderBy(DB::raw('CONVERT(VARCHAR(10), created_at, 23)'), 'ASC')
         ->get();
+
+    // ================================
+    // ATTENDANCE PER ACADEMIC YEAR (TABEL)
+    // ================================
+    $studentId = auth()->user()->student_id ?? null;
+    $attendance = DB::select("
+        SELECT 
+            CONCAT(YEAR(ay.start_date), '/', YEAR(ay.end_date)) AS academic_year,
+            ay.semester,
+            MIN(ay.start_date) AS sort_date,
+            COUNT(ad.attendance_detail_id) AS total
+        FROM mst_academic_years ay
+        LEFT JOIN mst_academic_classes ac
+            ON ac.academic_year_id = ay.academic_year_id
+        LEFT JOIN txn_attendances a
+            ON a.academic_class_id = ac.academic_class_id
+        LEFT JOIN txn_attendance_details ad
+            ON ad.attendance_id = a.attendance_id
+            AND ad.student_id = ?
+        GROUP BY 
+            ay.academic_year_id,
+            ay.start_date,
+            ay.end_date,
+            ay.semester
+        ORDER BY sort_date ASC
+    ", [$studentId]);
 
     // ================================
     // GRADE CHART
@@ -115,7 +154,7 @@ public function index(Request $request)
             )
             ->get();
     } else {
-        $schedule = collect(); // kosong kalau kolom tidak ditemukan
+        $schedule = collect();
     }
 
     // ================================
@@ -143,7 +182,8 @@ public function index(Request $request)
     return view('dashboard.dashboard-teacher', [
         'total_students'     => $totalStudents,
         'students_per_class' => $studentsPerClass,
-        'attendance_chart'   => $attendanceChart,
+        'attendance_chart'   => $attendance_chart,
+        'attendance'         => $attendance,
         'grade_chart'        => $gradeChart,
         'classes'            => $classes,
         'schedule'           => $schedule,
@@ -152,6 +192,8 @@ public function index(Request $request)
     ]);
 }
 
-
+    
 
 }
+
+

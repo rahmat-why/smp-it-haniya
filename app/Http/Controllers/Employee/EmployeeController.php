@@ -267,6 +267,21 @@ $schedules = $query->get();
     return back()->withInput()->with('error', 'Failed to create event (please try again).');
 }
 
+public function edit($id)
+    {
+        return view('employees.edit');
+    }
+
+    public function getEmployee($id)
+    {
+        $employee = MstEmployee::where('employee_id', $id)->first();
+
+        if (!$employee) {
+            return response()->json(['error' => 'Employee not found'], 404);
+        }
+
+        return response()->json($employee);
+    }
 
     public function update(Request $request, $id)
     {
