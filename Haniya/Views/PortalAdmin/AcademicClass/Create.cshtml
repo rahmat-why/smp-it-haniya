@@ -1,0 +1,582 @@
+﻿@{
+    Layout = "_LayoutAdmin";
+}
+
+<h2 class="text-xl font-semibold mb-4">Create Academic Class</h2>
+
+<div class="bg-white p-6 rounded-lg shadow w-full space-y-6">
+
+    <form id="frm" class="space-y-6 w-full">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+
+            <!-- LEFT: Academic Year -->
+            <div class="border border-gray-200 rounded-lg overflow-hidden w-full">
+                <button type="button"
+                        onclick="toggleSection('academic-info')"
+                        class="w-full flex items-center justify-between px-4 py-3 bg-blue-900 hover:bg-blue-800 transition-colors duration-200 text-left"
+                        data-testid="academic-info-toggle">
+                    <span class="font-semibold text-white">
+                        Academic Information
+                    </span>
+                    <svg id="icon-academic-info"
+                         class="w-5 h-5 text-white transition-transform duration-300"
+                         fill="none"
+                         viewBox="0 0 24 24"
+                         stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+
+                <div id="academic-info"
+                     class="px-4 pb-4 pt-3 space-y-4 border-t border-gray-100"
+                     data-testid="academic-info-section">
+
+                    <!-- Academic Year (searchable dropdown) -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Academic Year <span class="text-red-500">*</span>
+                        </label>
+
+                        <div class="relative" data-testid="academic-year-searchable-wrapper">
+                            <input type="hidden" id="academic_year_id" data-testid="academic-year-hidden-input" />
+
+                            <button type="button"
+                                    id="academic-year-display"
+                                    class="w-full border border-gray-300 rounded-md p-2 bg-white text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    data-testid="academic-year-select-toggle">
+                                <span id="academic-year-display-text" class="text-gray-500">
+                                    -- Select Academic Year --
+                                </span>
+                                <svg class="w-4 h-4 text-gray-500 ml-2"
+                                     fill="none"
+                                     viewBox="0 0 24 24"
+                                     stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+
+                            <div id="academic-year-dropdown"
+                                 class="absolute mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg z-10 hidden"
+                                 data-testid="academic-year-dropdown">
+                                <div class="p-2 border-b border-gray-200">
+                                    <input type="text"
+                                           id="academic-year-search"
+                                           placeholder="Search academic year..."
+                                           class="w-full border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                           data-testid="academic-year-search-input" />
+                                </div>
+                                <ul id="academic-year-options"
+                                    class="max-h-48 overflow-y-auto py-1 text-sm"
+                                    data-testid="academic-year-options-list">
+                                    <!-- filled by JS -->
+                                </ul>
+                            </div>
+                        </div>
+
+                        <p id="error-academic_year_id"
+                           class="mt-1 text-xs text-red-600 hidden validation-error-message"
+                           data-testid="academic-year-error"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: Class list + per-class homeroom teacher -->
+            <div class="border border-gray-200 rounded-lg overflow-hidden w-full">
+                <button type="button"
+                        onclick="toggleSection('class-selection')"
+                        class="w-full flex items-center justify-between px-4 py-3 bg-blue-900 hover:bg-blue-800 transition-colors duration-200 text-left"
+                        data-testid="class-selection-toggle">
+                    <span class="font-semibold text-white">
+                        Class & Homeroom Teacher
+                    </span>
+                    <svg id="icon-class-selection"
+                         class="w-5 h-5 text-white transition-transform duration-300"
+                         fill="none"
+                         viewBox="0 0 24 24"
+                         stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+
+                <div id="class-selection"
+                     class="px-4 pb-4 pt-3 space-y-3 border-t border-gray-100"
+                     data-testid="class-selection-section">
+
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm text-gray-700">
+                            For this academic year, assign a homeroom teacher per class.
+                        </span>
+                        <label class="inline-flex items-center text-sm text-gray-700 cursor-pointer">
+                            <input type="checkbox"
+                                   id="select-all-classes"
+                                   class="mr-1"
+                                   data-testid="select-all-classes-checkbox" />
+                            <span>Select All</span>
+                        </label>
+                    </div>
+
+                    <div class="border border-gray-200 rounded-md max-h-72 overflow-auto"
+                         data-testid="class-list-container">
+                        <table class="min-w-full text-sm">
+                            <thead class="bg-gray-50 text-left text-gray-700">
+                                <tr>
+                                    <th class="p-2 w-10"></th>
+                                    <th class="p-2 font-medium">Class</th>
+                                    <th class="p-2 font-medium">Level</th>
+                                    <th class="p-2 font-medium">Homeroom Teacher</th>
+                                    <th class="p-2 font-medium">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="class-list-body" data-testid="class-list-body">
+                                <!-- filled by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <p id="error-class_ids"
+                       class="mt-1 text-xs text-red-600 hidden validation-error-message"
+                       data-testid="class-ids-error"></p>
+
+                    <div class="pt-4 flex items-center justify-end space-x-2">
+                        <button type="button"
+                                onclick="goBack()"
+                                class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
+                                data-testid="academic-class-back-button">
+                            <svg class="w-4 h-4 mr-2 text-gray-600"
+                                 fill="none"
+                                 viewBox="0 0 24 24"
+                                 stroke="currentColor">
+                                <path stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      stroke-width="2"
+                                      d="M15 19l-7-7 7-7" />
+                            </svg>
+                            <span>Back</span>
+                        </button>
+
+                        <button type="button"
+                                onclick="saveAcademicClasses()"
+                                class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900"
+                                data-testid="academic-class-save-button">
+                            <span>Save</span>
+                            <svg class="w-4 h-4 ml-2 text-white"
+                                 fill="none"
+                                 viewBox="0 0 24 24"
+                                 stroke="currentColor">
+                                <path stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      stroke-width="2"
+                                      d="M5 13l4 4L19 7" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        let gYears = [];
+        let gClasses = [];
+        let gTeachers = [];
+
+        function toggleSection(id) {
+            const section = document.getElementById(id);
+            const icon = document.getElementById('icon-' + id);
+
+            if (!section || !icon) return;
+
+            const isHidden = section.classList.contains('hidden');
+
+            if (isHidden) {
+                section.classList.remove('hidden');
+                icon.classList.remove('-rotate-90');
+            } else {
+                section.classList.add('hidden');
+                icon.classList.add('-rotate-90');
+            }
+        }
+
+        function showError($input, $error, message) {
+            if (!$error.length) return;
+            if ($input && $input.length) {
+                $input.removeClass('border-gray-300').addClass('border-red-500');
+            }
+            $error.text(message).removeClass('hidden');
+        }
+
+        function clearError($input, $error) {
+            if ($input && $input.length) {
+                $input.removeClass('border-red-500').addClass('border-gray-300');
+            }
+            $error.text('').addClass('hidden');
+        }
+
+        function clearAllValidation() {
+            clearError($('#academic_year_id'), $('#error-academic_year_id'));
+            clearError(null, $('#error-class_ids'));
+        }
+
+        function validateForm() {
+            clearAllValidation();
+
+            let isValid = true;
+
+            const academicYearId = ($('#academic_year_id').val() || '').trim();
+
+            if (!academicYearId) {
+                isValid = false;
+                showError($('#academic_year_id'), $('#error-academic_year_id'), 'Academic year is required.');
+            }
+
+            const rows = $('#class-list-body').find('tr.class-row');
+            let selectedCount = 0;
+            let teacherMissing = false;
+
+            rows.each(function () {
+                const $row = $(this);
+                const checkbox = $row.find('input.class-checkbox').get(0);
+                const value = ($row.find('input.homeroom-teacher-value').val() || '').trim();
+
+                if (checkbox && checkbox.checked && !checkbox.disabled) {
+                    selectedCount++;
+                    if (!value) {
+                        teacherMissing = true;
+                    }
+                }
+            });
+
+            if (selectedCount === 0) {
+                isValid = false;
+                showError(null, $('#error-class_ids'), 'At least one class must be selected.');
+            } else if (teacherMissing) {
+                isValid = false;
+                showError(null, $('#error-class_ids'), 'Homeroom teacher is required for all selected classes.');
+            }
+
+            if (!isValid) {
+                const $firstError = $('.validation-error-message:not(.hidden)').first();
+                if ($firstError.length) {
+                    $('html, body').animate({
+                        scrollTop: $firstError.offset().top - 100
+                    }, 400);
+                }
+            }
+
+            return isValid;
+        }
+
+        function goBack() {
+            window.location.href = "/AcademicClass";
+        }
+
+        function renderClassRows(assignments) {
+            const body = $('#class-list-body');
+            body.empty();
+
+            const map = {};
+            (assignments || []).forEach(a => {
+                if (a.class_id) {
+                    map[a.class_id] = a;
+                }
+            });
+
+            let html = "";
+
+            gClasses.forEach(c => {
+                const id = c.class_id;
+                const name = c.class_name || "";
+                const level = c.class_level || "";
+                const existing = map[id];
+
+                if (existing) {
+                    const teacherName = existing.homeroom_teacher_name || "-";
+                    const teacherNpk = existing.homeroom_teacher_npk || "";
+                    const teacherText = teacherName + (teacherNpk ? " (" + teacherNpk + ")" : "");
+
+                    html += `
+                        <tr class="class-row border-b last:border-0 bg-gray-50"
+                            data-class-id="${id}"
+                            data-testid="class-row-${id}">
+                            <td class="p-2 text-center text-xs text-gray-500">
+                                <!-- already created, no checkbox -->
+                            </td>
+                            <td class="p-2">${name}</td>
+                            <td class="p-2">${level}</td>
+                            <td class="p-2 text-gray-700">
+                                ${teacherText || '<span class="text-gray-400">No homeroom</span>'}
+                            </td>
+                            <td class="p-2 text-xs text-green-700 font-medium">
+                                Already created
+                            </td>
+                        </tr>`;
+                } else {
+                    // New class for this academic year: checkbox + homeroom searchable dropdown
+                    let optionsHtml = "";
+                    gTeachers.forEach(t => {
+                        const tid = t.teacher_id;
+                        const fullName = t.full_name || "";
+                        const npk = t.npk || "";
+                        const label = fullName + (npk ? " (" + npk + ")" : "");
+                        optionsHtml += `
+                            <li data-id="${tid}"
+                                class="homeroom-option px-3 py-2 hover:bg-blue-50 cursor-pointer"
+                                data-testid="homeroom-teacher-option-${id}-${tid}">
+                                ${label}
+                            </li>`;
+                    });
+
+                    html += `
+                        <tr class="class-row border-b last:border-0"
+                            data-class-id="${id}"
+                            data-testid="class-row-${id}">
+                            <td class="p-2 text-center">
+                                <input type="checkbox"
+                                       class="class-checkbox"
+                                       data-testid="class-checkbox-${id}" />
+                            </td>
+                            <td class="p-2">${name}</td>
+                            <td class="p-2">${level}</td>
+                            <td class="p-2">
+                                <div class="relative"
+                                     data-testid="homeroom-teacher-searchable-wrapper-${id}">
+                                    <input type="hidden"
+                                           class="homeroom-teacher-value"
+                                           data-testid="homeroom-teacher-hidden-input-${id}" />
+
+                                    <button type="button"
+                                            class="homeroom-display w-full border border-gray-300 rounded-md p-2 bg-white text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            data-testid="homeroom-teacher-select-toggle-${id}">
+                                        <span class="homeroom-display-text text-gray-500">
+                                            -- Select Homeroom Teacher --
+                                        </span>
+                                        <svg class="w-4 h-4 text-gray-500 ml-2"
+                                             fill="none"
+                                             viewBox="0 0 24 24"
+                                             stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                  d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+
+                                    <div class="homeroom-dropdown absolute mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg z-10 hidden"
+                                         data-testid="homeroom-teacher-dropdown-${id}">
+                                        <div class="p-2 border-b border-gray-200">
+                                            <input type="text"
+                                                   class="homeroom-search w-full border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                   placeholder="Search teacher..."
+                                                   data-testid="homeroom-teacher-search-input-${id}" />
+                                        </div>
+                                        <ul class="homeroom-options max-h-48 overflow-y-auto py-1 text-sm"
+                                            data-testid="homeroom-teacher-options-list-${id}">
+                                            ${optionsHtml}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="p-2 text-xs text-blue-700">
+                                New
+                            </td>
+                        </tr>`;
+                }
+            });
+
+            body.html(html);
+        }
+
+        function loadAssignmentsForYear(academicYearId) {
+            if (!academicYearId) {
+                $('#class-list-body').empty();
+                return;
+            }
+
+            $.get("/AcademicClass/GetByYear", { academicYearId: academicYearId }, function (res) {
+                if (!res.success) {
+                    alert(res.message || "Failed to load academic classes for this year");
+                    return;
+                }
+
+                const assignments = res.data || [];
+                renderClassRows(assignments);
+            });
+        }
+
+        $(document).ready(function () {
+            // Load lookups once
+            $.get("/AcademicClass/GetLookups", function (res) {
+                if (!res.success) {
+                    alert(res.message || 'Failed to load lookups.');
+                    return;
+                }
+
+                gYears = res.data.years || [];
+                gClasses = res.data.classes || [];
+                gTeachers = res.data.teachers || [];
+
+                let yearHtml = "";
+                gYears.forEach(y => {
+                    const startYear = y.start_date ? new Date(y.start_date).getFullYear() : "";
+                    const endYear = y.end_date ? new Date(y.end_date).getFullYear() : "";
+                    const labelParts = [];
+                    if (startYear && endYear) labelParts.push(startYear + " / " + endYear);
+                    if (y.semester) labelParts.push("Semester " + y.semester);
+                    if (y.status) labelParts.push("[" + y.status + "]");
+                    const label = labelParts.join(" - ");
+                    yearHtml += `
+                        <li data-id="${y.academic_year_id}"
+                            class="px-3 py-2 hover:bg-blue-50 cursor-pointer"
+                            data-testid="academic-year-option-${y.academic_year_id}">
+                            ${label}
+                        </li>`;
+                });
+                $("#academic-year-options").html(yearHtml);
+
+                // Default alert to guide user
+                alert("Please select academic year first.");
+            });
+
+            // Academic year dropdown behavior
+            $('#academic-year-display').on('click', function (e) {
+                e.stopPropagation();
+                $('#academic-year-dropdown').toggleClass('hidden');
+                $('#academic-year-search').val('').trigger('input');
+                $('#academic-year-search').focus();
+            });
+
+            $('#academic-year-options').on('click', 'li', function (e) {
+                e.stopPropagation();
+                const id = $(this).data('id');
+                const label = $(this).text().trim();
+
+                $('#academic_year_id').val(id);
+                $('#academic-year-display-text').text(label).removeClass('text-gray-500');
+                $('#academic-year-dropdown').addClass('hidden');
+
+                clearError($('#academic_year_id'), $('#error-academic_year_id'));
+
+                loadAssignmentsForYear(id);
+            });
+
+            $('#academic-year-search').on('input', function () {
+                const term = $(this).val().toLowerCase();
+                $('#academic-year-options li').each(function () {
+                    const text = $(this).text().toLowerCase();
+                    $(this).toggle(text.indexOf(term) !== -1);
+                });
+            });
+
+            // Select all for non-disabled classes
+            $('#select-all-classes').on('change', function () {
+                const checked = $(this).is(':checked');
+                $('#class-list-body').find('input.class-checkbox:not(:disabled)').prop('checked', checked);
+                if (checked) {
+                    clearError(null, $('#error-class_ids'));
+                }
+            });
+
+            // Any class checkbox change clears class_ids error if some selected
+            $(document).on('change', 'input.class-checkbox', function () {
+                if ($('#class-list-body').find('input.class-checkbox:checked').length > 0) {
+                    clearError(null, $('#error-class_ids'));
+                }
+            });
+
+            // Homeroom teacher dropdown behavior (per-row)
+            $(document).on('click', '.homeroom-display', function (e) {
+                e.stopPropagation();
+                const $row = $(this).closest('tr.class-row');
+                const $dropdown = $row.find('.homeroom-dropdown');
+
+                $('.homeroom-dropdown').addClass('hidden');
+                $dropdown.toggleClass('hidden');
+
+                const $search = $row.find('.homeroom-search');
+                $search.val('').trigger('input');
+                $search.focus();
+            });
+
+            $(document).on('click', '.homeroom-option', function (e) {
+                e.stopPropagation();
+                const $li = $(this);
+                const id = $li.data('id');
+                const label = $li.text().trim();
+                const $row = $li.closest('tr.class-row');
+
+                $row.find('input.homeroom-teacher-value').val(id);
+                $row.find('.homeroom-display-text').text(label).removeClass('text-gray-500');
+                $row.find('.homeroom-dropdown').addClass('hidden');
+
+                clearError(null, $('#error-class_ids'));
+            });
+
+            $(document).on('input', '.homeroom-search', function () {
+                const term = $(this).val().toLowerCase();
+                const $dd = $(this).closest('.homeroom-dropdown');
+                $dd.find('.homeroom-option').each(function () {
+                    const text = $(this).text().toLowerCase();
+                    $(this).toggle(text.indexOf(term) !== -1);
+                });
+            });
+
+            // Close all dropdowns on outside click
+            $(document).on('click', function () {
+                $('#academic-year-dropdown').addClass('hidden');
+                $('.homeroom-dropdown').addClass('hidden');
+            });
+
+            $('#academic-year-dropdown').on('click', function (e) {
+                e.stopPropagation();
+            });
+
+            $(document).on('click', '.homeroom-dropdown', function (e) {
+                e.stopPropagation();
+            });
+        });
+
+        function saveAcademicClasses() {
+            if (!validateForm()) return;
+
+            const fd = new FormData();
+
+            fd.append("academic_year_id", $('#academic_year_id').val());
+
+            $('#class-list-body').find('tr.class-row').each(function () {
+                const $row = $(this);
+                const classId = $row.data('class-id');
+                const checkbox = $row.find('input.class-checkbox').get(0);
+                const teacherId = ($row.find('input.homeroom-teacher-value').val() || '').trim();
+
+                if (checkbox && !checkbox.disabled && checkbox.checked) {
+                    if (!teacherId) {
+                        return;
+                    }
+                    fd.append("class_ids", classId);
+                    fd.append("homeroom_teacher_ids", teacherId);
+                }
+            });
+
+            $.ajax({
+                url: "/AcademicClass/Create",
+                type: "POST",
+                data: fd,
+                processData: false,
+                contentType: false,
+                success: res => {
+                    if (res.success) {
+                        window.location.href = "/AcademicClass";
+                    } else {
+                        alert(res.message || "Failed to create academic classes");
+                    }
+                }
+            });
+        }
+    </script>
+}

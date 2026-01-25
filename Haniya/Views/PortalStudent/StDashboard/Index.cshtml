@@ -1,0 +1,9 @@
+﻿@{
+    Layout = "_LayoutStudent";
+    ViewData["Title"] = "Student Dashboard";
+}
+
+<div class="space-y-4">
+    <h2 class="text-xl font-bold text-gray-800">Selamat datang, @User.FindFirst("FullName")?.Value</h2>
+    <p class="text-sm text-gray-600">Ini adalah dashboard student.</p>
+</div>

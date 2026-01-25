@@ -1,0 +1,387 @@
+﻿@{
+    Layout = "_LayoutAdmin";
+    var id = ViewBag.gradeId;
+    IEnumerable<dynamic> classOptions = ViewBag.ClassOptions as IEnumerable<dynamic> ?? new List<dynamic>();
+    IEnumerable<dynamic> subjectOptions = ViewBag.SubjectOptions as IEnumerable<dynamic> ?? new List<dynamic>();
+    IEnumerable<dynamic> teacherOptions = ViewBag.TeacherOptions as IEnumerable<dynamic> ?? new List<dynamic>();
+    IEnumerable<dynamic> studentOptions = ViewBag.StudentOptions as IEnumerable<dynamic> ?? new List<dynamic>();
+}
+
+<input type="hidden" id="grade_id" name="grade_id" value="@id">
+
+<h2 class="text-xl font-semibold mb-4">Edit Grade</h2>
+
+<div class="bg-white p-6 rounded-lg shadow w-full space-y-6">
+
+    <form id="frm" class="space-y-6 w-full">
+
+        <div class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="academic_class_id" class="block text-sm font-medium text-gray-700 mb-1">
+                        Class <span class="text-red-500">*</span>
+                    </label>
+                    <select id="academic_class_id"
+                            class="w-full border border-gray-300 rounded-md p-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            data-testid="grade-class-select">
+                        <option value="">-- Select Class --</option>
+                        @foreach (var c in classOptions)
+                        {
+                            string cid = c.Id as string ?? "";
+                            string cname = c.Name as string ?? "";
+                            <option value="@cid">@cname</option>
+                        }
+                    </select>
+                    <p id="error-class"
+                       class="mt-1 text-xs text-red-600 hidden validation-error-message"
+                       data-testid="error-class"></p>
+                </div>
+
+                <div>
+                    <label for="subject_id" class="block text-sm font-medium text-gray-700 mb-1">
+                        Subject <span class="text-red-500">*</span>
+                    </label>
+                    <select id="subject_id"
+                            class="w-full border border-gray-300 rounded-md p-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            data-testid="grade-subject-select">
+                        <option value="">-- Select Subject --</option>
+                        @foreach (var s in subjectOptions)
+                        {
+                            string sid = s.Id as string ?? "";
+                            string sname = s.Name as string ?? "";
+                            <option value="@sid">@sname</option>
+                        }
+                    </select>
+                    <p id="error-subject"
+                       class="mt-1 text-xs text-red-600 hidden validation-error-message"
+                       data-testid="error-subject"></p>
+                </div>
+
+                <div>
+                    <label for="teacher_id" class="block text-sm font-medium text-gray-700 mb-1">
+                        Teacher <span class="text-red-500">*</span>
+                    </label>
+                    <select id="teacher_id"
+                            class="w-full border border-gray-300 rounded-md p-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            data-testid="grade-teacher-select">
+                        <option value="">-- Select Teacher --</option>
+                        @foreach (var t in teacherOptions)
+                        {
+                            string tid = t.Id as string ?? "";
+                            string tname = t.Name as string ?? "";
+                            <option value="@tid">@tname</option>
+                        }
+                    </select>
+                    <p id="error-teacher"
+                       class="mt-1 text-xs text-red-600 hidden validation-error-message"
+                       data-testid="error-teacher"></p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="grade_type" class="block text-sm font-medium text-gray-700 mb-1">
+                        Grade Type <span class="text-red-500">*</span>
+                    </label>
+                    <input id="grade_type"
+                           class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="e.g. Midterm, Final"
+                           data-testid="grade-type-input" />
+                    <p id="error-grade-type"
+                       class="mt-1 text-xs text-red-600 hidden validation-error-message"
+                       data-testid="error-grade-type"></p>
+                </div>
+
+                <div>
+                    <label for="minimum_value" class="block text-sm font-medium text-gray-700 mb-1">
+                        Minimum Value
+                    </label>
+                    <input id="minimum_value"
+                           type="number"
+                           step="0.01"
+                           class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           data-testid="grade-minimum-input" />
+                </div>
+            </div>
+        </div>
+
+        <!-- DETAILS -->
+        <div class="space-y-3">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-gray-700">Grade Details</h3>
+                <button type="button"
+                        onclick="addDetailRow()"
+                        class="inline-flex items-center px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-600"
+                        data-testid="grade-add-row-button">
+                    + Add Row
+                </button>
+            </div>
+
+            <div class="overflow-auto border border-gray-200 rounded-md">
+                <table class="min-w-full text-xs">
+                    <thead class="bg-gray-100 text-left text-gray-700">
+                        <tr>
+                            <th class="p-2 font-medium">Student</th>
+                            <th class="p-2 font-medium">Grade</th>
+                            <th class="p-2 font-medium">Attitude</th>
+                            <th class="p-2 font-medium">Notes</th>
+                            <th class="p-2 font-medium text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-details" data-testid="grade-details-body"></tbody>
+
+                    <tbody id="row-template-body" class="hidden">
+                        <tr class="detail-row">
+                            <td class="p-1">
+                                <select class="student-select w-full border border-gray-300 rounded-md p-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">-- Student --</option>
+                                    @foreach (var s in studentOptions)
+                                    {
+                                        string sid = s.Id as string ?? "";
+                                        string sname = s.Name as string ?? "";
+                                        <option value="@sid">@sname</option>
+                                    }
+                                </select>
+                            </td>
+                            <td class="p-1">
+                                <input type="number"
+                                       step="0.01"
+                                       class="grade-value-input w-full border border-gray-300 rounded-md p-1 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
+                            </td>
+                            <td class="p-1">
+                                <input type="text"
+                                       class="grade-attitude-input w-full border border-gray-300 rounded-md p-1 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                       placeholder="e.g. Good, Needs Improvement" />
+                            </td>
+                            <td class="p-1">
+                                <input type="text"
+                                       class="notes-input w-full border border-gray-300 rounded-md p-1 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
+                            </td>
+                            <td class="p-1 text-right">
+                                <button type="button"
+                                        onclick="removeDetailRow(this)"
+                                        class="inline-flex items-center px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs font-medium rounded-md"
+                                        data-testid="grade-remove-row-button">
+                                    Remove
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p id="error-details"
+               class="mt-1 text-xs text-red-600 hidden validation-error-message"
+               data-testid="error-details"></p>
+        </div>
+
+        <input type="hidden" id="details" name="details" />
+
+        <div class="pt-4 flex items-center justify-end space-x-2">
+            <button type="button"
+                    onclick="goBackGrade()"
+                    class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
+                    data-testid="grade-back-button">
+                <svg class="w-4 h-4 mr-2 text-gray-600"
+                     fill="none"
+                     viewBox="0 0 24 24"
+                     stroke="currentColor">
+                    <path stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M15 19l-7-7 7-7" />
+                </svg>
+                <span>Back</span>
+            </button>
+
+            <button type="button"
+                    onclick="updateGrade()"
+                    class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900"
+                    data-testid="grade-update-button">
+                <span>Update</span>
+                <svg class="w-4 h-4 ml-2 text-white"
+                     fill="none"
+                     viewBox="0 0 24 24"
+                     stroke="currentColor">
+                    <path stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M5 13l4 4L19 7" />
+                </svg>
+            </button>
+        </div>
+
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        function addDetailRow(prefill) {
+            const $tmpl = $('#row-template-body tr.detail-row').first().clone();
+            if (prefill) {
+                $tmpl.find('.student-select').val(prefill.student_id || '');
+                $tmpl.find('.grade-value-input').val(prefill.grade_value || '');
+                $tmpl.find('.grade-attitude-input').val(prefill.grade_attitude || '');
+                $tmpl.find('.notes-input').val(prefill.notes || '');
+            }
+            $('#tbody-details').append($tmpl);
+        }
+
+        function removeDetailRow(btn) {
+            $(btn).closest('tr').remove();
+        }
+
+        function collectDetails() {
+            const rows = [];
+            $('#tbody-details tr.detail-row').each(function () {
+                const $row = $(this);
+                const student_id = ($row.find('.student-select').val() || '').toString().trim();
+                const grade_value = ($row.find('.grade-value-input').val() || '').toString().trim();
+                const grade_attitude = ($row.find('.grade-attitude-input').val() || '').toString().trim();
+                const notes = ($row.find('.notes-input').val() || '').toString().trim();
+
+                if (student_id || grade_value || grade_attitude || notes) {
+                    rows.push({ student_id, grade_value, grade_attitude, notes });
+                }
+            });
+            return rows;
+        }
+
+        function showError($input, $error, message) {
+            if ($input && $input.length) {
+                $input.addClass('border-red-500').removeClass('border-gray-300');
+            }
+            if ($error && $error.length) {
+                $error.text(message).removeClass('hidden');
+            }
+        }
+
+        function clearError($input, $error) {
+            if ($input && $input.length) {
+                $input.removeClass('border-red-500').addClass('border-gray-300');
+            }
+            if ($error && $error.length) {
+                $error.text('').addClass('hidden');
+            }
+        }
+
+        function clearAllValidation() {
+            clearError($('#academic_class_id'), $('#error-class'));
+            clearError($('#subject_id'), $('#error-subject'));
+            clearError($('#teacher_id'), $('#error-teacher'));
+            clearError($('#grade_type'), $('#error-grade-type'));
+            clearError($('#tbody-details'), $('#error-details'));
+        }
+
+        function validateForm() {
+            clearAllValidation();
+            let isValid = true;
+
+            const cls = ($('#academic_class_id').val() || '').trim();
+            const subject = ($('#subject_id').val() || '').trim();
+            const teacher = ($('#teacher_id').val() || '').trim();
+            const type = ($('#grade_type').val() || '').trim();
+            const details = collectDetails();
+
+            if (!cls) {
+                isValid = false;
+                showError($('#academic_class_id'), $('#error-class'), 'Class is required.');
+            }
+            if (!subject) {
+                isValid = false;
+                showError($('#subject_id'), $('#error-subject'), 'Subject is required.');
+            }
+            if (!teacher) {
+                isValid = false;
+                showError($('#teacher_id'), $('#error-teacher'), 'Teacher is required.');
+            }
+            if (!type) {
+                isValid = false;
+                showError($('#grade_type'), $('#error-grade-type'), 'Grade type is required.');
+            }
+
+            if (!details.length) {
+                isValid = false;
+                showError($('#tbody-details'), $('#error-details'), 'At least one detail row is required.');
+            }
+            details.forEach(d => {
+                if (!d.student_id) {
+                    isValid = false;
+                    showError($('#tbody-details'), $('#error-details'), 'Each row must have student.');
+                }
+            });
+
+            $('#details').val(JSON.stringify(details));
+            return isValid;
+        }
+
+        function goBackGrade() {
+            window.location.href = "/Grade";
+        }
+
+        function loadGrade() {
+            const id = $('#grade_id').val();
+            if (!id) return;
+
+            $.get("/Grade/GetById", { id }, function (res) {
+                if (!res.success) {
+                    alert(res.message || "Failed to load grade");
+                    return;
+                }
+
+                const d = res.data;
+                $('#academic_class_id').val(d.academic_class_id || '');
+                $('#subject_id').val(d.subject_id || '');
+                $('#teacher_id').val(d.teacher_id || '');
+                $('#grade_type').val(d.grade_type || '');
+                $('#minimum_value').val(d.minimum_value || '');
+
+                $('#tbody-details').empty();
+                if (Array.isArray(d.details) && d.details.length) {
+                    d.details.forEach(row => {
+                        addDetailRow({
+                            student_id: row.student_id,
+                            grade_value: row.grade_value,
+                            grade_attitude: row.grade_attitude,
+                            notes: row.notes
+                        });
+                    });
+                } else {
+                    addDetailRow();
+                }
+            });
+        }
+
+        function updateGrade() {
+            if (!validateForm()) return;
+
+            const fd = new FormData();
+            fd.append("grade_id", $('#grade_id').val());
+            fd.append("academic_class_id", $('#academic_class_id').val());
+            fd.append("subject_id", $('#subject_id').val());
+            fd.append("teacher_id", $('#teacher_id').val());
+            fd.append("grade_type", $('#grade_type').val());
+            fd.append("minimum_value", $('#minimum_value').val());
+            fd.append("details", $('#details').val());
+
+            $.ajax({
+                url: "/Grade/Update",
+                type: "POST",
+                data: fd,
+                processData: false,
+                contentType: false,
+                success: res => {
+                    if (res.success) {
+                        window.location.href = "/Grade";
+                    } else {
+                        alert(res.message || "Failed to update grade");
+                    }
+                }
+            });
+        }
+
+        $(document).ready(function () {
+            loadGrade();
+        });
+    </script>
+}

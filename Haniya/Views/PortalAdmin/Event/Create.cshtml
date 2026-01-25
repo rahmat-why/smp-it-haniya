@@ -1,0 +1,346 @@
+﻿@{
+    Layout = "_LayoutAdmin";
+    ViewData["Title"] = "Create Event";
+}
+
+<h2 class="text-xl font-semibold mb-4">Create Event</h2>
+<div class="bg-white p-6 rounded-lg shadow w-full space-y-6">
+    <form id="frm" enctype="multipart/form-data" class="space-y-6 w-full">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+            <!-- EVENT INFO (LEFT) -->
+            <div class="border border-gray-200 rounded-lg overflow-hidden w-full">
+                <button type="button"
+                        onclick="toggleSection('event-info')"
+                        class="w-full flex items-center justify-between px-4 py-3 bg-blue-900 hover:bg-blue-800 transition-colors duration-200 text-left"
+                        data-testid="event-info-toggle">
+                    <span class="font-semibold text-white">
+                        Event Information
+                    </span>
+                    <svg id="icon-event-info"
+                         class="w-5 h-5 text-white transition-transform duration-300"
+                         fill="none"
+                         viewBox="0 0 24 24"
+                         stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+                <div id="event-info"
+                     class="px-4 pb-4 pt-3 space-y-4 border-t border-gray-100"
+                     data-testid="event-info-section">
+                    <div>
+                        <label for="event_name" class="block text-sm font-medium text-gray-700 mb-1">
+                            Event Name <span class="text-red-500">*</span>
+                        </label>
+                        <input id="event_name"
+                               class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               data-testid="event-name-input" />
+                        <p id="error-event_name"
+                           class="mt-1 text-xs text-red-600 hidden validation-error-message"
+                           data-testid="error-event_name"></p>
+                    </div>
+                    <div>
+                        <label for="location" class="block text-sm font-medium text-gray-700 mb-1">
+                            Location <span class="text-red-500">*</span>
+                        </label>
+                        <input id="location"
+                               class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               data-testid="location-input" />
+                        <p id="error-location"
+                           class="mt-1 text-xs text-red-600 hidden validation-error-message"
+                           data-testid="error-location"></p>
+                    </div>
+                    <!-- Photo -->
+                    <div>
+                        <label for="photo" class="block text-sm font-medium text-gray-700 mb-1">
+                            Photo <span class="text-red-500">*</span>
+                        </label>
+                        <div class="flex items-center gap-3">
+                            <label for="photo"
+                                   class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
+                                Choose File
+                            </label>
+                            <span id="photo-filename"
+                                  class="text-sm text-gray-600 truncate max-w-[200px]"
+                                  data-testid="photo-filename">
+                                No file chosen
+                            </span>
+                            <input type="file"
+                                   id="photo"
+                                   class="hidden"
+                                   accept="image/*"
+                                   onchange="updatePhotoName()"
+                                   data-testid="photo-input" />
+                        </div>
+                        <div class="mt-3">
+                            <img id="photo-preview"
+                                 src=""
+                                 alt="Photo preview"
+                                 class="hidden w-32 h-32 object-cover rounded-md border border-gray-300"
+                                 data-testid="photo-preview" />
+                        </div>
+                        <p id="error-photo"
+                           class="mt-1 text-xs text-red-600 hidden validation-error-message"
+                           data-testid="error-photo"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DESCRIPTION & TAGS (RIGHT) -->
+            <div class="border border-gray-200 rounded-lg overflow-hidden w-full">
+                <button type="button"
+                        onclick="toggleSection('event-extra')"
+                        class="w-full flex items-center justify-between px-4 py-3 bg-blue-900 hover:bg-blue-800 transition-colors duration-200 text-left"
+                        data-testid="event-extra-toggle">
+                    <span class="font-semibold text-white">
+                        Description & Tags
+                    </span>
+                    <svg id="icon-event-extra"
+                         class="w-5 h-5 text-white transition-transform duration-300"
+                         fill="none"
+                         viewBox="0 0 24 24"
+                         stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+                <div id="event-extra"
+                     class="px-4 pb-4 pt-3 space-y-4 border-t border-gray-100"
+                     data-testid="event-extra-section">
+                    <div>
+                        <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
+                            Description <span class="text-red-500">*</span>
+                        </label>
+                        <textarea id="description"
+                                  class="w-full border border-gray-300 rounded-md p-2 min-h-[160px] resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  data-testid="description-textarea"></textarea>
+                        <p id="error-description"
+                           class="mt-1 text-xs text-red-600 hidden validation-error-message"
+                           data-testid="error-description"></p>
+                    </div>
+
+                    <div>
+                        <label for="tags" class="block text-sm font-medium text-gray-700 mb-1">
+                            Tags <span class="text-red-500">*</span>
+                        </label>
+                        <select id="tags"
+                                class="w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                multiple="multiple"
+                                data-placeholder="-- Select Tags --"
+                                data-testid="event-tags-select">
+                        </select>
+                        <p id="error-tags"
+                           class="mt-1 text-xs text-red-600 hidden validation-error-message"
+                           data-testid="error-tags"></p>
+                    </div>
+
+                    <div class="pt-4 flex items-center justify-end space-x-2">
+                        <button type="button"
+                                onclick="goBack()"
+                                class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
+                                data-testid="event-back-button">
+                            <svg class="w-4 h-4 mr-2 text-gray-600"
+                                 fill="none"
+                                 viewBox="0 0 24 24"
+                                 stroke="currentColor">
+                                <path stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      stroke-width="2"
+                                      d="M15 19l-7-7 7-7" />
+                            </svg>
+                            <span>Back</span>
+                        </button>
+                        <button type="button"
+                                onclick="saveEvent()"
+                                class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900"
+                                data-testid="event-save-button">
+                            <span>Save</span>
+                            <svg class="w-4 h-4 ml-2 text-white"
+                                 fill="none"
+                                 viewBox="0 0 24 24"
+                                 stroke="currentColor">
+                                <path stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      stroke-width="2"
+                                      d="M5 13l4 4L19 7" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        function toggleSection(id) {
+            const section = document.getElementById(id);
+            const icon = document.getElementById('icon-' + id);
+            if (!section || !icon) return;
+            const isHidden = section.classList.contains('hidden');
+            if (isHidden) {
+                section.classList.remove('hidden');
+                icon.classList.remove('-rotate-90');
+            } else {
+                section.classList.add('hidden');
+                icon.classList.add('-rotate-90');
+            }
+        }
+
+        function updatePhotoName() {
+            const input = document.getElementById('photo');
+            const labelSpan = document.getElementById('photo-filename');
+            const preview = document.getElementById('photo-preview');
+            if (!input || !labelSpan || !preview) return;
+            if (input.files && input.files.length > 0) {
+                const file = input.files[0];
+                labelSpan.textContent = file.name;
+                const url = URL.createObjectURL(file);
+                preview.src = url;
+                preview.classList.remove('hidden');
+                clearError($('#photo'), $('#error-photo'));
+            } else {
+                labelSpan.textContent = 'No file chosen';
+                preview.src = '';
+                preview.classList.add('hidden');
+            }
+        }
+
+        function showError($input, $error, message) {
+            if (!$error.length) return;
+            if ($input && $input.length) {
+                $input.removeClass('border-gray-300').addClass('border-red-500');
+            }
+            $error.text(message).removeClass('hidden');
+        }
+
+        function clearError($input, $error) {
+            if ($input && $input.length) {
+                $input.removeClass('border-red-500').addClass('border-gray-300');
+            }
+            $error.text('').addClass('hidden');
+        }
+
+        function clearAllValidation() {
+            clearError($('#event_name'), $('#error-event_name'));
+            clearError($('#location'), $('#error-location'));
+            clearError($('#description'), $('#error-description'));
+            clearError($('#photo'), $('#error-photo'));
+            clearError($('#tags'), $('#error-tags'));
+        }
+
+        function validateForm() {
+            clearAllValidation();
+            let isValid = true;
+
+            const eventName = ($('#event_name').val() || '').trim();
+            const location = ($('#location').val() || '').trim();
+            const description = ($('#description').val() || '').trim();
+            const tags = $('#tags').val() || [];
+            const photoInput = document.getElementById('photo');
+            const hasPhoto = photoInput && photoInput.files && photoInput.files.length > 0;
+
+            if (!eventName) {
+                isValid = false;
+                showError($('#event_name'), $('#error-event_name'), 'Event name is required.');
+            }
+            if (!location) {
+                isValid = false;
+                showError($('#location'), $('#error-location'), 'Location is required.');
+            }
+            if (!description) {
+                isValid = false;
+                showError($('#description'), $('#error-description'), 'Description is required.');
+            }
+            if (tags.length === 0) {
+                isValid = false;
+                showError($('#tags'), $('#error-tags'), 'At least one tag is required.');
+            }
+            if (!hasPhoto) {
+                isValid = false;
+                showError($('#photo'), $('#error-photo'), 'Photo is required.');
+            }
+
+            if (!isValid) {
+                const $firstError = $('.validation-error-message:not(.hidden)').first();
+                if ($firstError.length) {
+                    $('html, body').animate({
+                        scrollTop: $firstError.offset().top - 100
+                    }, 400);
+                }
+            }
+
+            return isValid;
+        }
+
+        function goBack() {
+            window.location.href = "/Event";
+        }
+
+        function saveEvent() {
+            if (!validateForm()) return;
+
+            const fd = new FormData();
+            $('#frm').find('input,textarea,select').each(function () {
+                if (this.type !== "file") {
+                    fd.append(this.id, $(this).val());
+                }
+            });
+
+            const photoInput = document.getElementById('photo');
+            if (photoInput && photoInput.files && photoInput.files[0]) {
+                fd.append("profile_photo", photoInput.files[0]);
+            }
+
+            $.ajax({
+                url: "/Event/Create",
+                type: "POST",
+                data: fd,
+                processData: false,
+                contentType: false,
+                success: res => {
+                    if (res.success) {
+                        window.location.href = "/Event";
+                    } else {
+                        alert(res.message || "Failed to create event");
+                    }
+                },
+                error: function () {
+                    alert("An error occurred while creating the event.");
+                }
+            });
+        }
+
+        $(document).ready(function () {
+            // Initialize Select2 for Tags (multi-select with AJAX)
+            $('#tags').select2({
+                placeholder: "-- Select Tags --",
+                allowClear: true,
+                multiple: true,
+                ajax: {
+                    url: '/Select2/TagsEvent',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) {
+                        return {
+                            q: params.term || '',
+                            page: params.page || 1
+                        };
+                    },
+                    processResults: function (data, params) {
+                        params.page = params.page || 1;
+                        return {
+                            results: data.results,
+                            pagination: data.pagination
+                        };
+                    },
+                    cache: true
+                },
+                minimumInputLength: 0
+            }).on('change', function () {
+                clearError($('#tags'), $('#error-tags'));
+            });
+        });
+    </script>
+}

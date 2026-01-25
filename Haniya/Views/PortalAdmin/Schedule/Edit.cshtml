@@ -1,0 +1,345 @@
+﻿@using System.Collections.Generic
+
+@{
+    Layout = "_LayoutAdmin";
+    var id = ViewBag.scheduleId;
+    IEnumerable<dynamic> classOptions = ViewBag.ClassOptions as IEnumerable<dynamic> ?? new List<dynamic>();
+    IEnumerable<dynamic> subjectOptions = ViewBag.SubjectOptions as IEnumerable<dynamic> ?? new List<dynamic>();
+    IEnumerable<dynamic> teacherOptions = ViewBag.TeacherOptions as IEnumerable<dynamic> ?? new List<dynamic>();
+}
+
+<input type="hidden" id="schedule_id" name="schedule_id" value="@id">
+
+<h2 class="text-xl font-semibold mb-4">Edit Schedule</h2>
+
+<div class="bg-white p-6 rounded-lg shadow w-full space-y-6">
+
+    <form id="frm" class="space-y-6 w-full">
+
+        <div class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="academic_class_id" class="block text-sm font-medium text-gray-700 mb-1">
+                        Class <span class="text-red-500">*</span>
+                    </label>
+                    <select id="academic_class_id"
+                            class="w-full border border-gray-300 rounded-md p-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            data-testid="schedule-class-select">
+                        <option value="">-- Select Class --</option>
+                        @foreach (var c in classOptions)
+                        {
+                            string cid = c.Id as string ?? "";
+                            string cname = c.Name as string ?? "";
+                            <option value="@cid">@cname</option>
+                        }
+                    </select>
+                    <p id="error-class"
+                       class="mt-1 text-xs text-red-600 hidden validation-error-message"
+                       data-testid="error-class"></p>
+                </div>
+
+                <div>
+                    <label for="day" class="block text-sm font-medium text-gray-700 mb-1">
+                        Day <span class="text-red-500">*</span>
+                    </label>
+                    <select id="day"
+                            class="w-full border border-gray-300 rounded-md p-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            data-testid="schedule-day-select">
+                        <option value="">-- Select Day --</option>
+                        <option>MONDAY</option>
+                        <option>TUESDAY</option>
+                        <option>WEDNESDAY</option>
+                        <option>THURSDAY</option>
+                        <option>FRIDAY</option>
+                        <option>SATURDAY</option>
+                        <option>SUNDAY</option>
+                    </select>
+                    <p id="error-day"
+                       class="mt-1 text-xs text-red-600 hidden validation-error-message"
+                       data-testid="error-day"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- DETAILS -->
+        <div class="space-y-3">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-gray-700">Schedule Details</h3>
+                <button type="button"
+                        onclick="addDetailRow()"
+                        class="inline-flex items-center px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-600"
+                        data-testid="schedule-add-row-button">
+                    + Add Row
+                </button>
+            </div>
+
+            <div class="overflow-auto border border-gray-200 rounded-md">
+                <table class="min-w-full text-xs">
+                    <thead class="bg-gray-100 text-left text-gray-700">
+                        <tr>
+                            <th class="p-2 font-medium">Subject</th>
+                            <th class="p-2 font-medium">Teacher</th>
+                            <th class="p-2 font-medium">Start Time</th>
+                            <th class="p-2 font-medium">End Time</th>
+                            <th class="p-2 font-medium text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-details" data-testid="schedule-details-body"></tbody>
+
+                    <!-- hidden template -->
+                    <tbody id="row-template-body" class="hidden">
+                        <tr class="detail-row">
+                            <td class="p-1">
+                                <select class="subject-select w-full border border-gray-300 rounded-md p-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">-- Subject --</option>
+                                    @foreach (var s in subjectOptions)
+                                    {
+                                        string sid = s.Id as string ?? "";
+                                        string sname = s.Name as string ?? "";
+                                        <option value="@sid">@sname</option>
+                                    }
+                                </select>
+                            </td>
+                            <td class="p-1">
+                                <select class="teacher-select w-full border border-gray-300 rounded-md p-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">-- Teacher --</option>
+                                    @foreach (var t in teacherOptions)
+                                    {
+                                        string tid = t.Id as string ?? "";
+                                        string tname = t.Name as string ?? "";
+                                        <option value="@tid">@tname</option>
+                                    }
+                                </select>
+                            </td>
+                            <td class="p-1">
+                                <input type="time"
+                                       class="start-time-input w-full border border-gray-300 rounded-md p-1 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
+                            </td>
+                            <td class="p-1">
+                                <input type="time"
+                                       class="end-time-input w-full border border-gray-300 rounded-md p-1 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
+                            </td>
+                            <td class="p-1 text-right">
+                                <button type="button"
+                                        onclick="removeDetailRow(this)"
+                                        class="inline-flex items-center px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs font-medium rounded-md"
+                                        data-testid="schedule-remove-row-button">
+                                    Remove
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p id="error-details"
+               class="mt-1 text-xs text-red-600 hidden validation-error-message"
+               data-testid="error-details"></p>
+        </div>
+
+        <input type="hidden" id="details" name="details" />
+
+        <div class="pt-4 flex items-center justify-end space-x-2">
+            <button type="button"
+                    onclick="goBackSchedule()"
+                    class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
+                    data-testid="schedule-back-button">
+                <svg class="w-4 h-4 mr-2 text-gray-600"
+                     fill="none"
+                     viewBox="0 0 24 24"
+                     stroke="currentColor">
+                    <path stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M15 19l-7-7 7-7" />
+                </svg>
+                <span>Back</span>
+            </button>
+
+            <button type="button"
+                    onclick="updateSchedule()"
+                    class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900"
+                    data-testid="schedule-update-button">
+                <span>Update</span>
+                <svg class="w-4 h-4 ml-2 text-white"
+                     fill="none"
+                     viewBox="0 0 24 24"
+                     stroke="currentColor">
+                    <path stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M5 13l4 4L19 7" />
+                </svg>
+            </button>
+        </div>
+
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        function addDetailRow(prefill) {
+            const $tmpl = $('#row-template-body tr.detail-row').first().clone();
+            if (prefill) {
+                $tmpl.find('.subject-select').val(prefill.subject_id || '');
+                $tmpl.find('.teacher-select').val(prefill.teacher_id || '');
+                if (prefill.start_time) {
+                    $tmpl.find('.start-time-input').val(prefill.start_time.substring(0, 5));
+                }
+                if (prefill.end_time) {
+                    $tmpl.find('.end-time-input').val(prefill.end_time.substring(0, 5));
+                }
+            }
+            $('#tbody-details').append($tmpl);
+        }
+
+        function removeDetailRow(btn) {
+            $(btn).closest('tr').remove();
+        }
+
+        function collectDetails() {
+            const rows = [];
+            $('#tbody-details tr.detail-row').each(function () {
+                const $row = $(this);
+                const subjectId = ($row.find('.subject-select').val() || '').toString().trim();
+                const teacherId = ($row.find('.teacher-select').val() || '').toString().trim();
+                const startTime = ($row.find('.start-time-input').val() || '').toString().trim();
+                const endTime = ($row.find('.end-time-input').val() || '').toString().trim();
+
+                if (subjectId || teacherId || startTime || endTime) {
+                    rows.push({
+                        subject_id: subjectId,
+                        teacher_id: teacherId,
+                        start_time: startTime,
+                        end_time: endTime
+                    });
+                }
+            });
+            return rows;
+        }
+
+        function showError($input, $error, message) {
+            if ($input && $input.length) {
+                $input.addClass('border-red-500').removeClass('border-gray-300');
+            }
+            if ($error && $error.length) {
+                $error.text(message).removeClass('hidden');
+            }
+        }
+
+        function clearError($input, $error) {
+            if ($input && $input.length) {
+                $input.removeClass('border-red-500').addClass('border-gray-300');
+            }
+            if ($error && $error.length) {
+                $error.text('').addClass('hidden');
+            }
+        }
+
+        function clearAllValidation() {
+            clearError($('#academic_class_id'), $('#error-class'));
+            clearError($('#day'), $('#error-day'));
+            clearError($('#tbody-details'), $('#error-details'));
+        }
+
+        function validateForm() {
+            clearAllValidation();
+
+            let isValid = true;
+
+            const cls = ($('#academic_class_id').val() || '').trim();
+            const day = ($('#day').val() || '').trim();
+            const details = collectDetails();
+
+            if (!cls) {
+                isValid = false;
+                showError($('#academic_class_id'), $('#error-class'), 'Class is required.');
+            }
+
+            if (!day) {
+                isValid = false;
+                showError($('#day'), $('#error-day'), 'Day is required.');
+            }
+
+            if (!details.length) {
+                isValid = false;
+                showError($('#tbody-details'), $('#error-details'), 'At least one detail row is required.');
+            }
+
+            details.forEach(d => {
+                if (!d.subject_id || !d.teacher_id || !d.start_time || !d.end_time) {
+                    isValid = false;
+                    showError($('#tbody-details'), $('#error-details'), 'Each row must have subject, teacher, start & end time.');
+                }
+            });
+
+            $('#details').val(JSON.stringify(details));
+            return isValid;
+        }
+
+        function goBackSchedule() {
+            window.location.href = "/Schedule";
+        }
+
+        function loadSchedule() {
+            const id = $('#schedule_id').val();
+            if (!id) return;
+
+            $.get("/Schedule/GetById", { id: id }, function (res) {
+                if (!res.success) {
+                    alert(res.message || "Failed to load schedule");
+                    return;
+                }
+
+                const d = res.data;
+
+                $('#academic_class_id').val(d.academic_class_id || '');
+                $('#day').val(d.day || '');
+
+                $('#tbody-details').empty();
+
+                if (Array.isArray(d.details) && d.details.length) {
+                    d.details.forEach(row => {
+                        addDetailRow({
+                            subject_id: row.subject_id,
+                            teacher_id: row.teacher_id,
+                            start_time: row.start_time,
+                            end_time: row.end_time
+                        });
+                    });
+                } else {
+                    addDetailRow();
+                }
+            });
+        }
+
+        function updateSchedule() {
+            if (!validateForm()) return;
+
+            const fd = new FormData();
+            fd.append("schedule_id", $('#schedule_id').val());
+            fd.append("academic_class_id", $('#academic_class_id').val());
+            fd.append("day", $('#day').val());
+            fd.append("details", $('#details').val());
+
+            $.ajax({
+                url: "/Schedule/Update",
+                type: "POST",
+                data: fd,
+                processData: false,
+                contentType: false,
+                success: res => {
+                    if (res.success) {
+                        window.location.href = "/Schedule";
+                    } else {
+                        alert(res.message || "Failed to update schedule");
+                    }
+                }
+            });
+        }
+
+        $(document).ready(function () {
+            loadSchedule();
+        });
+    </script>
+}

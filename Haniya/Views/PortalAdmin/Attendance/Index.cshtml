@@ -1,0 +1,122 @@
+﻿@{
+    Layout = "_LayoutAdmin";
+    ViewData["Title"] = "Attendance";
+}
+
+<div class="flex justify-between items-center mb-4">
+    <h2 class="text-xl font-semibold">Attendance List</h2>
+    <a href="/Attendance/Create"
+       class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900"
+       data-testid="attendance-add-button">
+        + Add Attendance
+    </a>
+</div>
+
+<div class="overflow-auto bg-white rounded shadow">
+    <table class="min-w-full text-sm">
+        <thead class="bg-gray-100 text-left text-gray-700">
+            <tr>
+                <th class="p-2 font-medium">Date</th>
+                <th class="p-2 font-medium">Class</th>
+                <th class="p-2 font-medium">Teacher</th>
+                <th class="p-2 font-medium">Records</th>
+                <th class="p-2 font-medium text-right">Action</th>
+            </tr>
+        </thead>
+        <tbody id="tbl" data-testid="attendance-table-body"></tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            loadAttendance();
+
+            $(document).on('click', function (e) {
+                if (!$(e.target).closest('.attendance-actions-wrapper').length) {
+                    $('.attendance-actions-menu').addClass('hidden');
+                }
+            });
+        });
+
+        function loadAttendance() {
+            $.get("/Attendance/GetAll", res => {
+                if (!res.success) {
+                    alert(res.message || "Failed to load attendance");
+                    return;
+                }
+
+                let html = "";
+                res.data.forEach(x => {
+                    const id = x.attendance_id;
+                    const dateStr = x.attendance_date ? new Date(x.attendance_date).toLocaleDateString() : "";
+                    html += `
+                                <tr class="border-b last:border-0 hover:bg-gray-50">
+                                    <td class="p-2">${dateStr}</td>
+                                    <td class="p-2">${x.class_name ?? ""}</td>
+                                    <td class="p-2">${x.teacher_name ?? ""}</td>
+                                    <td class="p-2">${x.detail_count ?? 0}</td>
+                                    <td class="p-2 text-right">
+                                        <div class="relative inline-block text-left attendance-actions-wrapper">
+                                            <button type="button"
+                                                    onclick="toggleAttendanceActions('${id}')"
+                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    data-testid="attendance-actions-toggle-${id}">
+                                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round"
+                                                          stroke-linejoin="round"
+                                                          stroke-width="2"
+                                                          d="M12 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" />
+                                                </svg>
+                                            </button>
+
+                                            <div id="attendance-menu-${id}"
+                                                 class="attendance-actions-menu hidden origin-top-right absolute right-0 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10"
+                                                 data-testid="attendance-actions-menu-${id}">
+                                                <div class="py-1">
+                                                    <a href="/Attendance/Edit?id=${id}"
+                                                       class="block px-3 py-1.5 text-left text-gray-700 hover:bg-gray-100 text-sm"
+                                                       data-testid="attendance-edit-action-${id}">
+                                                        Edit
+                                                    </a>
+                                                    <button type="button"
+                                                            onclick="deleteAttendance('${id}')"
+                                                            class="w-full text-left block px-3 py-1.5 text-sm text-red-600 hover:bg-red-50"
+                                                            data-testid="attendance-delete-action-${id}">
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>`;
+                });
+
+                $("#tbl").html(html);
+            });
+        }
+
+        function toggleAttendanceActions(id) {
+            const $menu = $('#attendance-menu-' + id);
+            if (!$menu.length) return;
+            const isHidden = $menu.hasClass('hidden');
+            $('.attendance-actions-menu').addClass('hidden');
+            if (isHidden) $menu.removeClass('hidden');
+        }
+
+        function deleteAttendance(id) {
+            if (!confirm("Delete this attendance?")) return;
+
+            $.ajax({
+                url: "/Attendance/Delete",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ id }),
+                success: res => {
+                    if (res.success) loadAttendance();
+                    else alert(res.message || "Failed to delete attendance");
+                }
+            });
+        }
+    </script>
+}

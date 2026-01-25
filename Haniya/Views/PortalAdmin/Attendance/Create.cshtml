@@ -1,0 +1,300 @@
+﻿@using System.Collections.Generic
+
+@{
+    Layout = "_LayoutAdmin";
+    IEnumerable<dynamic> classOptions = ViewBag.ClassOptions as IEnumerable<dynamic> ?? new List<dynamic>();
+    IEnumerable<dynamic> teacherOptions = ViewBag.TeacherOptions as IEnumerable<dynamic> ?? new List<dynamic>();
+    IEnumerable<dynamic> studentOptions = ViewBag.StudentOptions as IEnumerable<dynamic> ?? new List<dynamic>();
+}
+
+<h2 class="text-xl font-semibold mb-4">Create Attendance</h2>
+
+<div class="bg-white p-6 rounded-lg shadow w-full space-y-6">
+
+    <form id="frm" class="space-y-6 w-full">
+
+        <div class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="attendance_date" class="block text-sm font-medium text-gray-700 mb-1">
+                        Date <span class="text-red-500">*</span>
+                    </label>
+                    <input type="date"
+                           id="attendance_date"
+                           class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           data-testid="attendance-date-input" />
+                    <p id="error-date"
+                       class="mt-1 text-xs text-red-600 hidden validation-error-message"
+                       data-testid="error-date"></p>
+                </div>
+
+                <div>
+                    <label for="academic_class_id" class="block text-sm font-medium text-gray-700 mb-1">
+                        Class <span class="text-red-500">*</span>
+                    </label>
+                    <select id="academic_class_id"
+                            class="w-full border border-gray-300 rounded-md p-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            data-testid="attendance-class-select">
+                        <option value="">-- Select Class --</option>
+                        @foreach (var c in classOptions)
+                        {
+                            string id = c.Id as string ?? "";
+                            string name = c.Name as string ?? "";
+                            <option value="@id">@name</option>
+                        }
+                    </select>
+                    <p id="error-class"
+                       class="mt-1 text-xs text-red-600 hidden validation-error-message"
+                       data-testid="error-class"></p>
+                </div>
+
+                <div>
+                    <label for="teacher_id" class="block text-sm font-medium text-gray-700 mb-1">
+                        Teacher <span class="text-red-500">*</span>
+                    </label>
+                    <select id="teacher_id"
+                            class="w-full border border-gray-300 rounded-md p-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            data-testid="attendance-teacher-select">
+                        <option value="">-- Select Teacher --</option>
+                        @foreach (var t in teacherOptions)
+                        {
+                            string id = t.Id as string ?? "";
+                            string name = t.Name as string ?? "";
+                            <option value="@id">@name</option>
+                        }
+                    </select>
+                    <p id="error-teacher"
+                       class="mt-1 text-xs text-red-600 hidden validation-error-message"
+                       data-testid="error-teacher"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- DETAILS -->
+        <div class="space-y-3">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-gray-700">Attendance Details</h3>
+                <button type="button"
+                        onclick="addDetailRow()"
+                        class="inline-flex items-center px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-600"
+                        data-testid="attendance-add-row-button">
+                    + Add Row
+                </button>
+            </div>
+
+            <div class="overflow-auto border border-gray-200 rounded-md">
+                <table class="min-w-full text-xs">
+                    <thead class="bg-gray-100 text-left text-gray-700">
+                        <tr>
+                            <th class="p-2 font-medium">Student</th>
+                            <th class="p-2 font-medium">Status</th>
+                            <th class="p-2 font-medium">Notes</th>
+                            <th class="p-2 font-medium text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-details" data-testid="attendance-details-body"></tbody>
+
+                    <tbody id="row-template-body" class="hidden">
+                        <tr class="detail-row">
+                            <td class="p-1">
+                                <select class="student-select w-full border border-gray-300 rounded-md p-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">-- Student --</option>
+                                    @foreach (var s in studentOptions)
+                                    {
+                                        string id = s.Id as string ?? "";
+                                        string name = s.Name as string ?? "";
+                                        <option value="@id">@name</option>
+                                    }
+                                </select>
+                            </td>
+                            <td class="p-1">
+                                <select class="status-select w-full border border-gray-300 rounded-md p-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">-- Status --</option>
+                                    <option value="PRESENT">PRESENT</option>
+                                    <option value="SICK">SICK</option>
+                                    <option value="EXCUSED">EXCUSED</option>
+                                    <option value="NO INFO">NO INFO</option>
+                                </select>
+                            </td>
+                            <td class="p-1">
+                                <input type="text"
+                                       class="notes-input w-full border border-gray-300 rounded-md p-1 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
+                            </td>
+                            <td class="p-1 text-right">
+                                <button type="button"
+                                        onclick="removeDetailRow(this)"
+                                        class="inline-flex items-center px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs font-medium rounded-md"
+                                        data-testid="attendance-remove-row-button">
+                                    Remove
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p id="error-details"
+               class="mt-1 text-xs text-red-600 hidden validation-error-message"
+               data-testid="error-details"></p>
+        </div>
+
+        <input type="hidden" id="details" name="details" />
+
+        <div class="pt-4 flex items-center justify-end space-x-2">
+            <button type="button"
+                    onclick="goBackAttendance()"
+                    class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
+                    data-testid="attendance-back-button">
+                <svg class="w-4 h-4 mr-2 text-gray-600"
+                     fill="none"
+                     viewBox="0 0 24 24"
+                     stroke="currentColor">
+                    <path stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M15 19l-7-7 7-7" />
+                </svg>
+                <span>Back</span>
+            </button>
+
+            <button type="button"
+                    onclick="saveAttendance()"
+                    class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900"
+                    data-testid="attendance-save-button">
+                <span>Save</span>
+                <svg class="w-4 h-4 ml-2 text-white"
+                     fill="none"
+                     viewBox="0 0 24 24"
+                     stroke="currentColor">
+                    <path stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M5 13l4 4L19 7" />
+                </svg>
+            </button>
+        </div>
+
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        function addDetailRow() {
+            const $tmpl = $('#row-template-body tr.detail-row').first().clone();
+            $('#tbody-details').append($tmpl);
+        }
+
+        function removeDetailRow(btn) {
+            $(btn).closest('tr').remove();
+        }
+
+        function collectDetails() {
+            const rows = [];
+            $('#tbody-details tr.detail-row').each(function () {
+                const $row = $(this);
+                const student_id = ($row.find('.student-select').val() || '').toString().trim();
+                const status = ($row.find('.status-select').val() || '').toString().trim();
+                const notes = ($row.find('.notes-input').val() || '').toString().trim();
+
+                if (student_id || status || notes) {
+                    rows.push({ student_id, status, notes });
+                }
+            });
+            return rows;
+        }
+
+        function showError($input, $error, message) {
+            if ($input && $input.length) {
+                $input.addClass('border-red-500').removeClass('border-gray-300');
+            }
+            if ($error && $error.length) {
+                $error.text(message).removeClass('hidden');
+            }
+        }
+
+        function clearError($input, $error) {
+            if ($input && $input.length) {
+                $input.removeClass('border-red-500').addClass('border-gray-300');
+            }
+            if ($error && $error.length) {
+                $error.text('').addClass('hidden');
+            }
+        }
+
+        function clearAllValidation() {
+            clearError($('#attendance_date'), $('#error-date'));
+            clearError($('#academic_class_id'), $('#error-class'));
+            clearError($('#teacher_id'), $('#error-teacher'));
+            clearError($('#tbody-details'), $('#error-details'));
+        }
+
+        function validateForm() {
+            clearAllValidation();
+            let isValid = true;
+
+            const dateVal = ($('#attendance_date').val() || '').trim();
+            const cls = ($('#academic_class_id').val() || '').trim();
+            const teacher = ($('#teacher_id').val() || '').trim();
+            const details = collectDetails();
+
+            if (!dateVal) {
+                isValid = false;
+                showError($('#attendance_date'), $('#error-date'), 'Date is required.');
+            }
+            if (!cls) {
+                isValid = false;
+                showError($('#academic_class_id'), $('#error-class'), 'Class is required.');
+            }
+            if (!teacher) {
+                isValid = false;
+                showError($('#teacher_id'), $('#error-teacher'), 'Teacher is required.');
+            }
+            if (!details.length) {
+                isValid = false;
+                showError($('#tbody-details'), $('#error-details'), 'At least one detail row is required.');
+            }
+            details.forEach(d => {
+                if (!d.student_id || !d.status) {
+                    isValid = false;
+                    showError($('#tbody-details'), $('#error-details'), 'Each row must have student & status.');
+                }
+            });
+
+            $('#details').val(JSON.stringify(details));
+            return isValid;
+        }
+
+        function goBackAttendance() {
+            window.location.href = "/Attendance";
+        }
+
+        function saveAttendance() {
+            if (!validateForm()) return;
+
+            const fd = new FormData();
+            fd.append("attendance_date", $('#attendance_date').val());
+            fd.append("academic_class_id", $('#academic_class_id').val());
+            fd.append("teacher_id", $('#teacher_id').val());
+            fd.append("details", $('#details').val());
+
+            $.ajax({
+                url: "/Attendance/Create",
+                type: "POST",
+                data: fd,
+                processData: false,
+                contentType: false,
+                success: res => {
+                    if (res.success) {
+                        window.location.href = "/Attendance";
+                    } else {
+                        alert(res.message || "Failed to create attendance");
+                    }
+                }
+            });
+        }
+
+        $(document).ready(function () {
+            addDetailRow();
+        });
+    </script>
+}

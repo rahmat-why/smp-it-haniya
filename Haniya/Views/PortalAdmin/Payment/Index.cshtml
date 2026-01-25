@@ -1,0 +1,134 @@
+﻿@{
+    Layout = "_LayoutAdmin";
+    ViewData["Title"] = "Payments";
+}
+
+<div class="flex justify-between items-center mb-4">
+    <h2 class="text-xl font-semibold">Payment List</h2>
+    <a href="/Payment/Create"
+       class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900"
+       data-testid="payment-add-button">
+        + Add Payment
+    </a>
+</div>
+
+<div class="overflow-auto bg-white rounded shadow">
+    <table class="min-w-full text-sm">
+        <thead class="bg-gray-100 text-left text-gray-700">
+            <tr>
+                <th class="p-2 font-medium">Payment ID</th>
+                <th class="p-2 font-medium">Student Class</th>
+                <th class="p-2 font-medium">Type</th>
+                <th class="p-2 font-medium">Total Price</th>
+                <th class="p-2 font-medium">Paid</th>
+                <th class="p-2 font-medium">Remaining</th>
+                <th class="p-2 font-medium">Status</th>
+                <th class="p-2 font-medium">Instalments</th>
+                <th class="p-2 font-medium text-right">Action</th>
+            </tr>
+        </thead>
+        <tbody id="tbl" data-testid="payment-table-body"></tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            loadPayments();
+
+            $(document).on('click', function (e) {
+                if (!$(e.target).closest('.payment-actions-wrapper').length) {
+                    $('.payment-actions-menu').addClass('hidden');
+                }
+            });
+        });
+
+        function loadPayments() {
+            $.get("/Payment/GetAll", res => {
+                if (!res.success) {
+                    alert(res.message || "Failed to load payments");
+                    return;
+                }
+
+                let html = "";
+                res.data.forEach(x => {
+                    const id = x.payment_id;
+                    const price = x.total_price ?? 0;
+                    const paid = x.total_payment ?? 0;
+                    const remaining = x.remaining_payment ?? 0;
+                    const dateStr = x.payment_date ? new Date(x.payment_date).toLocaleDateString() : "";
+
+                    html += `
+                                <tr class="border-b last:border-0 hover:bg-gray-50">
+                                    <td class="p-2">${id}</td>
+                                    <td class="p-2">${x.student_class_id ?? ""}</td>
+                                    <td class="p-2">${x.payment_type ?? ""}</td>
+                                    <td class="p-2">${price}</td>
+                                    <td class="p-2">${paid}</td>
+                                    <td class="p-2">${remaining}</td>
+                                    <td class="p-2">${x.status ?? ""}</td>
+                                    <td class="p-2">${x.instalment_count ?? 0}</td>
+                                    <td class="p-2 text-right">
+                                        <div class="relative inline-block text-left payment-actions-wrapper">
+                                            <button type="button"
+                                                    onclick="togglePaymentActions('${id}')"
+                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    data-testid="payment-actions-toggle-${id}">
+                                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round"
+                                                          stroke-linejoin="round"
+                                                          stroke-width="2"
+                                                          d="M12 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" />
+                                                </svg>
+                                            </button>
+
+                                            <div id="payment-menu-${id}"
+                                                 class="payment-actions-menu hidden origin-top-right absolute right-0 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10"
+                                                 data-testid="payment-actions-menu-${id}">
+                                                <div class="py-1">
+                                                    <a href="/Payment/Edit?id=${id}"
+                                                       class="block px-3 py-1.5 text-left text-gray-700 hover:bg-gray-100 text-sm"
+                                                       data-testid="payment-edit-action-${id}">
+                                                        Edit
+                                                    </a>
+                                                    <button type="button"
+                                                            onclick="deletePayment('${id}')"
+                                                            class="w-full text-left block px-3 py-1.5 text-sm text-red-600 hover:bg-red-50"
+                                                            data-testid="payment-delete-action-${id}">
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>`;
+                });
+
+                $("#tbl").html(html);
+            });
+        }
+
+        function togglePaymentActions(id) {
+            const $menu = $('#payment-menu-' + id);
+            if (!$menu.length) return;
+            const isHidden = $menu.hasClass('hidden');
+            $('.payment-actions-menu').addClass('hidden');
+            if (isHidden) $menu.removeClass('hidden');
+        }
+
+        function deletePayment(id) {
+            if (!confirm("Delete this payment?")) return;
+
+            $.ajax({
+                url: "/Payment/Delete",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ id }),
+                success: res => {
+                    if (res.success) loadPayments();
+                    else alert(res.message || "Failed to delete payment");
+                }
+            });
+        }
+    </script>
+}

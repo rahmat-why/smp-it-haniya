@@ -1,0 +1,83 @@
+﻿<!-- ============================================ -->
+<!-- 1. Views/Login/AccessDenied.cshtml -->
+<!-- ============================================ -->
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Access Denied - SMP IT HANIYA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-red-900 via-red-700 to-red-500 flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+        <div class="bg-white rounded-lg shadow-2xl overflow-hidden">
+            <div class="bg-red-900 text-white p-8 text-center">
+                <div class="mb-4">
+                    <svg class="w-20 h-20 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <h1 class="text-2xl font-bold">Access Denied</h1>
+            </div>
+
+            <div class="p-8 text-center">
+                <p class="text-gray-700 mb-6">
+                    You don't have permission to access this page.
+                </p>
+                <p class="text-gray-600 mb-8">
+                    Please login with appropriate credentials.
+                </p>
+
+                <div class="space-y-3">
+                    <a href="/LoginAdmin/Index"
+                       class="block w-full bg-blue-900 text-white py-3 rounded-lg font-semibold hover:bg-blue-800 transition">
+                        Go to Login
+                    </a>
+                    <a href="javascript:history.back()"
+                       class="block w-full bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition">
+                        Go Back
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-6 text-white text-sm">
+            <p>&copy; 2024 SMP IT HANIYA. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+
+<!-- ============================================ -->
+<!-- 2. Update _LayoutAdmin.cshtml - Logout Section -->
+<!-- ============================================ -->
+<!-- Replace the logout section in your sidebar with this: -->
+<!-- Logout -->
+<div class="p-4 border-t border-blue-700">
+    @if (User.Identity.IsAuthenticated)
+    {
+        <!-- Show user info -->
+        <div class="mb-3 px-4 py-2 bg-blue-800 rounded">
+            <p class="text-xs text-blue-200">Logged in as</p>
+            <p class="text-sm font-semibold text-white">@User.FindFirst("FullName")?.Value</p>
+            <p class="text-xs text-blue-300">@User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value</p>
+        </div>
+
+        <a href="/LoginAdmin/Logout"
+           class="block px-4 py-2 rounded hover:bg-blue-700 transition text-red-400 text-center font-semibold">
+            Logout
+        </a>
+    }
+    else
+    {
+        <a href="/LoginAdmin/Index"
+           class="block px-4 py-2 rounded hover:bg-blue-700 transition text-white text-center">
+            Login
+        </a>
+    }
+</div>

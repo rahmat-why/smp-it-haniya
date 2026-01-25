@@ -1,0 +1,530 @@
+﻿@{
+    Layout = "_LayoutAdmin";
+}
+
+<h2 class="text-xl font-semibold mb-4">Edit Academic Class</h2>
+
+<div class="bg-white p-6 rounded-lg shadow w-full space-y-6">
+
+    <form id="frm" class="space-y-6 w-full">
+
+        <input type="hidden" id="academic_class_id" data-testid="academic-class-id-hidden" />
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+
+            <!-- Academic Info -->
+            <div class="border border-gray-200 rounded-lg overflow-hidden w-full">
+                <button type="button"
+                        onclick="toggleSection('academic-info')"
+                        class="w-full flex items-center justify-between px-4 py-3 bg-blue-900 hover:bg-blue-800 transition-colors duration-200 text-left"
+                        data-testid="academic-edit-info-toggle">
+                    <span class="font-semibold text-white">
+                        Academic Information
+                    </span>
+                    <svg id="icon-academic-info"
+                         class="w-5 h-5 text-white transition-transform duration-300"
+                         fill="none"
+                         viewBox="0 0 24 24"
+                         stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+
+                <div id="academic-info"
+                     class="px-4 pb-4 pt-3 space-y-4 border-t border-gray-100"
+                     data-testid="academic-edit-info-section">
+
+                    <!-- Academic Year -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Academic Year <span class="text-red-500">*</span>
+                        </label>
+
+                        <div class="relative" data-testid="academic-edit-year-searchable-wrapper">
+                            <input type="hidden" id="academic_year_id" data-testid="academic-edit-year-hidden-input" />
+
+                            <button type="button"
+                                    id="academic-year-display"
+                                    class="w-full border border-gray-300 rounded-md p-2 bg-white text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    data-testid="academic-edit-year-select-toggle">
+                                <span id="academic-year-display-text" class="text-gray-500">
+                                    -- Select Academic Year --
+                                </span>
+                                <svg class="w-4 h-4 text-gray-500 ml-2"
+                                     fill="none"
+                                     viewBox="0 0 24 24"
+                                     stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+
+                            <div id="academic-year-dropdown"
+                                 class="absolute mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg z-10 hidden"
+                                 data-testid="academic-edit-year-dropdown">
+                                <div class="p-2 border-b border-gray-200">
+                                    <input type="text"
+                                           id="academic-year-search"
+                                           placeholder="Search academic year..."
+                                           class="w-full border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                           data-testid="academic-edit-year-search-input" />
+                                </div>
+                                <ul id="academic-year-options"
+                                    class="max-h-48 overflow-y-auto py-1 text-sm"
+                                    data-testid="academic-edit-year-options-list">
+                                    <!-- filled by JS -->
+                                </ul>
+                            </div>
+                        </div>
+
+                        <p id="error-academic_year_id"
+                           class="mt-1 text-xs text-red-600 hidden validation-error-message"
+                           data-testid="academic-edit-year-error"></p>
+                    </div>
+
+                    <!-- Class -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Class <span class="text-red-500">*</span>
+                        </label>
+
+                        <div class="relative" data-testid="academic-edit-class-searchable-wrapper">
+                            <input type="hidden" id="class_id" data-testid="academic-edit-class-hidden-input" />
+
+                            <button type="button"
+                                    id="class-display"
+                                    class="w-full border border-gray-300 rounded-md p-2 bg-white text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    data-testid="academic-edit-class-select-toggle">
+                                <span id="class-display-text" class="text-gray-500">
+                                    -- Select Class --
+                                </span>
+                                <svg class="w-4 h-4 text-gray-500 ml-2"
+                                     fill="none"
+                                     viewBox="0 0 24 24"
+                                     stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+
+                            <div id="class-dropdown"
+                                 class="absolute mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg z-10 hidden"
+                                 data-testid="academic-edit-class-dropdown">
+                                <div class="p-2 border-b border-gray-200">
+                                    <input type="text"
+                                           id="class-search"
+                                           placeholder="Search class..."
+                                           class="w-full border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                           data-testid="academic-edit-class-search-input" />
+                                </div>
+                                <ul id="class-options"
+                                    class="max-h-48 overflow-y-auto py-1 text-sm"
+                                    data-testid="academic-edit-class-options-list">
+                                    <!-- filled by JS -->
+                                </ul>
+                            </div>
+                        </div>
+
+                        <p id="error-class_id"
+                           class="mt-1 text-xs text-red-600 hidden validation-error-message"
+                           data-testid="academic-edit-class-error"></p>
+                    </div>
+
+                    <!-- Homeroom Teacher -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Homeroom Teacher <span class="text-red-500">*</span>
+                        </label>
+
+                        <div class="relative" data-testid="academic-edit-teacher-searchable-wrapper">
+                            <input type="hidden" id="homeroom_teacher_id" data-testid="academic-edit-teacher-hidden-input" />
+
+                            <button type="button"
+                                    id="homeroom-teacher-display"
+                                    class="w-full border border-gray-300 rounded-md p-2 bg-white text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    data-testid="academic-edit-teacher-select-toggle">
+                                <span id="homeroom-teacher-display-text" class="text-gray-500">
+                                    -- Select Homeroom Teacher --
+                                </span>
+                                <svg class="w-4 h-4 text-gray-500 ml-2"
+                                     fill="none"
+                                     viewBox="0 0 24 24"
+                                     stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+
+                            <div id="homeroom-teacher-dropdown"
+                                 class="absolute mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg z-10 hidden"
+                                 data-testid="academic-edit-teacher-dropdown">
+                                <div class="p-2 border-b border-gray-200">
+                                    <input type="text"
+                                           id="homeroom-teacher-search"
+                                           placeholder="Search teacher..."
+                                           class="w-full border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                           data-testid="academic-edit-teacher-search-input" />
+                                </div>
+                                <ul id="homeroom-teacher-options"
+                                    class="max-h-48 overflow-y-auto py-1 text-sm"
+                                    data-testid="academic-edit-teacher-options-list">
+                                    <!-- filled by JS -->
+                                </ul>
+                            </div>
+                        </div>
+
+                        <p id="error-homeroom_teacher_id"
+                           class="mt-1 text-xs text-red-600 hidden validation-error-message"
+                           data-testid="academic-edit-teacher-error"></p>
+                    </div>
+
+                    <div class="pt-4 flex items-center justify-end space-x-2">
+                        <button type="button"
+                                onclick="goBack()"
+                                class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
+                                data-testid="academic-edit-back-button">
+                            <svg class="w-4 h-4 mr-2 text-gray-600"
+                                 fill="none"
+                                 viewBox="0 0 24 24"
+                                 stroke="currentColor">
+                                <path stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      stroke-width="2"
+                                      d="M15 19l-7-7 7-7" />
+                            </svg>
+                            <span>Back</span>
+                        </button>
+
+                        <button type="button"
+                                onclick="updateAcademicClass()"
+                                class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900"
+                                data-testid="academic-edit-save-button">
+                            <span>Save</span>
+                            <svg class="w-4 h-4 ml-2 text-white"
+                                 fill="none"
+                                 viewBox="0 0 24 24"
+                                 stroke="currentColor">
+                                <path stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      stroke-width="2"
+                                      d="M5 13l4 4L19 7" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        function toggleSection(id) {
+            const section = document.getElementById(id);
+            const icon = document.getElementById('icon-' + id);
+
+            if (!section || !icon) return;
+
+            const isHidden = section.classList.contains('hidden');
+
+            if (isHidden) {
+                section.classList.remove('hidden');
+                icon.classList.remove('-rotate-90');
+            } else {
+                section.classList.add('hidden');
+                icon.classList.add('-rotate-90');
+            }
+        }
+
+        function showError($input, $error, message) {
+            if (!$error.length) return;
+            if ($input && $input.length) {
+                $input.removeClass('border-gray-300').addClass('border-red-500');
+            }
+            $error.text(message).removeClass('hidden');
+        }
+
+        function clearError($input, $error) {
+            if ($input && $input.length) {
+                $input.removeClass('border-red-500').addClass('border-gray-300');
+            }
+            $error.text('').addClass('hidden');
+        }
+
+        function clearAllValidation() {
+            clearError($('#academic_year_id'), $('#error-academic_year_id'));
+            clearError($('#class_id'), $('#error-class_id'));
+            clearError($('#homeroom_teacher_id'), $('#error-homeroom_teacher_id'));
+        }
+
+        function validateForm() {
+            clearAllValidation();
+
+            let isValid = true;
+
+            const yearId = ($('#academic_year_id').val() || '').trim();
+            const classId = ($('#class_id').val() || '').trim();
+            const teacherId = ($('#homeroom_teacher_id').val() || '').trim();
+
+            if (!yearId) {
+                isValid = false;
+                showError($('#academic_year_id'), $('#error-academic_year_id'), 'Academic year is required.');
+            }
+            if (!classId) {
+                isValid = false;
+                showError($('#class_id'), $('#error-class_id'), 'Class is required.');
+            }
+            if (!teacherId) {
+                isValid = false;
+                showError($('#homeroom_teacher_id'), $('#error-homeroom_teacher_id'), 'Homeroom teacher is required.');
+            }
+
+            if (!isValid) {
+                const $firstError = $('.validation-error-message:not(.hidden)').first();
+                if ($firstError.length) {
+                    $('html, body').animate({
+                        scrollTop: $firstError.offset().top - 100
+                    }, 400);
+                }
+            }
+
+            return isValid;
+        }
+
+        function goBack() {
+            window.location.href = "/AcademicClass";
+        }
+
+        $(document).ready(function () {
+            // Load lookups first
+            $.get("/AcademicClass/GetLookups", function (res) {
+                if (!res.success) {
+                    alert(res.message || "Failed to load lookups");
+                    return;
+                }
+
+                const years = res.data.years || [];
+                const classes = res.data.classes || [];
+                const teachers = res.data.teachers || [];
+
+                // Years
+                let yearHtml = "";
+                years.forEach(y => {
+                    const startYear = y.start_date ? new Date(y.start_date).getFullYear() : "";
+                    const endYear = y.end_date ? new Date(y.end_date).getFullYear() : "";
+                    const parts = [];
+                    if (startYear && endYear) parts.push(startYear + " / " + endYear);
+                    if (y.semester) parts.push("Semester " + y.semester);
+                    if (y.status) parts.push("[" + y.status + "]");
+                    const label = parts.join(" - ");
+                    yearHtml += `
+                                <li data-id="${y.academic_year_id}"
+                                    class="px-3 py-2 hover:bg-blue-50 cursor-pointer"
+                                    data-testid="academic-edit-year-option-${y.academic_year_id}">
+                                    ${label}
+                                </li>`;
+                });
+                $("#academic-year-options").html(yearHtml);
+
+                // Classes
+                let classHtml = "";
+                classes.forEach(c => {
+                    const id = c.class_id;
+                    const name = c.class_name || "";
+                    const level = c.class_level || "";
+                    const label = name + (level ? " (" + level + ")" : "");
+                    classHtml += `
+                                <li data-id="${id}"
+                                    class="px-3 py-2 hover:bg-blue-50 cursor-pointer"
+                                    data-testid="academic-edit-class-option-${id}">
+                                    ${label}
+                                </li>`;
+                });
+                $("#class-options").html(classHtml);
+
+                // Teachers
+                let teacherHtml = "";
+                teachers.forEach(t => {
+                    const id = t.teacher_id;
+                    const fullName = t.full_name || "";
+                    const npk = t.npk || "";
+                    const label = fullName + (npk ? " (" + npk + ")" : "");
+                    teacherHtml += `
+                                <li data-id="${id}"
+                                    class="px-3 py-2 hover:bg-blue-50 cursor-pointer"
+                                    data-testid="academic-edit-teacher-option-${id}">
+                                    ${label}
+                                </li>`;
+                });
+                $("#homeroom-teacher-options").html(teacherHtml);
+
+                // After lookups, load current record
+                loadAcademicClass();
+            });
+
+            // Academic year dropdown
+            $('#academic-year-display').on('click', function (e) {
+                e.stopPropagation();
+                $('#academic-year-dropdown').toggleClass('hidden');
+                $('#academic-year-search').val('').trigger('input');
+                $('#academic-year-search').focus();
+            });
+
+            $('#academic-year-options').on('click', 'li', function (e) {
+                e.stopPropagation();
+                const id = $(this).data('id');
+                const label = $(this).text().trim();
+
+                $('#academic_year_id').val(id);
+                $('#academic-year-display-text').text(label).removeClass('text-gray-500');
+                $('#academic-year-dropdown').addClass('hidden');
+
+                clearError($('#academic_year_id'), $('#error-academic_year_id'));
+            });
+
+            $('#academic-year-search').on('input', function () {
+                const term = $(this).val().toLowerCase();
+                $('#academic-year-options li').each(function () {
+                    const text = $(this).text().toLowerCase();
+                    $(this).toggle(text.indexOf(term) !== -1);
+                });
+            });
+
+            // Class dropdown
+            $('#class-display').on('click', function (e) {
+                e.stopPropagation();
+                $('#class-dropdown').toggleClass('hidden');
+                $('#class-search').val('').trigger('input');
+                $('#class-search').focus();
+            });
+
+            $('#class-options').on('click', 'li', function (e) {
+                e.stopPropagation();
+                const id = $(this).data('id');
+                const label = $(this).text().trim();
+
+                $('#class_id').val(id);
+                $('#class-display-text').text(label).removeClass('text-gray-500');
+                $('#class-dropdown').addClass('hidden');
+
+                clearError($('#class_id'), $('#error-class_id'));
+            });
+
+            $('#class-search').on('input', function () {
+                const term = $(this).val().toLowerCase();
+                $('#class-options li').each(function () {
+                    const text = $(this).text().toLowerCase();
+                    $(this).toggle(text.indexOf(term) !== -1);
+                });
+            });
+
+            // Teacher dropdown
+            $('#homeroom-teacher-display').on('click', function (e) {
+                e.stopPropagation();
+                $('#homeroom-teacher-dropdown').toggleClass('hidden');
+                $('#homeroom-teacher-search').val('').trigger('input');
+                $('#homeroom-teacher-search').focus();
+            });
+
+            $('#homeroom-teacher-options').on('click', 'li', function (e) {
+                e.stopPropagation();
+                const id = $(this).data('id');
+                const label = $(this).text().trim();
+
+                $('#homeroom_teacher_id').val(id);
+                $('#homeroom-teacher-display-text').text(label).removeClass('text-gray-500');
+                $('#homeroom-teacher-dropdown').addClass('hidden');
+
+                clearError($('#homeroom_teacher_id'), $('#error-homeroom_teacher_id'));
+            });
+
+            $('#homeroom-teacher-search').on('input', function () {
+                const term = $(this).val().toLowerCase();
+                $('#homeroom-teacher-options li').each(function () {
+                    const text = $(this).text().toLowerCase();
+                    $(this).toggle(text.indexOf(term) !== -1);
+                });
+            });
+
+            // Close dropdowns click outside
+            $(document).on('click', function () {
+                $('#academic-year-dropdown').addClass('hidden');
+                $('#class-dropdown').addClass('hidden');
+                $('#homeroom-teacher-dropdown').addClass('hidden');
+            });
+
+            $('#academic-year-dropdown, #class-dropdown, #homeroom-teacher-dropdown').on('click', function (e) {
+                e.stopPropagation();
+            });
+        });
+
+        function loadAcademicClass() {
+            const id = '@ViewBag.academicClassId';
+
+            if (!id) return;
+
+            $.get("/AcademicClass/GetById", { id: id }, function (res) {
+                if (!res.success) {
+                    alert(res.message || "Failed to load academic class");
+                    return;
+                }
+
+                const d = res.data;
+
+                $('#academic_class_id').val(d.academic_class_id || '');
+
+                if (d.academic_year_id) {
+                    $('#academic_year_id').val(d.academic_year_id);
+                    const yearLi = $(`#academic-year-options li[data-id='${d.academic_year_id}']`);
+                    if (yearLi.length) {
+                        $('#academic-year-display-text').text(yearLi.text().trim()).removeClass('text-gray-500');
+                    }
+                }
+
+                if (d.class_id) {
+                    $('#class_id').val(d.class_id);
+                    const classLi = $(`#class-options li[data-id='${d.class_id}']`);
+                    if (classLi.length) {
+                        $('#class-display-text').text(classLi.text().trim()).removeClass('text-gray-500');
+                    }
+                }
+
+                if (d.homeroom_teacher_id) {
+                    $('#homeroom_teacher_id').val(d.homeroom_teacher_id);
+                    const tLi = $(`#homeroom-teacher-options li[data-id='${d.homeroom_teacher_id}']`);
+                    if (tLi.length) {
+                        $('#homeroom-teacher-display-text').text(tLi.text().trim()).removeClass('text-gray-500');
+                    }
+                }
+            });
+        }
+
+        function updateAcademicClass() {
+            if (!validateForm()) return;
+
+            const fd = new FormData();
+            fd.append("academic_class_id", $('#academic_class_id').val());
+            fd.append("academic_year_id", $('#academic_year_id').val());
+            fd.append("class_id", $('#class_id').val());
+            fd.append("homeroom_teacher_id", $('#homeroom_teacher_id').val());
+
+            $.ajax({
+                url: "/AcademicClass/Update",
+                type: "POST",
+                data: fd,
+                processData: false,
+                contentType: false,
+                success: res => {
+                    if (res.success) {
+                        window.location.href = "/AcademicClass";
+                    } else {
+                        alert(res.message || "Failed to update academic class");
+                    }
+                }
+            });
+        }
+    </script>
+}
