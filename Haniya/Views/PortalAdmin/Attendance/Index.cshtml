@@ -12,26 +12,63 @@
     </a>
 </div>
 
-<div class="overflow-auto bg-white rounded shadow">
-    <table class="min-w-full text-sm">
-        <thead class="bg-gray-100 text-left text-gray-700">
-            <tr>
-                <th class="p-2 font-medium">Date</th>
-                <th class="p-2 font-medium">Class</th>
-                <th class="p-2 font-medium">Teacher</th>
-                <th class="p-2 font-medium">Records</th>
-                <th class="p-2 font-medium text-right">Action</th>
-            </tr>
-        </thead>
-        <tbody id="tbl" data-testid="attendance-table-body"></tbody>
-    </table>
+<div class="bg-white rounded-lg shadow">
+    <!-- Toolbar & filters -->
+    <div class="px-4 pt-4">
+        <div id="attendance-table-toolbar" class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <!-- Custom date filter -->
+            <div class="flex flex-wrap gap-4 items-end">
+                <div>
+                    <label class="text-sm font-medium text-gray-700">Attendance Date</label>
+                    <div class="flex gap-2 mt-1">
+                        <input type="date" id="filter_date"
+                               class="border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                        <button id="btnFilter"
+                                class="px-4 py-1.5 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
+                            Apply
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- DataTables length & search will be appended here -->
+        </div>
+    </div>
+
+    <div class="overflow-x-auto px-4 pt-4">
+        <table id="attendance-table"
+               class="min-w-full text-sm text-left text-gray-700 border-collapse">
+            <thead class="bg-gray-100 border-y border-gray-200">
+                <tr>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Date</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Class</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Teacher</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 200px;">Summary</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 70px;">Action</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100"></tbody>
+        </table>
+    </div>
+
+    <!-- Info + pagination -->
+    <div class="px-4 pb-4 pt-3">
+        <div id="attendance-table-footer" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div id="table-info-container"></div>
+            <div id="table-pagination-container"></div>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
     <script>
         $(document).ready(function () {
-            loadAttendance();
+            // Default to today
+            const today = new Date().toISOString().split('T')[0];
+            $('#filter_date').val(today);
 
+            initAttendanceTable();
+
+            // Close menu when clicking outside
             $(document).on('click', function (e) {
                 if (!$(e.target).closest('.attendance-actions-wrapper').length) {
                     $('.attendance-actions-menu').addClass('hidden');
@@ -39,82 +76,216 @@
             });
         });
 
-        function loadAttendance() {
-            $.get("/Attendance/GetAll", res => {
-                if (!res.success) {
-                    alert(res.message || "Failed to load attendance");
-                    return;
-                }
-
-                let html = "";
-                res.data.forEach(x => {
-                    const id = x.attendance_id;
-                    const dateStr = x.attendance_date ? new Date(x.attendance_date).toLocaleDateString() : "";
-                    html += `
-                                <tr class="border-b last:border-0 hover:bg-gray-50">
-                                    <td class="p-2">${dateStr}</td>
-                                    <td class="p-2">${x.class_name ?? ""}</td>
-                                    <td class="p-2">${x.teacher_name ?? ""}</td>
-                                    <td class="p-2">${x.detail_count ?? 0}</td>
-                                    <td class="p-2 text-right">
-                                        <div class="relative inline-block text-left attendance-actions-wrapper">
+        function initAttendanceTable() {
+            const table = $('#attendance-table').DataTable({
+                processing: true,
+                serverSide: true,
+                searching: true,
+                lengthChange: true,
+                ajax: {
+                    url: '/Attendance/GetAll',
+                    type: 'GET',
+                    data: function (d) {
+                        d.attendance_date = $('#filter_date').val();
+                    }
+                },
+                dom: 'lftip',
+                language: {
+                    lengthMenu: "Show _MENU_ rows",
+                    search: "",
+                    searchPlaceholder: "Search...",
+                    paginate: {
+                        first: "First",
+                        last: "Last",
+                        next: "Next",
+                        previous: "Previous"
+                    },
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries"
+                },
+                columns: [
+                    {
+                        data: 'attendance_date',
+                        className: 'py-3 font-medium text-gray-900',
+                        render: function (data) {
+                            if (!data) return '-';
+                            return new Date(data).toLocaleDateString('id-ID', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                            });
+                        }
+                    },
+                    {
+                        data: 'class_name',
+                        className: 'py-3 text-gray-700'
+                    },
+                    {
+                        data: 'teacher_name',
+                        className: 'py-3 text-gray-700'
+                    },
+                    {
+                        data: null,
+                        className: 'py-3 text-center',
+                        render: function (row) {
+                            return `Hadir: ${row.present || 0} | Sakit: ${row.sick || 0} | Izin: ${row.permit || 0} | Alpa: ${row.alpha || 0}`;
+                        }
+                    },
+                    {
+                        data: null,
+                        orderable: false,
+                        searchable: false,
+                        className: 'text-center py-3',
+                        render: function (data, type, row) {
+                            var id = row.attendance_id;
+                            var editUrl = '/Attendance/Edit?id=' + id;
+                            return `
+                                        <div class="flex justify-center attendance-actions-wrapper relative">
                                             <button type="button"
-                                                    onclick="toggleAttendanceActions('${id}')"
-                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    onclick="toggleActionsMenu(event, '${id}')"
+                                                    class="p-1.5 hover:bg-gray-100 rounded-md transition-colors duration-150"
                                                     data-testid="attendance-actions-toggle-${id}">
-                                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round"
-                                                          stroke-linejoin="round"
-                                                          stroke-width="2"
-                                                          d="M12 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" />
+                                                <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
                                                 </svg>
                                             </button>
-
-                                            <div id="attendance-menu-${id}"
-                                                 class="attendance-actions-menu hidden origin-top-right absolute right-0 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10"
-                                                 data-testid="attendance-actions-menu-${id}">
-                                                <div class="py-1">
-                                                    <a href="/Attendance/Edit?id=${id}"
-                                                       class="block px-3 py-1.5 text-left text-gray-700 hover:bg-gray-100 text-sm"
-                                                       data-testid="attendance-edit-action-${id}">
-                                                        Edit
-                                                    </a>
-                                                    <button type="button"
-                                                            onclick="deleteAttendance('${id}')"
-                                                            class="w-full text-left block px-3 py-1.5 text-sm text-red-600 hover:bg-red-50"
-                                                            data-testid="attendance-delete-action-${id}">
-                                                        Delete
-                                                    </button>
-                                                </div>
+                                            <div id="actions-menu-${id}" class="attendance-actions-menu hidden absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10">
+                                                <a href="${editUrl}"
+                                                   class="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50"
+                                                   data-testid="attendance-edit-action-${id}">
+                                                    <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                    </svg>
+                                                    Edit
+                                                </a>
+                                                <button type="button"
+                                                        onclick="delAttendance('${id}')"
+                                                        class="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100"
+                                                        data-testid="attendance-delete-action-${id}">
+                                                    <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                    Delete
+                                                </button>
                                             </div>
-                                        </div>
-                                    </td>
-                                </tr>`;
-                });
+                                        </div>`;
+                        }
+                    }
+                ],
+                initComplete: function () {
+                    const wrapper = $('#attendance-table_wrapper');
 
-                $("#tbl").html(html);
+                    // Get length and filter elements
+                    const $length = wrapper.find('.dataTables_length, .dt-length');
+                    const $filter = wrapper.find('.dataTables_filter, .dt-search');
+
+                    // Create controls container
+                    const $controls = $('<div class="flex items-center gap-4"></div>');
+                    $controls.append($length).append($filter);
+
+                    // Append to toolbar (on the right)
+                    $('#attendance-table-toolbar').append($controls);
+
+                    // Style length
+                    $length.addClass('flex items-center gap-2 text-sm text-gray-600');
+                    $length.find('label').addClass('flex items-center gap-2');
+                    $length.find('select').addClass(
+                        'border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 ' +
+                        'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+                    );
+
+                    // Style search
+                    $filter.addClass('flex items-center gap-2 text-sm text-gray-600');
+                    $filter.find('label').addClass('flex items-center gap-2');
+                    const $searchInput = $filter.find('input');
+                    $searchInput
+                        .addClass(
+                            'border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 ' +
+                            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full md:w-64'
+                        )
+                        .attr('placeholder', 'Search...');
+
+                    stylePagination();
+                },
+                drawCallback: function () {
+                    setTimeout(stylePagination, 50);
+                }
+            });
+
+            // Apply filter button
+            $('#btnFilter').on('click', function () {
+                table.ajax.reload();
             });
         }
 
-        function toggleAttendanceActions(id) {
-            const $menu = $('#attendance-menu-' + id);
-            if (!$menu.length) return;
-            const isHidden = $menu.hasClass('hidden');
-            $('.attendance-actions-menu').addClass('hidden');
-            if (isHidden) $menu.removeClass('hidden');
+        // Same pagination styling as in Article page
+        function stylePagination() {
+            const wrapper = $('#attendance-table_wrapper');
+            let $info = wrapper.find('.dataTables_info').first();
+            if ($info.length === 0) $info = wrapper.find('.dt-info').first();
+
+            let $paginate = wrapper.find('.dataTables_paginate').first();
+            if ($paginate.length === 0) $paginate = wrapper.find('.dt-paging').first();
+
+            if ($info.length > 0) {
+                $('#table-info-container').empty().append($info);
+                $info.removeClass().addClass('text-sm');
+            }
+
+            if ($paginate.length > 0) {
+                $('#table-pagination-container').empty().append($paginate);
+                $paginate.removeClass().addClass('inline-flex items-center border border-gray-300 rounded-md overflow-hidden');
+
+                $paginate.find('a, span').each(function () {
+                    const $btn = $(this);
+                    const hasCurrentClass = $btn.hasClass('current');
+                    const hasDisabledClass = $btn.hasClass('disabled');
+                    $btn.removeClass();
+
+                    let classes = 'inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 last:border-r-0 min-w-[40px] transition-colors duration-150';
+
+                    if (hasCurrentClass) {
+                        classes += ' bg-blue-900 text-white cursor-default';
+                        $btn.addClass(classes).addClass('current');
+                    } else if (hasDisabledClass) {
+                        classes += ' bg-gray-50 text-gray-400 cursor-not-allowed';
+                        $btn.addClass(classes).addClass('disabled');
+                    } else {
+                        classes += ' bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900 cursor-pointer';
+                        $btn.addClass(classes);
+                    }
+                });
+            }
         }
 
-        function deleteAttendance(id) {
-            if (!confirm("Delete this attendance?")) return;
+        function toggleActionsMenu(event, id) {
+            event.stopPropagation();
+            $('.attendance-actions-menu').addClass('hidden');
+            const menu = $('#actions-menu-' + id);
+            menu.toggleClass('hidden');
+        }
+
+        function delAttendance(id) {
+            $('.attendance-actions-menu').addClass('hidden');
+            if (!confirm("Delete this attendance record?")) return;
 
             $.ajax({
                 url: "/Attendance/Delete",
                 type: "POST",
                 contentType: "application/json",
-                data: JSON.stringify({ id }),
+                data: JSON.stringify({
+                    action: "delete",
+                    id: id,
+                    data: null
+                }),
                 success: res => {
-                    if (res.success) loadAttendance();
-                    else alert(res.message || "Failed to delete attendance");
+                    if (res.success) {
+                        $('#attendance-table').DataTable().ajax.reload(null, false);
+                    } else {
+                        alert(res.message || "Failed to delete attendance record");
+                    }
+                },
+                error: function () {
+                    alert("An error occurred while deleting the attendance record.");
                 }
             });
         }

@@ -74,6 +74,7 @@ namespace Haniya.Controllers.PortalAdmin
         {
             try
             {
+                // Daftar nama kolom sesuai urutan di DataTables (index 0 = kolom pertama, dst)
                 var columns = new[]
                 {
             "subject_name",
@@ -84,60 +85,62 @@ namespace Haniya.Controllers.PortalAdmin
             "created_at"
         };
 
+                // Panggil dengan menyertakan columns
                 var (draw, start, length, searchValue, orderColumn, orderDir) = ParseDataTablesQuery(columns);
+
+                // orderColumn sudah langsung nama kolom (dari fungsi ParseDataTablesQuery)
+                // tidak perlu mapping lagi di sini
+
+                string orderDirection = orderDir.ToUpper() == "DESC" ? "DESC" : "ASC";
 
                 using var conn = GetConn();
                 conn.Open();
 
-                // Total records
-                var totalCmd = new SqlCommand(
-                    "SELECT COUNT(*) FROM mst_subjects",
-                    conn
-                );
-                var recordsTotal = (int)totalCmd.ExecuteScalar();
+                // Total records (hanya aktif)
+                var totalSql = "SELECT COUNT(*) FROM mst_subjects WHERE status = 'ACTIVE'";
+                var recordsTotal = (int)new SqlCommand(totalSql, conn).ExecuteScalar();
 
-                // Filtered count
-                string whereSearch = "";
-                if (!string.IsNullOrWhiteSpace(searchValue))
+                // Filtered count + search
+                var whereClause = "WHERE status = 'ACTIVE'";
+                bool hasSearch = !string.IsNullOrWhiteSpace(searchValue);
+                string searchPattern = hasSearch ? $"%{searchValue.Trim()}%" : null;
+
+                if (hasSearch)
                 {
-                    whereSearch = @" WHERE (
-                subject_name LIKE @search OR
-                subject_code LIKE @search OR
-                class_level LIKE @search OR
-                description LIKE @search OR
-                CAST(minimum_value AS NVARCHAR) LIKE @search
-            )";
+                    whereClause += @"
+                AND (
+                    subject_name LIKE @search OR
+                    subject_code LIKE @search OR
+                    class_level LIKE @search OR
+                    description LIKE @search OR
+                    CAST(minimum_value AS NVARCHAR(50)) LIKE @search
+                )";
                 }
 
-                var filteredCmd = new SqlCommand(
-                    "SELECT COUNT(*) FROM mst_subjects" + whereSearch,
-                    conn
-                );
-                if (!string.IsNullOrWhiteSpace(searchValue))
-                    filteredCmd.Parameters.AddWithValue("@search", $"%{searchValue}%");
-
+                var filteredSql = $"SELECT COUNT(*) FROM mst_subjects {whereClause}";
+                using var filteredCmd = new SqlCommand(filteredSql, conn);
+                if (hasSearch) filteredCmd.Parameters.AddWithValue("@search", searchPattern);
                 var recordsFiltered = (int)filteredCmd.ExecuteScalar();
 
                 // Data query
-                var sql = $@"
-            SELECT
+                var dataSql = $@"
+            SELECT 
                 subject_id,
                 subject_name,
                 subject_code,
                 class_level,
                 description,
                 minimum_value,
-                created_at
+                CONVERT(varchar(10), created_at, 120) AS created_at
             FROM mst_subjects
-            {whereSearch}
-            ORDER BY {orderColumn} {orderDir}
+            {whereClause}
+            ORDER BY {orderColumn} {orderDirection}
             OFFSET @start ROWS FETCH NEXT @length ROWS ONLY";
 
-                using var cmd = new SqlCommand(sql, conn);
+                using var cmd = new SqlCommand(dataSql, conn);
                 cmd.Parameters.AddWithValue("@start", start);
                 cmd.Parameters.AddWithValue("@length", length);
-                if (!string.IsNullOrWhiteSpace(searchValue))
-                    cmd.Parameters.AddWithValue("@search", $"%{searchValue}%");
+                if (hasSearch) cmd.Parameters.AddWithValue("@search", searchPattern);
 
                 var list = new List<object>();
                 using var rd = cmd.ExecuteReader();
@@ -145,13 +148,13 @@ namespace Haniya.Controllers.PortalAdmin
                 {
                     list.Add(new
                     {
-                        subject_id = rd["subject_id"],
-                        subject_name = rd["subject_name"],
-                        subject_code = rd["subject_code"],
-                        class_level = rd["class_level"],
-                        description = rd["description"],
-                        minimum_value = rd["minimum_value"],
-                        created_at = rd["created_at"]
+                        subject_id = rd["subject_id"].ToString(),
+                        subject_name = rd["subject_name"]?.ToString() ?? "",
+                        subject_code = rd["subject_code"]?.ToString() ?? "",
+                        class_level = rd["class_level"]?.ToString() ?? "",
+                        description = rd["description"]?.ToString() ?? "",
+                        minimum_value = rd["minimum_value"]?.ToString() ?? "",
+                        created_at = rd["created_at"]?.ToString() ?? ""
                     });
                 }
 
@@ -253,7 +256,8 @@ namespace Haniya.Controllers.PortalAdmin
                         class_level,
                         description,
                         minimum_value,
-                        created_at
+                        created_at,
+                        status
                     ) VALUES (
                         @id,
                         @name,
@@ -261,7 +265,8 @@ namespace Haniya.Controllers.PortalAdmin
                         @level,
                         @desc,
                         @minVal,
-                        GETDATE()
+                        GETDATE(),
+                        @status
                     )";
 
                 using var cmd = new SqlCommand(sql, conn);
@@ -274,7 +279,7 @@ namespace Haniya.Controllers.PortalAdmin
                     cmd.Parameters.AddWithValue("@minVal", minimumValue.Value);
                 else
                     cmd.Parameters.AddWithValue("@minVal", DBNull.Value);
-
+                cmd.Parameters.AddWithValue("@status", "ACTIVE");
                 cmd.ExecuteNonQuery();
 
                 return Json(DTOResponse.ok(null, "subject created"));

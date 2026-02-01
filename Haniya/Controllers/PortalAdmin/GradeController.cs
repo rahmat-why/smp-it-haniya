@@ -2,220 +2,121 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.Linq;
 using System.Text.Json;
 using Haniya.Models;
+using System.Data;
 
 namespace Haniya.Controllers.PortalAdmin
 {
     public class GradeController : Controller
     {
         private readonly IConfiguration _config;
+        public GradeController(IConfiguration config) => _config = config;
 
-        public GradeController(IConfiguration config)
-        {
-            _config = config;
-        }
+        private SqlConnection GetConn() => new SqlConnection(_config.GetConnectionString("DefaultConnection"));
 
-        private SqlConnection GetConn()
-        {
-            return new SqlConnection(_config.GetConnectionString("DefaultConnection"));
-        }
-
-        // ===== MASTER LOADERS =====
-
-        private List<dynamic> GetClassOptions()
-        {
-            var list = new List<dynamic>();
-            using var conn = GetConn();
-            conn.Open();
-
-            var sql = @"
-                SELECT c.academic_class_id, cl.class_name
-                FROM mst_academic_classes c
-                LEFT JOIN mst_classes cl ON cl.class_id = c.class_id
-                ORDER BY cl.class_name";
-
-            using var cmd = new SqlCommand(sql, conn);
-            using var rd = cmd.ExecuteReader();
-            while (rd.Read())
-            {
-                list.Add(new
-                {
-                    Id = rd["academic_class_id"]?.ToString(),
-                    Name = rd["class_name"]?.ToString()
-                });
-            }
-            return list;
-        }
-
-        private List<dynamic> GetSubjectOptions()
-        {
-            var list = new List<dynamic>();
-            using var conn = GetConn();
-            conn.Open();
-
-            var sql = @"
-                SELECT subject_id, subject_name
-                FROM mst_subjects
-                ORDER BY subject_name";
-
-            using var cmd = new SqlCommand(sql, conn);
-            using var rd = cmd.ExecuteReader();
-            while (rd.Read())
-            {
-                list.Add(new
-                {
-                    Id = rd["subject_id"]?.ToString(),
-                    Name = rd["subject_name"]?.ToString()
-                });
-            }
-            return list;
-        }
-
-        private List<dynamic> GetTeacherOptions()
-        {
-            var list = new List<dynamic>();
-            using var conn = GetConn();
-            conn.Open();
-
-            var sql = @"
-        SELECT 
-            teacher_id,
-            CONCAT(first_name, ' ', last_name) AS teacher_name
-        FROM mst_teachers
-        WHERE status = 'ACTIVE'
-        ORDER BY first_name";
-
-            using var cmd = new SqlCommand(sql, conn);
-            using var rd = cmd.ExecuteReader();
-
-            while (rd.Read())
-            {
-                list.Add(new
-                {
-                    Id = rd["teacher_id"]?.ToString(),
-                    Name = rd["teacher_name"]?.ToString()
-                });
-            }
-            return list;
-        }
-
-        private List<dynamic> GetStudentOptions()
-        {
-            var list = new List<dynamic>();
-
-            using var conn = GetConn();
-            conn.Open();
-
-            var sql = @"
-        SELECT
-            student_id,
-            full_name
-        FROM mst_students
-        WHERE status = 'ACTIVE'
-        ORDER BY full_name";
-
-            using var cmd = new SqlCommand(sql, conn);
-            using var rd = cmd.ExecuteReader();
-
-            while (rd.Read())
-            {
-                list.Add(new
-                {
-                    Id = rd["student_id"]?.ToString(),
-                    Name = rd["full_name"]?.ToString()
-                });
-            }
-
-            return list;
-        }
-
-        public IActionResult Index()
-        {
-            return View("~/Views/PortalAdmin/Grade/Index.cshtml");
-        }
-
-        public IActionResult Create()
-        {
-            ViewBag.ClassOptions = GetClassOptions();
-            ViewBag.SubjectOptions = GetSubjectOptions();
-            ViewBag.TeacherOptions = GetTeacherOptions();
-            ViewBag.StudentOptions = GetStudentOptions();
-            return View("~/Views/PortalAdmin/Grade/Create.cshtml");
-        }
-
+        public IActionResult Index() => View("~/Views/PortalAdmin/Grade/Index.cshtml");
+        public IActionResult Create() => View("~/Views/PortalAdmin/Grade/Create.cshtml");
         public IActionResult Edit(string id)
         {
             ViewBag.gradeId = id;
-            ViewBag.ClassOptions = GetClassOptions();
-            ViewBag.SubjectOptions = GetSubjectOptions();
-            ViewBag.TeacherOptions = GetTeacherOptions();
-            ViewBag.StudentOptions = GetStudentOptions();
             return View("~/Views/PortalAdmin/Grade/Edit.cshtml");
         }
 
-        [HttpGet]
-        public IActionResult GetAll()
+        public IActionResult GetAll(string academic_class_id = null, string grade_date = null)
         {
-            try
+            var (draw, start, length, _, _, _) = ParseDataTablesQuery();
+
+            using var conn = GetConn();
+            conn.Open();
+
+            var totalSql = @"
+        SELECT COUNT(*) 
+        FROM txn_grades g
+        WHERE (@classId IS NULL OR g.academic_class_id = @classId)
+          AND (@date IS NULL OR g.grade_date = @date)";
+
+            int recordsTotal;
+            using (var cmd = new SqlCommand(totalSql, conn))
             {
-                var list = new List<object>();
-                using var conn = GetConn();
-                conn.Open();
+                cmd.Parameters.AddWithValue("@classId", (object)academic_class_id ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@date", (object)grade_date ?? DBNull.Value);
+                recordsTotal = (int)cmd.ExecuteScalar();
+            }
 
-                var sql = @"
-            SELECT
-                g.grade_id,
-                g.grade_type,
-                cl.class_name,
-                s.subject_name,
-                CONCAT(t.first_name, ' ', t.last_name) AS teacher_name,
-                COUNT(DISTINCT d.student_id) AS total_student
-            FROM txn_grades g
-            LEFT JOIN mst_academic_classes c
-                ON g.academic_class_id = c.academic_class_id
-            LEFT JOIN mst_classes cl
-                ON cl.class_id = c.class_id
-            LEFT JOIN mst_subjects s
-                ON g.subject_id = s.subject_id
-            LEFT JOIN mst_teachers t
-                ON g.teacher_id = t.teacher_id
-            LEFT JOIN txn_grade_details d
-                ON g.grade_id = d.grade_id
-            GROUP BY
-                g.grade_id,
-                g.grade_type,
-                cl.class_name,
-                s.subject_name,
-                CONCAT(t.first_name, ' ', t.last_name)
-            ORDER BY
-                cl.class_name,
-                s.subject_name,
-                g.grade_type";
+            var sql = @"
+        SELECT 
+            g.grade_id,
+            g.grade_date,
+            c.class_name,
+            s.subject_name,
+            CONCAT(t.first_name,' ',t.last_name) AS teacher_name,
+            COALESCE(dt.item_desc, g.grade_type) AS grade_type_desc,
+            s.minimum_value,
+            COUNT(d.grade_detail_id) AS total_graded,
+            SUM(CASE 
+                WHEN TRY_CAST(REPLACE(d.grade_value, ',', '.') AS FLOAT) >= s.minimum_value THEN 1 
+                ELSE 0 
+            END) AS passed,
+            SUM(CASE 
+                WHEN TRY_CAST(REPLACE(d.grade_value, ',', '.') AS FLOAT) < s.minimum_value 
+                     OR TRY_CAST(REPLACE(d.grade_value, ',', '.') AS FLOAT) IS NULL THEN 1 
+                ELSE 0 
+            END) AS remedial
+        FROM txn_grades g
+        JOIN mst_academic_classes ac ON g.academic_class_id = ac.academic_class_id
+        JOIN mst_classes c ON ac.class_id = c.class_id
+        JOIN mst_subjects s ON g.subject_id = s.subject_id
+        JOIN mst_teachers t ON g.teacher_id = t.teacher_id
+        LEFT JOIN txn_grade_details d ON d.grade_id = g.grade_id
+        LEFT JOIN mst_detail_settings dt ON g.grade_type = dt.detail_id AND dt.header_id = 'GRADE_TYPE'
+        WHERE (@classId IS NULL OR g.academic_class_id = @classId)
+          AND (@date IS NULL OR g.grade_date = @date)
+        GROUP BY 
+            g.grade_id, g.grade_date, c.class_name, s.subject_name, t.first_name, t.last_name, 
+            g.grade_type, dt.item_desc, s.minimum_value
+        ORDER BY g.grade_date DESC, MAX(g.created_at) DESC
+        OFFSET @start ROWS FETCH NEXT @length ROWS ONLY";
 
-                using var cmd = new SqlCommand(sql, conn);
-                using var rd = cmd.ExecuteReader();
+            var list = new List<object>();
+            using (var cmd = new SqlCommand(sql, conn))
+            {
+                cmd.Parameters.AddWithValue("@classId", (object)academic_class_id ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@date", (object)grade_date ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@start", start);
+                cmd.Parameters.AddWithValue("@length", length);
 
-                while (rd.Read())
+                using var r = cmd.ExecuteReader();
+                while (r.Read())
                 {
                     list.Add(new
                     {
-                        grade_id = rd["grade_id"]?.ToString(),
-                        grade_type = rd["grade_type"]?.ToString(),
-                        class_name = rd["class_name"]?.ToString(),
-                        subject_name = rd["subject_name"]?.ToString(),
-                        teacher_name = rd["teacher_name"]?.ToString(),
-                        total_student = Convert.ToInt32(rd["total_student"])
+                        grade_id = r["grade_id"].ToString(),
+                        grade_date = r["grade_date"] == DBNull.Value ? null : ((DateTime)r["grade_date"]).ToString("yyyy-MM-dd"),
+                        class_name = r["class_name"].ToString(),
+                        subject_name = r["subject_name"].ToString(),
+                        teacher_name = r["teacher_name"].ToString(),
+                        grade_type = r["grade_type_desc"]?.ToString(),
+                        minimum_value = r["minimum_value"] as double?,
+                        passed = Convert.ToInt32(r["passed"]),
+                        remedial = Convert.ToInt32(r["remedial"])
                     });
                 }
+            }
 
-                return Json(DTOResponse.ok(list));
-            }
-            catch (Exception ex)
-            {
-                return Json(DTOResponse.fail(ex.Message, 500));
-            }
+            return Json(new { draw, recordsTotal, recordsFiltered = recordsTotal, data = list });
+        }
+
+        private (int draw, int start, int length, string searchValue, int orderColumnIndex, string orderDir) ParseDataTablesQuery()
+        {
+            var q = Request.Query;
+            int.TryParse(q["draw"], out var draw); draw = draw > 0 ? draw : 1;
+            int.TryParse(q["start"], out var start);
+            int.TryParse(q["length"], out var length); length = length > 0 ? length : 10;
+            var searchValue = q["search[value]"].ToString() ?? "";
+            int.TryParse(q["order[0][column]"], out var orderColumnIndex);
+            var orderDir = q["order[0][dir]"].ToString().ToUpper() is "ASC" or "DESC" ? q["order[0][dir]"].ToString().ToUpper() : "ASC";
+            return (draw, start, length, searchValue, orderColumnIndex, orderDir);
         }
 
         [HttpGet]
@@ -223,88 +124,130 @@ namespace Haniya.Controllers.PortalAdmin
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(id)) return Json(DTOResponse.fail("Invalid ID", 400));
+
                 using var conn = GetConn();
                 conn.Open();
 
-                // ===== HEADER =====
-                var hdrSql = @"
-            SELECT
-                grade_id,
-                subject_id,
-                teacher_id,
-                grade_type,
-                academic_class_id,
-                minimum_value
-            FROM txn_grades
-            WHERE grade_id = @id";
+                var headerSql = @"
+            SELECT 
+                g.grade_id,
+                g.grade_date,
+                g.academic_class_id,
+                g.subject_id,
+                g.teacher_id,
+                g.grade_type,
+                s.minimum_value,
+                c.class_name,
+                s.subject_name,
+                CONCAT(t.first_name,' ',t.last_name) AS teacher_name,
+                COALESCE(dt.item_desc, g.grade_type) AS grade_type_desc
+            FROM txn_grades g
+            LEFT JOIN mst_academic_classes ac ON g.academic_class_id = ac.academic_class_id
+            LEFT JOIN mst_classes c ON ac.class_id = c.class_id
+            LEFT JOIN mst_subjects s ON g.subject_id = s.subject_id
+            LEFT JOIN mst_teachers t ON g.teacher_id = t.teacher_id
+            LEFT JOIN mst_detail_settings dt ON g.grade_type = dt.detail_id AND dt.header_id = 'GRADE_TYPE'
+            WHERE g.grade_id = @id";
 
-                using var hdrCmd = new SqlCommand(hdrSql, conn);
-                hdrCmd.Parameters.AddWithValue("@id", id);
-
-                using var rd = hdrCmd.ExecuteReader();
-                if (!rd.Read())
-                    return Json(DTOResponse.fail("data not found", 404));
-
-                var header = new
+                dynamic header = null;
+                using (var cmd = new SqlCommand(headerSql, conn))
                 {
-                    grade_id = rd["grade_id"]?.ToString(),
-                    subject_id = rd["subject_id"]?.ToString(),
-                    teacher_id = rd["teacher_id"]?.ToString(),
-                    grade_type = rd["grade_type"]?.ToString(),
-                    academic_class_id = rd["academic_class_id"]?.ToString(),
-                    minimum_value = rd["minimum_value"]?.ToString()
-                };
-                rd.Close();
+                    cmd.Parameters.AddWithValue("@id", id);
+                    using var r = cmd.ExecuteReader();
+                    if (r.Read())
+                    {
+                        header = new
+                        {
+                            grade_id = r["grade_id"].ToString(),
+                            grade_date = r["grade_date"] == DBNull.Value ? null : ((DateTime)r["grade_date"]).ToString("yyyy-MM-dd"),
+                            academic_class_id = r["academic_class_id"]?.ToString(),
+                            subject_id = r["subject_id"]?.ToString(),
+                            teacher_id = r["teacher_id"]?.ToString(),
+                            grade_type = r["grade_type"]?.ToString(),
+                            grade_type_desc = r["grade_type_desc"]?.ToString(),
+                            minimum_value = r["minimum_value"] as double?,
+                            class_name = r["class_name"]?.ToString(),
+                            subject_name = r["subject_name"]?.ToString(),
+                            teacher_name = r["teacher_name"]?.ToString()
+                        };
+                    }
+                    r.Close();
+                }
 
-                // ===== DETAILS =====
+                if (header == null) return Json(DTOResponse.fail("Not found", 404));
+
                 var details = new List<object>();
-
-                var detSql = @"
-            SELECT
+                var detailsSql = @"
+            SELECT 
                 d.grade_detail_id,
                 d.student_id,
-                s.full_name AS student_name,
                 d.grade_value,
-                d.grade_attitude,
-                d.notes
+                d.notes,
+                COALESCE(st.full_name, CONCAT(st.first_name,' ',st.last_name)) AS student_name,
+                st.nis,
+                st.profile_photo
             FROM txn_grade_details d
-            LEFT JOIN mst_students s
-                ON d.student_id = s.student_id
+            LEFT JOIN mst_students st ON d.student_id = st.student_id
             WHERE d.grade_id = @id
-            ORDER BY s.full_name";
+            ORDER BY student_name";
 
-                using var detCmd = new SqlCommand(detSql, conn);
-                detCmd.Parameters.AddWithValue("@id", id);
-
-                using var drd = detCmd.ExecuteReader();
-                while (drd.Read())
+                using (var cmd = new SqlCommand(detailsSql, conn))
                 {
-                    details.Add(new
+                    cmd.Parameters.AddWithValue("@id", id);
+                    using var r = cmd.ExecuteReader();
+                    while (r.Read())
                     {
-                        grade_detail_id = drd["grade_detail_id"]?.ToString(),
-                        student_id = drd["student_id"]?.ToString(),
-                        student_name = drd["student_name"]?.ToString(),
-                        grade_value = drd["grade_value"]?.ToString(),
-                        grade_attitude = drd["grade_attitude"]?.ToString(),
-                        notes = drd["notes"]?.ToString()
-                    });
+                        details.Add(new
+                        {
+                            grade_detail_id = r["grade_detail_id"]?.ToString(),
+                            student_id = r["student_id"]?.ToString(),
+                            grade_value = r["grade_value"]?.ToString(),
+                            notes = r["notes"]?.ToString(),
+                            student_name = r["student_name"]?.ToString(),
+                            nis = r["nis"]?.ToString(),
+                            profile_photo = r["profile_photo"]?.ToString() ?? "/image/no-image.png"
+                        });
+                    }
                 }
 
                 return Json(DTOResponse.ok(new
                 {
                     header.grade_id,
+                    header.grade_date,
+                    header.academic_class_id,
                     header.subject_id,
                     header.teacher_id,
                     header.grade_type,
-                    header.academic_class_id,
+                    header.grade_type_desc,
                     header.minimum_value,
+                    header.class_name,
+                    header.subject_name,
+                    header.teacher_name,
                     details
                 }));
             }
-            catch (Exception ex)
+            catch (Exception ex) { return Json(DTOResponse.fail(ex.Message, 500)); }
+        }
+
+        [HttpGet]
+        public IActionResult GetSubjectMinValue(string subjectId)
+        {
+            try
             {
-                return Json(DTOResponse.fail(ex.Message, 500));
+                if (string.IsNullOrWhiteSpace(subjectId)) return Json(DTOResponse.fail("Subject ID required", 400));
+
+                using var conn = GetConn();
+                conn.Open();
+
+                using var cmd = new SqlCommand("SELECT minimum_value FROM mst_subjects WHERE subject_id = @id", conn);
+                cmd.Parameters.AddWithValue("@id", subjectId);
+                var val = cmd.ExecuteScalar();
+
+                double? minValue = val == DBNull.Value ? null : Convert.ToDouble(val);
+                return Json(DTOResponse.ok(new { min_value = minValue }));
             }
+            catch (Exception ex) { return Json(DTOResponse.fail(ex.Message, 500)); }
         }
 
         [HttpPost]
@@ -313,87 +256,73 @@ namespace Haniya.Controllers.PortalAdmin
             try
             {
                 var f = Request.Form;
-
+                var classId = f["academic_class_id"].ToString();
                 var subjectId = f["subject_id"].ToString();
                 var teacherId = f["teacher_id"].ToString();
                 var gradeType = f["grade_type"].ToString();
-                var academicClassId = f["academic_class_id"].ToString();
-                var minValStr = f["minimum_value"].ToString();
-                var rawDetails = f["details"].ToString();
+                var gradeDate = f["grade_date"].ToString();
 
-                // ===== validations =====
-                if (string.IsNullOrWhiteSpace(subjectId))
-                    return Json(DTOResponse.fail("subject is required", 400));
+                if (string.IsNullOrWhiteSpace(classId) || string.IsNullOrWhiteSpace(subjectId) ||
+                    string.IsNullOrWhiteSpace(teacherId) || string.IsNullOrWhiteSpace(gradeType))
+                    return Json(DTOResponse.fail("Missing required fields", 400));
 
-                if (string.IsNullOrWhiteSpace(teacherId))
-                    return Json(DTOResponse.fail("teacher is required", 400));
+                var studentIds = JsonSerializer.Deserialize<List<string>>(f["student_ids"].ToString());
+                var gradeValues = JsonSerializer.Deserialize<List<string>>(f["grade_values"].ToString());
+                var notes = JsonSerializer.Deserialize<List<string>>(f["notes"].ToString());
 
-                if (string.IsNullOrWhiteSpace(gradeType))
-                    return Json(DTOResponse.fail("grade type is required", 400));
-
-                if (string.IsNullOrWhiteSpace(academicClassId))
-                    return Json(DTOResponse.fail("class is required", 400));
-
-                if (string.IsNullOrWhiteSpace(rawDetails))
-                    return Json(DTOResponse.fail("grade details are required", 400));
-
-                double? minVal = null;
-                if (!string.IsNullOrWhiteSpace(minValStr) &&
-                    double.TryParse(minValStr, out var mv))
-                {
-                    minVal = mv;
-                }
+                if (studentIds == null || studentIds.Count == 0 || gradeValues.Count != studentIds.Count || notes.Count != studentIds.Count)
+                    return Json(DTOResponse.fail("Invalid details", 400));
 
                 using var conn = GetConn();
                 conn.Open();
+                using var trx = conn.BeginTransaction();
 
-                // ===== generate grade_id =====
-                var lastIdCmd = new SqlCommand(
-                    "SELECT ISNULL(MAX(grade_id),'GRD0000') FROM txn_grades", conn);
-                var lastId = lastIdCmd.ExecuteScalar()?.ToString() ?? "GRD0000";
-                var next = int.Parse(lastId.Substring(3)) + 1;
-                var gradeId = "GRD" + next.ToString("D4");
+                var seqCmd = new SqlCommand("SELECT ISNULL(MAX(grade_id),'GRD0000') FROM txn_grades", conn, trx);
+                var seq = int.Parse(seqCmd.ExecuteScalar().ToString().Substring(3)) + 1;
+                var gradeId = "GRD" + seq.ToString("D4");
 
-                // ===== insert header =====
-                var sql = @"
-            INSERT INTO txn_grades (
-                grade_id,
-                subject_id,
-                teacher_id,
-                grade_type,
-                academic_class_id,
-                minimum_value,
-                created_at
-            ) VALUES (
-                @id,
-                @sub,
-                @tch,
-                @type,
-                @cls,
-                @min,
-                GETDATE()
-            )";
+                var headerSql = @"
+            INSERT INTO txn_grades (grade_id, subject_id, teacher_id, grade_type, academic_class_id, created_at, created_by, grade_date)
+            VALUES (@id, @subj, @teacher, @type, @class, GETDATE(), @by, @date)";
 
-                using (var cmd = new SqlCommand(sql, conn))
+                using (var cmd = new SqlCommand(headerSql, conn, trx))
                 {
                     cmd.Parameters.AddWithValue("@id", gradeId);
-                    cmd.Parameters.AddWithValue("@sub", subjectId);
-                    cmd.Parameters.AddWithValue("@tch", teacherId);
+                    cmd.Parameters.AddWithValue("@subj", subjectId);
+                    cmd.Parameters.AddWithValue("@teacher", teacherId);
                     cmd.Parameters.AddWithValue("@type", gradeType);
-                    cmd.Parameters.AddWithValue("@cls", academicClassId);
-                    cmd.Parameters.AddWithValue("@min", (object?)minVal ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@class", classId);
+                    cmd.Parameters.AddWithValue("@by", DBNull.Value);
+                    cmd.Parameters.AddWithValue("@date", gradeDate);
                     cmd.ExecuteNonQuery();
                 }
 
-                // ===== insert details (NO DTO) =====
-                InsertGradeDetails(conn, gradeId, rawDetails);
+                var detSeqCmd = new SqlCommand("SELECT ISNULL(MAX(grade_detail_id),'GRD0000') FROM txn_grade_details", conn, trx);
+                var detSeq = int.Parse(detSeqCmd.ExecuteScalar().ToString().Substring(3));
 
-                return Json(DTOResponse.ok(null, "grade created"));
+                for (int i = 0; i < studentIds.Count; i++)
+                {
+                    detSeq++;
+                    var detId = "GRD" + detSeq.ToString("D4");
+
+                    var detSql = @"
+                INSERT INTO txn_grade_details (grade_detail_id, grade_id, student_id, grade_value, notes, created_at, created_by)
+                VALUES (@did, @gid, @sid, @val, @notes, GETDATE(), @by)";
+
+                    using var dcmd = new SqlCommand(detSql, conn, trx);
+                    dcmd.Parameters.AddWithValue("@did", detId);
+                    dcmd.Parameters.AddWithValue("@gid", gradeId);
+                    dcmd.Parameters.AddWithValue("@sid", studentIds[i]);
+                    dcmd.Parameters.AddWithValue("@val", (object)gradeValues[i] ?? DBNull.Value);
+                    dcmd.Parameters.AddWithValue("@notes", (object)notes[i] ?? DBNull.Value);
+                    dcmd.Parameters.AddWithValue("@by", DBNull.Value); // Fixed: set to NULL
+                    dcmd.ExecuteNonQuery();
+                }
+
+                trx.Commit();
+                return Json(DTOResponse.ok(null, "Grade created"));
             }
-            catch (Exception ex)
-            {
-                return Json(DTOResponse.fail(ex.Message, 500));
-            }
+            catch (Exception ex) { return Json(DTOResponse.fail(ex.Message, 500)); }
         }
 
         [HttpPost]
@@ -402,194 +331,99 @@ namespace Haniya.Controllers.PortalAdmin
             try
             {
                 var f = Request.Form;
-
                 var gradeId = f["grade_id"].ToString();
+                var classId = f["academic_class_id"].ToString();
                 var subjectId = f["subject_id"].ToString();
                 var teacherId = f["teacher_id"].ToString();
                 var gradeType = f["grade_type"].ToString();
-                var academicClassId = f["academic_class_id"].ToString();
-                var minValStr = f["minimum_value"].ToString();
+                var gradeDate = f["grade_date"].ToString();
                 var rawDetails = f["details"].ToString();
 
-                // ===== validations =====
-                if (string.IsNullOrWhiteSpace(gradeId))
-                    return Json(DTOResponse.fail("invalid grade id", 400));
+                if (string.IsNullOrWhiteSpace(gradeId)) return Json(DTOResponse.fail("Invalid ID", 400));
 
-                if (string.IsNullOrWhiteSpace(subjectId))
-                    return Json(DTOResponse.fail("subject is required", 400));
-
-                if (string.IsNullOrWhiteSpace(teacherId))
-                    return Json(DTOResponse.fail("teacher is required", 400));
-
-                if (string.IsNullOrWhiteSpace(gradeType))
-                    return Json(DTOResponse.fail("grade type is required", 400));
-
-                if (string.IsNullOrWhiteSpace(academicClassId))
-                    return Json(DTOResponse.fail("class is required", 400));
-
-                if (string.IsNullOrWhiteSpace(rawDetails))
-                    return Json(DTOResponse.fail("grade detail required", 400));
-
-                double? minVal = null;
-                if (!string.IsNullOrWhiteSpace(minValStr) &&
-                    double.TryParse(minValStr, out var mv))
-                {
-                    minVal = mv;
-                }
-
-                using var conn = GetConn();
-                conn.Open();
-
-                // ===== update header =====
-                var sql = @"
-            UPDATE txn_grades SET
-                subject_id = @sub,
-                teacher_id = @tch,
-                grade_type = @type,
-                academic_class_id = @cls,
-                minimum_value = @min,
-                updated_at = GETDATE()
-            WHERE grade_id = @id";
-
-                using (var cmd = new SqlCommand(sql, conn))
-                {
-                    cmd.Parameters.AddWithValue("@id", gradeId);
-                    cmd.Parameters.AddWithValue("@sub", subjectId);
-                    cmd.Parameters.AddWithValue("@tch", teacherId);
-                    cmd.Parameters.AddWithValue("@type", gradeType);
-                    cmd.Parameters.AddWithValue("@cls", academicClassId);
-                    cmd.Parameters.AddWithValue("@min", (object?)minVal ?? DBNull.Value);
-                    cmd.ExecuteNonQuery();
-                }
-
-                // ===== delete old details =====
-                using (var del = new SqlCommand(
-                    "DELETE FROM txn_grade_details WHERE grade_id=@id", conn))
-                {
-                    del.Parameters.AddWithValue("@id", gradeId);
-                    del.ExecuteNonQuery();
-                }
-
-                // ===== insert new details (NO DTO) =====
-                InsertGradeDetails(conn, gradeId, rawDetails);
-
-                return Json(DTOResponse.ok(null, "grade updated"));
-            }
-            catch (Exception ex)
-            {
-                return Json(DTOResponse.fail(ex.Message, 500));
-            }
-        }
-
-        [HttpPost]
-        public IActionResult Delete()
-        {
-            try
-            {
-                var id = Request.Form["id"].ToString();
-                if (string.IsNullOrWhiteSpace(id))
-                    return Json(DTOResponse.fail("invalid grade id", 400));
-
-                using var conn = GetConn();
-                conn.Open();
-
-                new SqlCommand(
-                    "DELETE FROM txn_grade_details WHERE grade_id=@id", conn)
-                { Parameters = { new("@id", id) } }
-                .ExecuteNonQuery();
-
-                new SqlCommand(
-                    "DELETE FROM txn_grades WHERE grade_id=@id", conn)
-                { Parameters = { new("@id", id) } }
-                .ExecuteNonQuery();
-
-                return Json(DTOResponse.ok(null, "grade deleted"));
-            }
-            catch (Exception ex)
-            {
-                return Json(DTOResponse.fail(ex.Message, 500));
-            }
-        }
-
-        private void InsertGradeDetails(
-    SqlConnection conn,
-    string gradeId,
-    string rawDetails
-)
-        {
-            // ===== parse details (NO DTO) =====
-            List<dynamic> details;
-            try
-            {
+                List<dynamic> details;
                 using var json = JsonDocument.Parse(rawDetails);
-                details = json.RootElement
-                    .EnumerateArray()
+                details = json.RootElement.EnumerateArray()
                     .Select(x => new
                     {
                         student_id = x.GetProperty("student_id").GetString(),
-                        grade_value = x.TryGetProperty("grade_value", out JsonElement gvEl)
-                                        ? gvEl.GetString()
-                                        : null,
-                        grade_attitude = x.TryGetProperty("grade_attitude", out JsonElement gaEl)
-                                        ? gaEl.GetString()
-                                        : null,
-                        notes = x.TryGetProperty("notes", out JsonElement ntEl)
-                                        ? ntEl.GetString()
-                                        : null
+                        grade_value = x.TryGetProperty("grade_value", out var v) ? v.GetString() : null,
+                        notes = x.TryGetProperty("notes", out var n) ? n.GetString() : null
                     })
-                    .Where(x => !string.IsNullOrWhiteSpace(x.student_id))
+                    .Where(d => !string.IsNullOrWhiteSpace(d.student_id))
                     .Cast<dynamic>()
                     .ToList();
+
+                using var conn = GetConn();
+                conn.Open();
+                using var trx = conn.BeginTransaction();
+
+                var headerSql = @"
+            UPDATE txn_grades SET subject_id = @subj, teacher_id = @teacher,
+                grade_type = @type, academic_class_id = @class, updated_at = GETDATE(), grade_date = @date
+            WHERE grade_id = @id";
+
+                using (var cmd = new SqlCommand(headerSql, conn, trx))
+                {
+                    cmd.Parameters.AddWithValue("@id", gradeId);
+                    cmd.Parameters.AddWithValue("@subj", subjectId);
+                    cmd.Parameters.AddWithValue("@teacher", teacherId);
+                    cmd.Parameters.AddWithValue("@type", gradeType);
+                    cmd.Parameters.AddWithValue("@class", classId);
+                    cmd.Parameters.AddWithValue("@date", gradeDate);
+                    cmd.ExecuteNonQuery();
+                }
+
+                new SqlCommand("DELETE FROM txn_grade_details WHERE grade_id = @id", conn, trx)
+                { Parameters = { new SqlParameter("@id", gradeId) } }.ExecuteNonQuery();
+
+                var detSeqCmd = new SqlCommand("SELECT ISNULL(MAX(grade_detail_id),'GDT0000') FROM txn_grade_details", conn, trx);
+                var detSeq = int.Parse(detSeqCmd.ExecuteScalar().ToString().Substring(3));
+
+                foreach (var d in details)
+                {
+                    detSeq++;
+                    var detId = "GDT" + detSeq.ToString("D4");
+
+                    var detSql = @"
+                INSERT INTO txn_grade_details (grade_detail_id, grade_id, student_id, grade_value, notes, created_at, updated_at, created_by)
+                VALUES (@did, @gid, @sid, @val, @notes, GETDATE(), GETDATE(), @by)";
+
+                    using var dcmd = new SqlCommand(detSql, conn, trx);
+                    dcmd.Parameters.AddWithValue("@did", detId);
+                    dcmd.Parameters.AddWithValue("@gid", gradeId);
+                    dcmd.Parameters.AddWithValue("@sid", d.student_id);
+                    dcmd.Parameters.AddWithValue("@val", (object)d.grade_value ?? DBNull.Value);
+                    dcmd.Parameters.AddWithValue("@notes", (object)d.notes ?? DBNull.Value);
+                    dcmd.Parameters.AddWithValue("@by", DBNull.Value); // Added for consistency (NULL)
+                    dcmd.ExecuteNonQuery();
+                }
+
+                trx.Commit();
+                return Json(DTOResponse.ok(null, "Grade updated"));
             }
-            catch
+            catch (Exception ex) { return Json(DTOResponse.fail(ex.Message, 500)); }
+        }
+
+        [HttpPost]
+        public IActionResult Delete([FromBody] DTORequest req)
+        {
+            try
             {
-                throw new Exception("invalid grade details format");
+                if (string.IsNullOrEmpty(req?.id)) return Json(DTOResponse.fail("Invalid ID", 400));
+
+                using var conn = GetConn();
+                conn.Open();
+
+                new SqlCommand("DELETE FROM txn_grade_details WHERE grade_id = @id", conn)
+                { Parameters = { new SqlParameter("@id", req.id) } }.ExecuteNonQuery();
+
+                new SqlCommand("DELETE FROM txn_grades WHERE grade_id = @id", conn)
+                { Parameters = { new SqlParameter("@id", req.id) } }.ExecuteNonQuery();
+
+                return Json(DTOResponse.ok(null, "Deleted"));
             }
-
-            if (details.Count == 0)
-                throw new Exception("at least one grade detail is required");
-
-            // ===== generate detail id =====
-            var lastCmd = new SqlCommand(
-                "SELECT ISNULL(MAX(grade_detail_id),'GDL0000') FROM txn_grade_details",
-                conn
-            );
-            var lastId = lastCmd.ExecuteScalar()?.ToString() ?? "GDL0000";
-            var seq = int.Parse(lastId.Substring(3));
-
-            foreach (var d in details)
-            {
-                seq++;
-                var detId = "GDL" + seq.ToString("D4");
-
-                var sql = @"
-            INSERT INTO txn_grade_details (
-                grade_detail_id,
-                grade_id,
-                student_id,
-                grade_value,
-                grade_attitude,
-                notes,
-                created_at
-            ) VALUES (
-                @id,
-                @gid,
-                @stu,
-                @val,
-                @att,
-                @nts,
-                GETDATE()
-            )";
-
-                using var cmd = new SqlCommand(sql, conn);
-                cmd.Parameters.AddWithValue("@id", detId);
-                cmd.Parameters.AddWithValue("@gid", gradeId);
-                cmd.Parameters.AddWithValue("@stu", d.student_id);
-                cmd.Parameters.AddWithValue("@val", (object?)d.grade_value ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@att", (object?)d.grade_attitude ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@nts", (object?)d.notes ?? DBNull.Value);
-                cmd.ExecuteNonQuery();
-            }
+            catch (Exception ex) { return Json(DTOResponse.fail(ex.Message, 500)); }
         }
     }
 }

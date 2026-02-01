@@ -1,5 +1,184 @@
 ﻿@{
+    ViewData["Title"] = "Dashboard Admin";
     Layout = "_LayoutAdmin";
 }
 
-<p>Dashboard Admin</p>
+<div class="max-w-7xl mx-auto space-y-10 py-8 px-4" id="admin-dashboard">
+    <div class="text-center">
+        <h1 class="text-3xl font-bold text-indigo-900">Dashboard Admin</h1>
+        <p class="text-gray-600 mt-2">Selamat datang kembali</p>
+    </div>
+
+    <div id="loading" class="text-center py-20">
+        <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-indigo-600"></div>
+        <p class="mt-4 text-gray-600">Memuat data...</p>
+    </div>
+
+    <div id="content" class="hidden space-y-10">
+        <!-- Stat Cards (jarak lebih rapat lagi) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="stat-cards"></div>
+
+        <!-- Pembayaran dengan range date -->
+        <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100" id="payment-section">
+            <h2 class="text-3xl font-bold text-indigo-900 mb-8">Pembayaran</h2>
+
+            <div class="flex flex-wrap items-end gap-4 mb-8">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Dari Tanggal</label>
+                    <input type="date" id="startDate" class="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Sampai Tanggal</label>
+                    <input type="date" id="endDate" class="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <button onclick="loadAdminDashboard()" class="px-6 py-2 bg-indigo-900 text-white rounded-xl font-medium hover:bg-indigo-800 transition">Filter</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="payment-cards"></div>
+        </div>
+
+        <!-- Events & Articles dengan tag badge -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8" id="events-articles"></div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        // Set default: bulan ini
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+
+        $('#startDate').val(firstDay);
+        $('#endDate').val(lastDay);
+
+        loadAdminDashboard();
+    });
+
+    function loadAdminDashboard() {
+        const startDate = $('#startDate').val();
+        const endDate = $('#endDate').val();
+
+        $.ajax({
+            url: '/Dashboard/GetAdminData',
+            type: 'GET',
+            data: { startDate: startDate, endDate: endDate },
+            success: function (res) {
+                if (!res.success) {
+                    alert(res.message);
+                    return;
+                }
+
+                const d = res.data;
+
+                // Stat Cards (jarak lebih rapat)
+                $('#stat-cards').html(`
+                        <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 hover:shadow-2xl transition-all duration-500">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-600 text-sm font-medium">Total Kelas</p>
+                                    <p class="text-3xl font-bold text-indigo-900 mt-3">${d.totalClass}</p>
+                                </div>
+                                <i class="fas fa-chalkboard text-5xl text-indigo-300"></i>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 hover:shadow-2xl transition-all duration-500">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-600 text-sm font-medium">Total Siswa</p>
+                                    <p class="text-3xl font-bold text-rose-900 mt-3">${d.totalStudent}</p>
+                                </div>
+                                <i class="fas fa-user-graduate text-5xl text-rose-300"></i>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 hover:shadow-2xl transition-all duration-500">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-600 text-sm font-medium">Total Mata Pelajaran</p>
+                                    <p class="text-3xl font-bold text-purple-900 mt-3">${d.totalSubject}</p>
+                                </div>
+                                <i class="fas fa-book text-5xl text-purple-300"></i>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 hover:shadow-2xl transition-all duration-500">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-600 text-sm font-medium">Total Guru</p>
+                                    <p class="text-3xl font-bold text-teal-900 mt-3">${d.totalTeacher}</p>
+                                </div>
+                                <i class="fas fa-chalkboard-teacher text-5xl text-teal-300"></i>
+                            </div>
+                        </div>
+                    `);
+
+                // Payment Cards (font label lebih kecil, jarak lebih rapat)
+                $('#payment-cards').html(`
+                        <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl p-8 text-center">
+                            <p class="text-indigo-700 text-sm font-medium">Transaksi</p>
+                            <p class="text-3xl font-bold text-indigo-900 mt-4">${d.payment.transaction || 0}</p>
+                        </div>
+                        <div class="bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl p-8 text-center">
+                            <p class="text-amber-700 text-sm font-medium">Total Tagihan</p>
+                            <p class="text-3xl font-bold text-amber-900 mt-4">Rp ${(d.payment.tagihan || 0).toLocaleString('id-ID')}</p>
+                        </div>
+                        <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-8 text-center">
+                            <p class="text-green-700 text-sm font-medium">Terbayar</p>
+                            <p class="text-3xl font-bold text-green-900 mt-4">Rp ${(d.payment.terbayar || 0).toLocaleString('id-ID')}</p>
+                        </div>
+                        <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-8 text-center">
+                            <p class="text-red-700 text-sm font-medium">Sisa</p>
+                            <p class="text-3xl font-bold text-red-900 mt-4">Rp ${(d.payment.sisa || 0).toLocaleString('id-ID')}</p>
+                        </div>
+                    `);
+
+                // Events dengan tag badge
+                let eventsHtml = '<div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100"><h2 class="text-3xl font-bold text-indigo-900 mb-8">Event Mendatang</h2><div class="space-y-6">';
+                d.events.forEach(e => {
+                    let tagHtml = '';
+                    e.tags.forEach(tag => {
+                        tagHtml += `<span class="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">${tag}</span>`;
+                    });
+                    eventsHtml += `
+                            <div class="flex gap-6 hover:bg-gray-50 p-6 rounded-2xl transition">
+                                <div class="w-24 h-24 bg-gradient-to-br from-purple-200 to-indigo-200 rounded-2xl flex-shrink-0 bg-cover bg-center" style="background-image: url('${e.photo}')"></div>
+                                <div class="flex-1">
+                                    <p class="text-xl font-semibold text-indigo-900">${e.name}</p>
+                                    <p class="text-gray-600 mt-1">${e.date} • ${e.location}</p>
+                                    <p class="text-gray-500 mt-2">${e.desc}</p>
+                                    <div class="flex flex-wrap gap-2 mt-3">${tagHtml}</div>
+                                </div>
+                            </div>`;
+                });
+                eventsHtml += '</div></div>';
+
+                // Articles dengan tag badge
+                let articlesHtml = '<div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100"><h2 class="text-3xl font-bold text-indigo-900 mb-8">Artikel Terbaru</h2><div class="space-y-6">';
+                d.articles.forEach(a => {
+                    let tagHtml = '';
+                    a.tags.forEach(tag => {
+                        tagHtml += `<span class="px-3 py-1 bg-rose-100 text-rose-800 rounded-full text-xs font-medium">${tag}</span>`;
+                    });
+                    articlesHtml += `
+                            <div class="flex gap-6 hover:bg-gray-50 p-6 rounded-2xl transition">
+                                <div class="w-32 h-32 bg-gradient-to-br from-rose-200 to-pink-200 rounded-2xl flex-shrink-0 bg-cover bg-center" style="background-image: url('${a.image}')"></div>
+                                <div class="flex-1">
+                                    <p class="text-xl font-semibold text-indigo-900">${a.title}</p>
+                                    <p class="text-gray-500 mt-1">${a.date}</p>
+                                    <p class="text-gray-600 mt-2 line-clamp-3">${a.content}</p>
+                                    <div class="flex flex-wrap gap-2 mt-3">${tagHtml}</div>
+                                </div>
+                            </div>`;
+                });
+                articlesHtml += '</div></div>';
+
+                $('#events-articles').html(eventsHtml + articlesHtml);
+
+                $('#loading').addClass('hidden');
+                $('#content').removeClass('hidden');
+            },
+            error: function () {
+                alert('Gagal memuat data dashboard');
+            }
+        });
+    }
+</script>

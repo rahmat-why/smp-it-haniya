@@ -500,5 +500,500 @@ namespace Haniya.Controllers
                 return Json(DTOResponse.fail(ex.Message, 500));
             }
         }
+
+        [HttpGet]
+        public IActionResult AttendanceStatus(string q = "", int page = 1, int pageSize = 20)
+        {
+            try
+            {
+                if (page <= 0) page = 1;
+                if (pageSize <= 0) pageSize = 20;
+
+                using var conn = GetConn();
+                conn.Open();
+
+                var where = "WHERE status = 'ACTIVE' AND header_id = 'ATTENDANCE_STATUS'";
+                if (!string.IsNullOrWhiteSpace(q))
+                {
+                    where += " AND item_desc LIKE @q";
+                }
+
+                // Count without sorting
+                var countSql = $"SELECT COUNT(*) FROM mst_detail_settings {where}";
+                using var countCmd = new SqlCommand(countSql, conn);
+                if (!string.IsNullOrWhiteSpace(q))
+                    countCmd.Parameters.AddWithValue("@q", $"%{q}%");
+                var total = (int)countCmd.ExecuteScalar();
+
+                var offset = (page - 1) * pageSize;
+
+                // Use CAST to nvarchar for sorting (safe workaround)
+                var sql = $@"
+            SELECT detail_id, item_desc
+            FROM mst_detail_settings
+            {where}
+            ORDER BY CAST(item_desc AS nvarchar(4000))
+            OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY";
+
+                using var cmd = new SqlCommand(sql, conn);
+                if (!string.IsNullOrWhiteSpace(q))
+                    cmd.Parameters.AddWithValue("@q", $"%{q}%");
+                cmd.Parameters.AddWithValue("@offset", offset);
+                cmd.Parameters.AddWithValue("@pageSize", pageSize);
+
+                var results = new List<object>();
+                using var rd = cmd.ExecuteReader();
+                while (rd.Read())
+                {
+                    results.Add(new
+                    {
+                        id = rd["detail_id"].ToString(),
+                        text = rd["item_desc"]?.ToString() ?? ""
+                    });
+                }
+
+                var more = (page * pageSize) < total;
+
+                return Json(new
+                {
+                    results,
+                    pagination = new { more }
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(DTOResponse.fail(ex.Message, 500));
+            }
+        }
+
+        [HttpGet]
+        public IActionResult AcademicClasses(string q = "", int page = 1, int pageSize = 20)
+        {
+            try
+            {
+                if (page <= 0) page = 1;
+                if (pageSize <= 0) pageSize = 20;
+
+                using var conn = GetConn();
+                conn.Open();
+
+                var where = "WHERE 1=1";
+                if (!string.IsNullOrWhiteSpace(q))
+                {
+                    where += " AND (c.class_name LIKE @q OR CAST(ay.start_date AS NVARCHAR) LIKE @q OR CAST(ay.end_date AS NVARCHAR) LIKE @q)";
+                }
+
+                var countSql = $@"
+            SELECT COUNT(*) 
+            FROM mst_academic_classes ac
+            JOIN mst_classes c ON ac.class_id = c.class_id
+            JOIN mst_academic_years ay ON ac.academic_year_id = ay.academic_year_id
+            {where}";
+
+                using var countCmd = new SqlCommand(countSql, conn);
+                if (!string.IsNullOrWhiteSpace(q))
+                    countCmd.Parameters.AddWithValue("@q", $"%{q}%");
+                var total = (int)countCmd.ExecuteScalar();
+
+                var offset = (page - 1) * pageSize;
+
+                var sql = $@"
+            SELECT 
+                ac.academic_class_id,
+                c.class_name,
+                ay.start_date,
+                ay.end_date,
+                ay.semester
+            FROM mst_academic_classes ac
+            JOIN mst_classes c ON ac.class_id = c.class_id
+            JOIN mst_academic_years ay ON ac.academic_year_id = ay.academic_year_id
+            {where}
+            ORDER BY ay.start_date DESC, c.class_name
+            OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY";
+
+                using var cmd = new SqlCommand(sql, conn);
+                if (!string.IsNullOrWhiteSpace(q))
+                    cmd.Parameters.AddWithValue("@q", $"%{q}%");
+                cmd.Parameters.AddWithValue("@offset", offset);
+                cmd.Parameters.AddWithValue("@pageSize", pageSize);
+
+                var results = new List<object>();
+                using var rd = cmd.ExecuteReader();
+                while (rd.Read())
+                {
+                    var startYear = Convert.ToDateTime(rd["start_date"]).Year;
+                    var endYear = Convert.ToDateTime(rd["end_date"]).Year;
+                    var display = $"{rd["class_name"]}";
+
+                    results.Add(new
+                    {
+                        id = rd["academic_class_id"].ToString(),
+                        text = display
+                    });
+                }
+
+                var more = (page * pageSize) < total;
+
+                return Json(new
+                {
+                    results,
+                    pagination = new { more }
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(DTOResponse.fail(ex.Message, 500));
+            }
+        }
+
+        [HttpGet]
+        public IActionResult Subjects(string q = "", int page = 1, int pageSize = 20)
+        {
+            try
+            {
+                if (page <= 0) page = 1;
+                if (pageSize <= 0) pageSize = 20;
+
+                using var conn = GetConn();
+                conn.Open();
+
+                var where = "WHERE status = 'ACTIVE'";
+                if (!string.IsNullOrWhiteSpace(q))
+                {
+                    where += " AND subject_name LIKE @q";
+                }
+
+                var countSql = $"SELECT COUNT(*) FROM mst_subjects {where}";
+                using var countCmd = new SqlCommand(countSql, conn);
+                if (!string.IsNullOrWhiteSpace(q))
+                    countCmd.Parameters.AddWithValue("@q", $"%{q}%");
+                var total = (int)countCmd.ExecuteScalar();
+
+                var offset = (page - 1) * pageSize;
+
+                var sql = $@"
+            SELECT subject_id, subject_name
+            FROM mst_subjects
+            {where}
+            ORDER BY subject_name
+            OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY";
+
+                using var cmd = new SqlCommand(sql, conn);
+                if (!string.IsNullOrWhiteSpace(q))
+                    cmd.Parameters.AddWithValue("@q", $"%{q}%");
+                cmd.Parameters.AddWithValue("@offset", offset);
+                cmd.Parameters.AddWithValue("@pageSize", pageSize);
+
+                var results = new List<object>();
+                using var rd = cmd.ExecuteReader();
+                while (rd.Read())
+                {
+                    results.Add(new
+                    {
+                        id = rd["subject_id"].ToString(),
+                        text = rd["subject_name"]?.ToString()
+                    });
+                }
+
+                var more = (page * pageSize) < total;
+
+                return Json(new
+                {
+                    results,
+                    pagination = new { more }
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(DTOResponse.fail(ex.Message, 500));
+            }
+        }
+
+        [HttpGet]
+        public IActionResult GradeTypes(string q = "", int page = 1, int pageSize = 20)
+        {
+            try
+            {
+                if (page <= 0) page = 1;
+                if (pageSize <= 0) pageSize = 20;
+
+                using var conn = GetConn();
+                conn.Open();
+
+                var where = "WHERE status = 'ACTIVE' AND header_id = 'GRADE_TYPE'";
+                if (!string.IsNullOrWhiteSpace(q))
+                {
+                    where += " AND item_desc LIKE @q";
+                }
+
+                var countSql = $"SELECT COUNT(*) FROM mst_detail_settings {where}";
+                using var countCmd = new SqlCommand(countSql, conn);
+                if (!string.IsNullOrWhiteSpace(q))
+                    countCmd.Parameters.AddWithValue("@q", $"%{q}%");
+                var total = (int)countCmd.ExecuteScalar();
+
+                var offset = (page - 1) * pageSize;
+
+                var sql = $@"
+            SELECT detail_id, item_desc
+            FROM mst_detail_settings
+            {where}
+            ORDER BY CAST(item_desc AS NVARCHAR(4000))
+            OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY";
+
+                using var cmd = new SqlCommand(sql, conn);
+                if (!string.IsNullOrWhiteSpace(q))
+                    cmd.Parameters.AddWithValue("@q", $"%{q}%");
+                cmd.Parameters.AddWithValue("@offset", offset);
+                cmd.Parameters.AddWithValue("@pageSize", pageSize);
+
+                var results = new List<object>();
+                using var rd = cmd.ExecuteReader();
+                while (rd.Read())
+                {
+                    results.Add(new
+                    {
+                        id = rd["detail_id"].ToString(),
+                        text = rd["item_desc"]?.ToString()
+                    });
+                }
+
+                var more = (page * pageSize) < total;
+
+                return Json(new
+                {
+                    results,
+                    pagination = new { more }
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(DTOResponse.fail(ex.Message, 500));
+            }
+        }
+
+        // Add this method to your existing Select2Controller.cs
+
+        [HttpGet]
+        public IActionResult Days(string q = "", int page = 1, int pageSize = 20)
+        {
+            try
+            {
+                if (page <= 0) page = 1;
+                if (pageSize <= 0) pageSize = 20;
+
+                using var conn = GetConn();
+                conn.Open();
+
+                var where = "WHERE status = 'ACTIVE' AND header_id = 'DAY'";
+                if (!string.IsNullOrWhiteSpace(q))
+                {
+                    where += " AND item_desc LIKE @q";
+                }
+
+                var countSql = $"SELECT COUNT(*) FROM mst_detail_settings {where}";
+                using var countCmd = new SqlCommand(countSql, conn);
+                if (!string.IsNullOrWhiteSpace(q))
+                    countCmd.Parameters.AddWithValue("@q", $"%{q}%");
+
+                var total = (int)countCmd.ExecuteScalar();
+
+                var offset = (page - 1) * pageSize;
+
+                var sql = $@"
+            SELECT detail_id, item_desc
+            FROM mst_detail_settings
+            {where}
+            ORDER BY CAST(item_desc AS NVARCHAR(4000))
+            OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY";
+
+                using var cmd = new SqlCommand(sql, conn);
+                if (!string.IsNullOrWhiteSpace(q))
+                    cmd.Parameters.AddWithValue("@q", $"%{q}%");
+                cmd.Parameters.AddWithValue("@offset", offset);
+                cmd.Parameters.AddWithValue("@pageSize", pageSize);
+
+                var results = new List<object>();
+                using var rd = cmd.ExecuteReader();
+                while (rd.Read())
+                {
+                    results.Add(new
+                    {
+                        id = rd["detail_id"]?.ToString(),
+                        text = rd["item_desc"]?.ToString()
+                    });
+                }
+
+                var more = (page * pageSize) < total;
+
+                return Json(new
+                {
+                    results,
+                    pagination = new { more }
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(DTOResponse.fail(ex.Message, 500));
+            }
+        }
+
+        [HttpGet]
+        public IActionResult PaymentTypes(string q = "", int page = 1)
+        {
+            using var conn = GetConn();
+            conn.Open();
+
+            var sql = @"
+        SELECT detail_id AS id, item_desc AS text
+        FROM mst_detail_settings
+        WHERE header_id = 'PAYMENT_TYPE'
+          AND (@q IS NULL OR item_desc LIKE @pattern)
+        ORDER BY item_desc
+        OFFSET @offset ROWS FETCH NEXT 10 ROWS ONLY";
+
+            var results = new List<object>();
+            using (var cmd = new SqlCommand(sql, conn))
+            {
+                cmd.Parameters.AddWithValue("@q", string.IsNullOrWhiteSpace(q) ? DBNull.Value : q);
+                cmd.Parameters.AddWithValue("@pattern", $"%{q}%");
+                cmd.Parameters.AddWithValue("@offset", (page - 1) * 10);
+
+                using var r = cmd.ExecuteReader();
+                while (r.Read())
+                {
+                    results.Add(new { id = r["id"].ToString(), text = r["text"].ToString() });
+                }
+            }
+
+            return Json(new { results, pagination = new { more = results.Count == 10 } });
+        }
+
+        [HttpGet]
+        public IActionResult PaymentMethods(string q = "", int page = 1)
+        {
+            using var conn = GetConn();
+            conn.Open();
+
+            var sql = @"
+        SELECT detail_id AS id, item_desc AS text
+        FROM mst_detail_settings
+        WHERE header_id = 'PAYMENT_METHOD'
+          AND (@q IS NULL OR item_desc LIKE @pattern)
+        ORDER BY item_desc
+        OFFSET @offset ROWS FETCH NEXT 10 ROWS ONLY";
+
+            var results = new List<object>();
+            using (var cmd = new SqlCommand(sql, conn))
+            {
+                cmd.Parameters.AddWithValue("@q", string.IsNullOrWhiteSpace(q) ? DBNull.Value : q);
+                cmd.Parameters.AddWithValue("@pattern", $"%{q}%");
+                cmd.Parameters.AddWithValue("@offset", (page - 1) * 10);
+
+                using var r = cmd.ExecuteReader();
+                while (r.Read())
+                {
+                    results.Add(new { id = r["id"].ToString(), text = r["text"].ToString() });
+                }
+            }
+
+            return Json(new { results, pagination = new { more = results.Count == 10 } });
+        }
+
+        [HttpGet]
+        public IActionResult Students(string q = "", int page = 1, int pageSize = 20)
+        {
+            try
+            {
+                if (page <= 0) page = 1;
+                if (pageSize <= 0) pageSize = 20;
+
+                using var conn = GetConn();
+                conn.Open();
+
+                var where = "WHERE st.status = 'ACTIVE'";
+                var hasSearch = !string.IsNullOrWhiteSpace(q);
+
+                // Hitung total
+                var countSql = $@"
+            SELECT COUNT(*) 
+            FROM mst_student_classes sc
+            INNER JOIN mst_students st ON sc.student_id = st.student_id
+            {where}";
+
+                if (hasSearch)
+                {
+                    countSql += " AND (st.full_name LIKE @q OR st.first_name LIKE @q OR st.last_name LIKE @q OR st.nis LIKE @q)";
+                }
+
+                int total;
+                using (var countCmd = new SqlCommand(countSql, conn))
+                {
+                    if (hasSearch)
+                    {
+                        countCmd.Parameters.AddWithValue("@q", $"%{q}%");
+                    }
+                    total = (int)countCmd.ExecuteScalar();
+                }
+
+                var offset = (page - 1) * pageSize;
+
+                var sql = $@"
+            SELECT 
+                sc.student_class_id,
+                st.student_id,
+                st.nis,
+                COALESCE(st.full_name, CONCAT(st.first_name, ' ', st.last_name)) AS student_name
+            FROM mst_student_classes sc
+            INNER JOIN mst_students st ON sc.student_id = st.student_id
+            {where}";
+
+                if (hasSearch)
+                {
+                    sql += " AND (st.full_name LIKE @q OR st.first_name LIKE @q OR st.last_name LIKE @q OR st.nis LIKE @q)";
+                }
+
+                sql += @"
+            ORDER BY st.full_name, st.nis
+            OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY";
+
+                var results = new List<object>();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    if (hasSearch)
+                    {
+                        cmd.Parameters.AddWithValue("@q", $"%{q}%");
+                    }
+                    cmd.Parameters.AddWithValue("@offset", offset);
+                    cmd.Parameters.AddWithValue("@pageSize", pageSize);
+
+                    using var rd = cmd.ExecuteReader();
+                    while (rd.Read())
+                    {
+                        var name = rd["student_name"]?.ToString() ?? "";
+                        var nis = rd["nis"]?.ToString() ?? "-";
+                        var display = $"{name} - {nis}";
+
+                        results.Add(new
+                        {
+                            id = rd["student_class_id"].ToString(),
+                            text = display
+                        });
+                    }
+                }
+
+                var more = (page * pageSize) < total;
+
+                return Json(new
+                {
+                    results,
+                    pagination = new { more }
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(DTOResponse.fail(ex.Message, 500));
+            }
+        }
     }
 }

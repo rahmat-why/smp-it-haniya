@@ -2,190 +2,104 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.IO;
-using System.Linq;
 using System.Text.Json;
 using Haniya.Models;
+using System.Data;
+using System.Linq;
 
 namespace Haniya.Controllers.PortalAdmin
 {
     public class ScheduleController : Controller
     {
         private readonly IConfiguration _config;
+        public ScheduleController(IConfiguration config) => _config = config;
 
-        public ScheduleController(IConfiguration config)
-        {
-            _config = config;
-        }
+        private SqlConnection GetConn() => new SqlConnection(_config.GetConnectionString("DefaultConnection"));
 
-        private SqlConnection GetConn()
-        {
-            return new SqlConnection(_config.GetConnectionString("DefaultConnection"));
-        }
+        [HttpGet]
+        public IActionResult Index() => View("~/Views/PortalAdmin/Schedule/Index.cshtml");
 
-        // ========= MASTER LOADERS =========
+        [HttpGet]
+        public IActionResult Create() => View("~/Views/PortalAdmin/Schedule/Create.cshtml");
 
-        private List<dynamic> GetClassOptions()
-        {
-            var list = new List<dynamic>();
-
-            using var conn = GetConn();
-            conn.Open();
-
-            var sql = @"
-        SELECT 
-            ac.academic_class_id,
-            c.class_name
-        FROM mst_academic_classes ac
-        JOIN mst_classes c ON ac.class_id = c.class_id
-        ORDER BY c.class_name";
-
-            using var cmd = new SqlCommand(sql, conn);
-            using var rd = cmd.ExecuteReader();
-
-            while (rd.Read())
-            {
-                list.Add(new
-                {
-                    Id = rd["academic_class_id"]?.ToString(),
-                    Name = rd["class_name"]?.ToString()
-                });
-            }
-
-            return list;
-        }
-
-        private List<dynamic> GetSubjectOptions()
-        {
-            var list = new List<dynamic>();
-
-            using var conn = GetConn();
-            conn.Open();
-
-            var sql = @"
-        SELECT subject_id, subject_name
-        FROM mst_subjects
-        ORDER BY subject_name";
-
-            using var cmd = new SqlCommand(sql, conn);
-            using var rd = cmd.ExecuteReader();
-
-            while (rd.Read())
-            {
-                list.Add(new
-                {
-                    Id = rd["subject_id"]?.ToString(),
-                    Name = rd["subject_name"]?.ToString()
-                });
-            }
-
-            return list;
-        }
-
-        private List<dynamic> GetTeacherOptions()
-        {
-            var list = new List<dynamic>();
-
-            using var conn = GetConn();
-            conn.Open();
-
-            var sql = @"
-        SELECT 
-            teacher_id,
-            CONCAT(first_name, ' ', last_name) AS teacher_name
-        FROM mst_teachers
-        WHERE status = 'ACTIVE'
-        ORDER BY first_name";
-
-            using var cmd = new SqlCommand(sql, conn);
-            using var rd = cmd.ExecuteReader();
-
-            while (rd.Read())
-            {
-                list.Add(new
-                {
-                    Id = rd["teacher_id"]?.ToString(),
-                    Name = rd["teacher_name"]?.ToString()
-                });
-            }
-
-            return list;
-        }
-
-        public IActionResult Index()
-        {
-            return View("~/Views/PortalAdmin/Schedule/Index.cshtml");
-        }
-
-        public IActionResult Create()
-        {
-            ViewBag.ClassOptions = GetClassOptions();
-            ViewBag.SubjectOptions = GetSubjectOptions();
-            ViewBag.TeacherOptions = GetTeacherOptions();
-            return View("~/Views/PortalAdmin/Schedule/Create.cshtml");
-        }
-
+        [HttpGet]
         public IActionResult Edit(string id)
         {
             ViewBag.scheduleId = id;
-            ViewBag.ClassOptions = GetClassOptions();
-            ViewBag.SubjectOptions = GetSubjectOptions();
-            ViewBag.TeacherOptions = GetTeacherOptions();
             return View("~/Views/PortalAdmin/Schedule/Edit.cshtml");
         }
 
-        // ========= API =========
-        [HttpGet]
-        public IActionResult GetAll()
+        public IActionResult GetAll(string academic_class_id = null, string day = null)
         {
-            try
+            var (draw, start, length, _, _, _) = ParseDataTablesQuery();
+
+            using var conn = GetConn();
+            conn.Open();
+
+            var totalSql = @"
+                SELECT COUNT(*) 
+                FROM txn_schedules s
+                WHERE (@classId IS NULL OR s.academic_class_id = @classId)
+                  AND (@day IS NULL OR s.day = @day)";
+
+            int recordsTotal;
+            using (var cmd = new SqlCommand(totalSql, conn))
             {
-                var list = new List<object>();
+                cmd.Parameters.AddWithValue("@classId", (object)academic_class_id ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@day", (object)day ?? DBNull.Value);
+                recordsTotal = (int)cmd.ExecuteScalar();
+            }
 
-                using var conn = GetConn();
-                conn.Open();
+            var sql = @"
+                SELECT 
+                    s.schedule_id,
+                    c.class_name,
+                    s.day,
+                    COUNT(d.schedule_detail_id) AS lesson_count
+                FROM txn_schedules s
+                JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
+                JOIN mst_classes c ON ac.class_id = c.class_id
+                LEFT JOIN txn_schedule_details d ON d.schedule_id = s.schedule_id
+                WHERE (@classId IS NULL OR s.academic_class_id = @classId)
+                  AND (@day IS NULL OR s.day = @day)
+                GROUP BY s.schedule_id, c.class_name, s.day
+                ORDER BY c.class_name, s.day
+                OFFSET @start ROWS FETCH NEXT @length ROWS ONLY";
 
-                var sql = @"
-            SELECT
-                s.schedule_id,
-                s.day,
-                c.class_name,
-                COUNT(d.schedule_detail_id) AS detail_count
-            FROM txn_schedules s
-            LEFT JOIN mst_academic_classes ac
-                ON s.academic_class_id = ac.academic_class_id
-            LEFT JOIN mst_classes c
-                ON ac.class_id = c.class_id
-            LEFT JOIN txn_schedule_details d
-                ON s.schedule_id = d.schedule_id
-            GROUP BY
-                s.schedule_id,
-                s.day,
-                c.class_name
-            ORDER BY
-                c.class_name,
-                s.day";
+            var list = new List<object>();
+            using (var cmd = new SqlCommand(sql, conn))
+            {
+                cmd.Parameters.AddWithValue("@classId", (object)academic_class_id ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@day", (object)day ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@start", start);
+                cmd.Parameters.AddWithValue("@length", length);
 
-                using var cmd = new SqlCommand(sql, conn);
-                using var rd = cmd.ExecuteReader();
-
-                while (rd.Read())
+                using var r = cmd.ExecuteReader();
+                while (r.Read())
                 {
                     list.Add(new
                     {
-                        schedule_id = rd["schedule_id"]?.ToString(),
-                        day = rd["day"]?.ToString(),
-                        class_name = rd["class_name"]?.ToString(),
-                        detail_count = Convert.ToInt32(rd["detail_count"])
+                        schedule_id = r["schedule_id"].ToString(),
+                        class_name = r["class_name"].ToString(),
+                        day = r["day"].ToString(),
+                        lesson_count = Convert.ToInt32(r["lesson_count"])
                     });
                 }
+            }
 
-                return Json(DTOResponse.ok(list));
-            }
-            catch (Exception ex)
-            {
-                return Json(DTOResponse.fail(ex.Message, 500));
-            }
+            return Json(new { draw, recordsTotal, recordsFiltered = recordsTotal, data = list });
+        }
+
+        private (int draw, int start, int length, string searchValue, int orderColumnIndex, string orderDir) ParseDataTablesQuery()
+        {
+            var q = Request.Query;
+            int.TryParse(q["draw"], out var draw); draw = draw > 0 ? draw : 1;
+            int.TryParse(q["start"], out var start);
+            int.TryParse(q["length"], out var length); length = length > 0 ? length : 10;
+            var searchValue = q["search[value]"].ToString() ?? "";
+            int.TryParse(q["order[0][column]"], out var orderColumnIndex);
+            var orderDir = q["order[0][dir]"].ToString().ToUpper() is "ASC" or "DESC" ? q["order[0][dir]"].ToString().ToUpper() : "ASC";
+            return (draw, start, length, searchValue, orderColumnIndex, orderDir);
         }
 
         [HttpGet]
@@ -193,87 +107,87 @@ namespace Haniya.Controllers.PortalAdmin
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(id))
-                    return Json(DTOResponse.fail("invalid schedule id", 400));
+                if (string.IsNullOrWhiteSpace(id)) return Json(DTOResponse.fail("Invalid ID", 400));
 
                 using var conn = GetConn();
                 conn.Open();
 
-                // ===== get schedule header =====
-                var sql = @"
-            SELECT
+                var headerSql = @"
+            SELECT 
                 s.schedule_id,
                 s.day,
                 s.academic_class_id,
-                c.class_name
+                c.class_name,
+                COALESCE(dt.item_desc, s.day) AS day_desc
             FROM txn_schedules s
-            LEFT JOIN mst_academic_classes ac
-                ON s.academic_class_id = ac.academic_class_id
-            LEFT JOIN mst_classes c
-                ON ac.class_id = c.class_id
+            JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
+            JOIN mst_classes c ON ac.class_id = c.class_id
+            LEFT JOIN mst_detail_settings dt ON s.day = dt.detail_id AND dt.header_id = 'DAY'
             WHERE s.schedule_id = @id";
 
-                using var cmd = new SqlCommand(sql, conn);
-                cmd.Parameters.AddWithValue("@id", id);
-
-                using var rd = cmd.ExecuteReader();
-                if (!rd.Read())
-                    return Json(DTOResponse.fail("data not found", 404));
-
-                var schedule = new
+                dynamic header = null;
+                using (var cmd = new SqlCommand(headerSql, conn))
                 {
-                    schedule_id = rd["schedule_id"]?.ToString(),
-                    day = rd["day"]?.ToString(),
-                    academic_class_id = rd["academic_class_id"]?.ToString(),
-                    class_name = rd["class_name"]?.ToString()
-                };
+                    cmd.Parameters.AddWithValue("@id", id);
+                    using var r = cmd.ExecuteReader();
+                    if (r.Read())
+                    {
+                        header = new
+                        {
+                            schedule_id = r["schedule_id"].ToString(),
+                            day = r["day"]?.ToString(),
+                            day_desc = r["day_desc"]?.ToString(),
+                            academic_class_id = r["academic_class_id"]?.ToString(),
+                            class_name = r["class_name"]?.ToString()
+                        };
+                    }
+                    r.Close();
+                }
 
-                rd.Close();
+                if (header == null) return Json(DTOResponse.fail("Not found", 404));
 
-                // ===== get schedule details =====
                 var details = new List<object>();
-
-                var dsql = @"
-            SELECT
+                var detailsSql = @"
+            SELECT 
                 d.schedule_detail_id,
                 d.subject_id,
-                d.teacher_id,
-                CONVERT(VARCHAR(5), d.start_time, 108) AS start_time,
-                CONVERT(VARCHAR(5), d.end_time, 108) AS end_time,
                 s.subject_name,
-                CONCAT(t.first_name, ' ', t.last_name) AS teacher_name
+                d.teacher_id,
+                CONCAT(t.first_name, ' ', t.last_name) AS teacher_name,
+                CONVERT(varchar(5), d.start_time, 108) AS start_time,
+                CONVERT(varchar(5), d.end_time, 108) AS end_time
             FROM txn_schedule_details d
-            LEFT JOIN mst_subjects s
-                ON d.subject_id = s.subject_id
-            LEFT JOIN mst_teachers t
-                ON d.teacher_id = t.teacher_id
+            LEFT JOIN mst_subjects s ON d.subject_id = s.subject_id
+            LEFT JOIN mst_teachers t ON d.teacher_id = t.teacher_id
             WHERE d.schedule_id = @id
             ORDER BY d.start_time";
 
-                using var dcmd = new SqlCommand(dsql, conn);
-                dcmd.Parameters.AddWithValue("@id", id);
-
-                using var drd = dcmd.ExecuteReader();
-                while (drd.Read())
+                using (var cmd = new SqlCommand(detailsSql, conn))
                 {
-                    details.Add(new
+                    cmd.Parameters.AddWithValue("@id", id);
+                    using var r = cmd.ExecuteReader();
+                    while (r.Read())
                     {
-                        schedule_detail_id = drd["schedule_detail_id"]?.ToString(),
-                        subject_id = drd["subject_id"]?.ToString(),
-                        teacher_id = drd["teacher_id"]?.ToString(),
-                        start_time = drd["start_time"]?.ToString(),
-                        end_time = drd["end_time"]?.ToString(),
-                        subject_name = drd["subject_name"]?.ToString(),
-                        teacher_name = drd["teacher_name"]?.ToString()
-                    });
+                        details.Add(new
+                        {
+                            schedule_detail_id = r["schedule_detail_id"]?.ToString(),
+                            subject_id = r["subject_id"]?.ToString(),
+                            subject_name = r["subject_name"]?.ToString(),
+                            teacher_id = r["teacher_id"]?.ToString(),
+                            teacher_name = r["teacher_name"]?.ToString(),
+                            start_time = r["start_time"]?.ToString(),
+                            end_time = r["end_time"]?.ToString()
+                        });
+                    }
                 }
 
                 return Json(DTOResponse.ok(new
                 {
-                    schedule.schedule_id,
-                    schedule.day,
-                    schedule.academic_class_id,
-                    schedule.class_name,
+                    header.schedule_id,
+                    header.day,
+                    header.day_desc,
+                    header.academic_class_id,
+                    header.class_name,
                     details
                 }));
             }
@@ -289,266 +203,153 @@ namespace Haniya.Controllers.PortalAdmin
             try
             {
                 var f = Request.Form;
-
-                var day = f["day"].ToString();
                 var academicClassId = f["academic_class_id"].ToString();
+                var day = f["day"].ToString();
                 var rawDetails = f["details"].ToString();
 
-                if (string.IsNullOrWhiteSpace(day))
-                    return Json(DTOResponse.fail("day is required", 400));
+                if (string.IsNullOrWhiteSpace(academicClassId) || string.IsNullOrWhiteSpace(day))
+                    return Json(DTOResponse.fail("Class and day are required", 400));
 
-                if (string.IsNullOrWhiteSpace(academicClassId))
-                    return Json(DTOResponse.fail("class is required", 400));
-
-                if (string.IsNullOrWhiteSpace(rawDetails))
-                    return Json(DTOResponse.fail("schedule details are required", 400));
-
-                // ===== parse details (NO DTO) =====
                 List<dynamic> details;
-                try
-                {
-                    using var json = JsonDocument.Parse(rawDetails);
-                    details = json.RootElement
-                        .EnumerateArray()
-                        .Select(x => new
-                        {
-                            subject_id = x.GetProperty("subject_id").GetString(),
-                            teacher_id = x.GetProperty("teacher_id").GetString(),
-                            start_time = x.GetProperty("start_time").GetString(),
-                            end_time = x.GetProperty("end_time").GetString()
-                        })
-                        .Where(d =>
-                            !string.IsNullOrWhiteSpace(d.subject_id) &&
-                            !string.IsNullOrWhiteSpace(d.teacher_id) &&
-                            !string.IsNullOrWhiteSpace(d.start_time) &&
-                            !string.IsNullOrWhiteSpace(d.end_time)
-                        )
-                        .Cast<dynamic>()
-                        .ToList();
-                }
-                catch
-                {
-                    return Json(DTOResponse.fail("invalid details format", 400));
-                }
+                using var json = JsonDocument.Parse(rawDetails);
+                details = json.RootElement.EnumerateArray()
+                    .Select(x => new
+                    {
+                        subject_id = x.GetProperty("subject_id").GetString(),
+                        teacher_id = x.GetProperty("teacher_id").GetString(),
+                        start_time = x.GetProperty("start_time").GetString(),
+                        end_time = x.GetProperty("end_time").GetString()
+                    })
+                    .Where(d => !string.IsNullOrWhiteSpace(d.subject_id) && !string.IsNullOrWhiteSpace(d.teacher_id) &&
+                                !string.IsNullOrWhiteSpace(d.start_time) && !string.IsNullOrWhiteSpace(d.end_time))
+                    .Cast<dynamic>()
+                    .ToList();
 
-                if (details.Count == 0)
-                    return Json(DTOResponse.fail("at least one detail row is required", 400));
+                if (details.Count == 0) return Json(DTOResponse.fail("At least one schedule detail is required", 400));
 
                 using var conn = GetConn();
                 conn.Open();
+                using var trx = conn.BeginTransaction();
 
-                // ===== generate schedule_id =====
-                var lastIdCmd = new SqlCommand(
-                    "SELECT ISNULL(MAX(schedule_id),'SCH0000') FROM txn_schedules",
-                    conn
-                );
-                var lastId = lastIdCmd.ExecuteScalar().ToString();
-                var next = int.Parse(lastId.Substring(3)) + 1;
-                var scheduleId = "SCH" + next.ToString("D4");
+                var seqCmd = new SqlCommand("SELECT ISNULL(MAX(schedule_id),'SCH0000') FROM txn_schedules", conn, trx);
+                var seq = int.Parse(seqCmd.ExecuteScalar().ToString().Substring(3)) + 1;
+                var scheduleId = "SCH" + seq.ToString("D4");
 
-                // ===== insert schedule =====
-                var sql = @"
-            INSERT INTO txn_schedules (
-                schedule_id,
-                day,
-                academic_class_id,
-                created_at
-            ) VALUES (
-                @id,
-                @day,
-                @cls,
-                GETDATE()
-            )";
+                var headerSql = @"
+                    INSERT INTO txn_schedules (schedule_id, academic_class_id, day, created_at)
+                    VALUES (@id, @classId, @day, GETDATE())";
 
-                using (var cmd = new SqlCommand(sql, conn))
-                {
-                    cmd.Parameters.AddWithValue("@id", scheduleId);
-                    cmd.Parameters.AddWithValue("@day", day);
-                    cmd.Parameters.AddWithValue("@cls", academicClassId);
-                    cmd.ExecuteNonQuery();
-                }
+                using var cmd = new SqlCommand(headerSql, conn, trx);
+                cmd.Parameters.AddWithValue("@id", scheduleId);
+                cmd.Parameters.AddWithValue("@classId", academicClassId);
+                cmd.Parameters.AddWithValue("@day", day);
+                cmd.ExecuteNonQuery();
 
-                // ===== generate detail id seed =====
-                var lastDetCmd = new SqlCommand(
-                    "SELECT ISNULL(MAX(schedule_detail_id),'SCD0000') FROM txn_schedule_details",
-                    conn
-                );
-                var lastDetId = lastDetCmd.ExecuteScalar().ToString();
-                var detSeq = int.Parse(lastDetId.Substring(3));
+                var detSeqCmd = new SqlCommand("SELECT ISNULL(MAX(schedule_detail_id),'SCD0000') FROM txn_schedule_details", conn, trx);
+                var detSeq = int.Parse(detSeqCmd.ExecuteScalar().ToString().Substring(3));
 
                 foreach (var d in details)
                 {
                     detSeq++;
                     var detId = "SCD" + detSeq.ToString("D4");
 
-                    var dsql = @"
-                INSERT INTO txn_schedule_details (
-                    schedule_detail_id,
-                    schedule_id,
-                    subject_id,
-                    teacher_id,
-                    start_time,
-                    end_time,
-                    created_at
-                ) VALUES (
-                    @did,
-                    @sid,
-                    @sub,
-                    @tch,
-                    @st,
-                    @et,
-                    GETDATE()
-                )";
+                    var detSql = @"
+                        INSERT INTO txn_schedule_details (schedule_detail_id, schedule_id, subject_id, teacher_id, start_time, end_time, created_at)
+                        VALUES (@did, @sid, @subj, @tch, @start, @end, GETDATE())";
 
-                    using var dcmd = new SqlCommand(dsql, conn);
+                    using var dcmd = new SqlCommand(detSql, conn, trx);
                     dcmd.Parameters.AddWithValue("@did", detId);
                     dcmd.Parameters.AddWithValue("@sid", scheduleId);
-                    dcmd.Parameters.AddWithValue("@sub", d.subject_id);
+                    dcmd.Parameters.AddWithValue("@subj", d.subject_id);
                     dcmd.Parameters.AddWithValue("@tch", d.teacher_id);
-                    dcmd.Parameters.AddWithValue("@st", TimeSpan.Parse(d.start_time));
-                    dcmd.Parameters.AddWithValue("@et", TimeSpan.Parse(d.end_time));
+                    dcmd.Parameters.AddWithValue("@start", d.start_time);
+                    dcmd.Parameters.AddWithValue("@end", d.end_time);
                     dcmd.ExecuteNonQuery();
                 }
 
-                return Json(DTOResponse.ok(null, "schedule created"));
+                trx.Commit();
+                return Json(DTOResponse.ok(null, "Schedule created successfully"));
             }
-            catch (Exception ex)
-            {
-                return Json(DTOResponse.fail(ex.Message, 500));
-            }
+            catch (Exception ex) { return Json(DTOResponse.fail(ex.Message, 500)); }
         }
 
         [HttpPost]
-        public IActionResult Update(DTORequest req)
+        public IActionResult Update()
         {
             try
             {
                 var f = Request.Form;
-
                 var scheduleId = f["schedule_id"].ToString();
-                var day = f["day"].ToString();
                 var academicClassId = f["academic_class_id"].ToString();
+                var day = f["day"].ToString();
                 var rawDetails = f["details"].ToString();
 
-                if (string.IsNullOrWhiteSpace(scheduleId))
-                    return Json(DTOResponse.fail("invalid schedule id", 400));
+                if (string.IsNullOrWhiteSpace(scheduleId)) return Json(DTOResponse.fail("Invalid schedule ID", 400));
+                if (string.IsNullOrWhiteSpace(academicClassId) || string.IsNullOrWhiteSpace(day)) return Json(DTOResponse.fail("Class and day are required", 400));
 
-                if (string.IsNullOrWhiteSpace(day))
-                    return Json(DTOResponse.fail("day is required", 400));
-
-                if (string.IsNullOrWhiteSpace(academicClassId))
-                    return Json(DTOResponse.fail("class is required", 400));
-
-                if (string.IsNullOrWhiteSpace(rawDetails))
-                    return Json(DTOResponse.fail("schedule details are required", 400));
-
-                // ===== parse details (NO DTO) =====
                 List<dynamic> details;
-                try
-                {
-                    using var json = JsonDocument.Parse(rawDetails);
-                    details = json.RootElement
-                        .EnumerateArray()
-                        .Select(x => new
-                        {
-                            subject_id = x.GetProperty("subject_id").GetString(),
-                            teacher_id = x.GetProperty("teacher_id").GetString(),
-                            start_time = x.GetProperty("start_time").GetString(),
-                            end_time = x.GetProperty("end_time").GetString()
-                        })
-                        .Where(d =>
-                            !string.IsNullOrWhiteSpace(d.subject_id) &&
-                            !string.IsNullOrWhiteSpace(d.teacher_id) &&
-                            !string.IsNullOrWhiteSpace(d.start_time) &&
-                            !string.IsNullOrWhiteSpace(d.end_time)
-                        )
-                        .Cast<dynamic>()
-                        .ToList();
-                }
-                catch
-                {
-                    return Json(DTOResponse.fail("invalid details format", 400));
-                }
+                using var json = JsonDocument.Parse(rawDetails);
+                details = json.RootElement.EnumerateArray()
+                    .Select(x => new
+                    {
+                        subject_id = x.GetProperty("subject_id").GetString(),
+                        teacher_id = x.GetProperty("teacher_id").GetString(),
+                        start_time = x.GetProperty("start_time").GetString(),
+                        end_time = x.GetProperty("end_time").GetString()
+                    })
+                    .Where(d => !string.IsNullOrWhiteSpace(d.subject_id) && !string.IsNullOrWhiteSpace(d.teacher_id) &&
+                                !string.IsNullOrWhiteSpace(d.start_time) && !string.IsNullOrWhiteSpace(d.end_time))
+                    .Cast<dynamic>()
+                    .ToList();
 
-                if (details.Count == 0)
-                    return Json(DTOResponse.fail("at least one detail row is required", 400));
+                if (details.Count == 0) return Json(DTOResponse.fail("At least one schedule detail is required", 400));
 
                 using var conn = GetConn();
                 conn.Open();
+                using var trx = conn.BeginTransaction();
 
-                // ===== update schedule =====
-                var sql = @"
-            UPDATE txn_schedules SET
-                day = @day,
-                academic_class_id = @cls,
-                updated_at = GETDATE()
-            WHERE schedule_id = @id";
+                var headerSql = @"
+                    UPDATE txn_schedules 
+                    SET academic_class_id = @classId, day = @day, updated_at = GETDATE()
+                    WHERE schedule_id = @id";
 
-                using (var cmd = new SqlCommand(sql, conn))
+                using var cmd = new SqlCommand(headerSql, conn, trx);
+                cmd.Parameters.AddWithValue("@id", scheduleId);
+                cmd.Parameters.AddWithValue("@classId", academicClassId);
+                cmd.Parameters.AddWithValue("@day", day);
+                cmd.ExecuteNonQuery();
+
+                new SqlCommand("DELETE FROM txn_schedule_details WHERE schedule_id = @id", conn, trx)
                 {
-                    cmd.Parameters.AddWithValue("@id", scheduleId);
-                    cmd.Parameters.AddWithValue("@day", day);
-                    cmd.Parameters.AddWithValue("@cls", academicClassId);
-                    cmd.ExecuteNonQuery();
-                }
+                    Parameters = { new SqlParameter("@id", scheduleId) }
+                }.ExecuteNonQuery();
 
-                // ===== delete old details =====
-                using (var del = new SqlCommand(
-                    "DELETE FROM txn_schedule_details WHERE schedule_id=@id",
-                    conn))
-                {
-                    del.Parameters.AddWithValue("@id", scheduleId);
-                    del.ExecuteNonQuery();
-                }
-
-                // ===== generate new detail ids =====
-                var lastDetCmd = new SqlCommand(
-                    "SELECT ISNULL(MAX(schedule_detail_id),'SCD0000') FROM txn_schedule_details",
-                    conn
-                );
-                var lastDetId = lastDetCmd.ExecuteScalar().ToString();
-                var detSeq = int.Parse(lastDetId.Substring(3));
+                var detSeqCmd = new SqlCommand("SELECT ISNULL(MAX(schedule_detail_id),'SCD0000') FROM txn_schedule_details", conn, trx);
+                var detSeq = int.Parse(detSeqCmd.ExecuteScalar().ToString().Substring(3));
 
                 foreach (var d in details)
                 {
                     detSeq++;
                     var detId = "SCD" + detSeq.ToString("D4");
 
-                    var dsql = @"
-                INSERT INTO txn_schedule_details (
-                    schedule_detail_id,
-                    schedule_id,
-                    subject_id,
-                    teacher_id,
-                    start_time,
-                    end_time,
-                    created_at
-                ) VALUES (
-                    @did,
-                    @sid,
-                    @sub,
-                    @tch,
-                    @st,
-                    @et,
-                    GETDATE()
-                )";
+                    var detSql = @"
+                        INSERT INTO txn_schedule_details (schedule_detail_id, schedule_id, subject_id, teacher_id, start_time, end_time, created_at)
+                        VALUES (@did, @sid, @subj, @tch, @start, @end, GETDATE())";
 
-                    using var dcmd = new SqlCommand(dsql, conn);
+                    using var dcmd = new SqlCommand(detSql, conn, trx);
                     dcmd.Parameters.AddWithValue("@did", detId);
                     dcmd.Parameters.AddWithValue("@sid", scheduleId);
-                    dcmd.Parameters.AddWithValue("@sub", d.subject_id);
+                    dcmd.Parameters.AddWithValue("@subj", d.subject_id);
                     dcmd.Parameters.AddWithValue("@tch", d.teacher_id);
-                    dcmd.Parameters.AddWithValue("@st", TimeSpan.Parse(d.start_time));
-                    dcmd.Parameters.AddWithValue("@et", TimeSpan.Parse(d.end_time));
+                    dcmd.Parameters.AddWithValue("@start", d.start_time);
+                    dcmd.Parameters.AddWithValue("@end", d.end_time);
                     dcmd.ExecuteNonQuery();
                 }
 
-                return Json(DTOResponse.ok(null, "schedule updated"));
+                trx.Commit();
+                return Json(DTOResponse.ok(null, "Schedule updated successfully"));
             }
-            catch (Exception ex)
-            {
-                return Json(DTOResponse.fail(ex.Message, 500));
-            }
+            catch (Exception ex) { return Json(DTOResponse.fail(ex.Message, 500)); }
         }
 
         [HttpPost]
@@ -556,34 +357,26 @@ namespace Haniya.Controllers.PortalAdmin
         {
             try
             {
-                if (string.IsNullOrEmpty(req?.id))
-                    return Json(DTOResponse.fail("invalid schedule id", 400));
+                if (string.IsNullOrEmpty(req?.id)) return Json(DTOResponse.fail("Invalid ID", 400));
 
                 using var conn = GetConn();
                 conn.Open();
+                using var trx = conn.BeginTransaction();
 
-                // delete details first (no ON DELETE CASCADE in DDL)
-                var delDet = new SqlCommand(
-                    "DELETE FROM txn_schedule_details WHERE schedule_id=@id",
-                    conn
-                );
-                delDet.Parameters.AddWithValue("@id", req.id);
-                delDet.ExecuteNonQuery();
+                new SqlCommand("DELETE FROM txn_schedule_details WHERE schedule_id = @id", conn, trx)
+                {
+                    Parameters = { new SqlParameter("@id", req.id) }
+                }.ExecuteNonQuery();
 
-                var cmd = new SqlCommand(
-                    "DELETE FROM txn_schedules WHERE schedule_id=@id",
-                    conn
-                );
-                cmd.Parameters.AddWithValue("@id", req.id);
+                new SqlCommand("DELETE FROM txn_schedules WHERE schedule_id = @id", conn, trx)
+                {
+                    Parameters = { new SqlParameter("@id", req.id) }
+                }.ExecuteNonQuery();
 
-                cmd.ExecuteNonQuery();
-
-                return Json(DTOResponse.ok(null, "schedule deleted"));
+                trx.Commit();
+                return Json(DTOResponse.ok(null, "Schedule deleted"));
             }
-            catch (Exception ex)
-            {
-                return Json(DTOResponse.fail(ex.Message, 500));
-            }
+            catch (Exception ex) { return Json(DTOResponse.fail(ex.Message, 500)); }
         }
     }
 }

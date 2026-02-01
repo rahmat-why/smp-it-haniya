@@ -6,32 +6,85 @@
 <div class="flex justify-between items-center mb-4">
     <h2 class="text-xl font-semibold">Grade List</h2>
     <a href="/Grade/Create"
-       class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900"
-       data-testid="grade-add-button">
+       class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
         + Add Grade
     </a>
 </div>
 
-<div class="overflow-auto bg-white rounded shadow">
-    <table class="min-w-full text-sm">
-        <thead class="bg-gray-100 text-left text-gray-700">
-            <tr>
-                <th class="p-2 font-medium">Class</th>
-                <th class="p-2 font-medium">Subject</th>
-                <th class="p-2 font-medium">Type</th>
-                <th class="p-2 font-medium">Teacher</th>
-                <th class="p-2 font-medium">Records</th>
-                <th class="p-2 font-medium text-right">Action</th>
-            </tr>
-        </thead>
-        <tbody id="tbl" data-testid="grade-table-body"></tbody>
-    </table>
+<div class="bg-white rounded-lg shadow">
+    <div class="px-4 pt-4">
+        <div id="grade-table-toolbar" class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div class="flex flex-wrap gap-4 items-end">
+                <div>
+                    <label class="text-sm font-medium text-gray-700">Class</label>
+                    <div class="mt-1">
+                        <select id="filter_class"
+                                class="w-full md:w-64 border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-700">Grade Date</label>
+                    <div class="mt-1">
+                        <input type="date" id="filter_date"
+                               class="border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                    </div>
+                </div>
+                <div>
+                    <button id="btnFilter"
+                            class="px-4 py-1.5 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
+                        Apply
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="overflow-x-auto px-4 pt-4">
+        <table id="grade-table"
+               class="min-w-full text-sm text-left text-gray-700 border-collapse">
+            <thead class="bg-gray-100 border-y border-gray-200">
+                <tr>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 140px;">Grade Date</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Class</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Subject</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Teacher</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Grade Type</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 120px;">Min Value</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 180px;">Summary</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 70px;">Action</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100"></tbody>
+        </table>
+    </div>
+
+    <div class="px-4 pb-4 pt-3">
+        <div id="grade-table-footer" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div id="table-info-container"></div>
+            <div id="table-pagination-container"></div>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
     <script>
         $(document).ready(function () {
-            loadGrades();
+            $('#filter_class').select2({
+                placeholder: "-- All Class --",
+                allowClear: true,
+                ajax: {
+                    url: '/Select2/AcademicClasses',
+                    dataType: 'json',
+                    delay: 250,
+                    data: params => ({ q: params.term || '', page: params.page || 1 }),
+                    processResults: data => ({ results: data.results, pagination: data.pagination }),
+                    cache: true
+                },
+                minimumInputLength: 0
+            });
+
+            initGradeTable();
 
             $(document).on('click', function (e) {
                 if (!$(e.target).closest('.grade-actions-wrapper').length) {
@@ -40,83 +93,166 @@
             });
         });
 
-        function loadGrades() {
-            $.get("/Grade/GetAll", res => {
-                if (!res.success) {
-                    alert(res.message || "Failed to load grades");
-                    return;
-                }
-
-                let html = "";
-                res.data.forEach(x => {
-                    const id = x.grade_id;
-                    html += `
-                                <tr class="border-b last:border-0 hover:bg-gray-50">
-                                    <td class="p-2">${x.class_name ?? ""}</td>
-                                    <td class="p-2">${x.subject_name ?? ""}</td>
-                                    <td class="p-2">${x.grade_type ?? ""}</td>
-                                    <td class="p-2">${x.teacher_name ?? ""}</td>
-                                    <td class="p-2">${x.total_student ?? 0}</td>
-                                    <td class="p-2 text-right">
-                                        <div class="relative inline-block text-left grade-actions-wrapper">
-                                            <button type="button"
-                                                    onclick="toggleGradeActions('${id}')"
-                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                    data-testid="grade-actions-toggle-${id}">
-                                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round"
-                                                          stroke-linejoin="round"
-                                                          stroke-width="2"
-                                                          d="M12 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" />
+        function initGradeTable() {
+            const table = $('#grade-table').DataTable({
+                processing: true,
+                serverSide: true,
+                searching: true,
+                lengthChange: true,
+                ajax: {
+                    url: '/Grade/GetAll',
+                    type: 'GET',
+                    data: function (d) {
+                        d.academic_class_id = $('#filter_class').val() || null;
+                        d.grade_date = $('#filter_date').val() || null;
+                    }
+                },
+                dom: 'lftip',
+                language: {
+                    lengthMenu: "Show _MENU_ rows",
+                    search: "",
+                    searchPlaceholder: "Search...",
+                    paginate: {
+                        first: "First",
+                        last: "Last",
+                        next: "Next",
+                        previous: "Previous"
+                    },
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries"
+                },
+                columns: [
+                    {
+                        data: 'grade_date',
+                        className: 'py-3 font-medium text-gray-900',
+                        render: data => data ? new Date(data).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }) : '-'
+                    },
+                    { data: 'class_name', className: 'py-3 text-gray-700' },
+                    { data: 'subject_name', className: 'py-3 text-gray-700' },
+                    { data: 'teacher_name', className: 'py-3 text-gray-700' },
+                    { data: 'grade_type', className: 'py-3 text-gray-700' },
+                    {
+                        data: 'minimum_value',
+                        className: 'py-3 text-gray-700',
+                        render: data => data ?? '-'
+                    },
+                    {
+                        data: null,
+                        className: 'py-3 text-center',
+                        render: row => `Pass: ${row.passed || 0} | Remedial: ${row.remedial || 0}`
+                    },
+                    {
+                        data: null,
+                        orderable: false,
+                        searchable: false,
+                        className: 'text-center py-3',
+                        render: function (data, type, row) {
+                            var id = row.grade_id;
+                            var editUrl = '/Grade/Edit?id=' + id;
+                            return `
+                                        <div class="flex justify-center grade-actions-wrapper relative">
+                                            <button type="button" onclick="toggleActionsMenu(event, '${id}')"
+                                                    class="p-1.5 hover:bg-gray-100 rounded-md transition-colors duration-150">
+                                                <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
                                                 </svg>
                                             </button>
-
-                                            <div id="grade-menu-${id}"
-                                                 class="grade-actions-menu hidden origin-top-right absolute right-0 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10"
-                                                 data-testid="grade-actions-menu-${id}">
-                                                <div class="py-1">
-                                                    <a href="/Grade/Edit?id=${id}"
-                                                       class="block px-3 py-1.5 text-left text-gray-700 hover:bg-gray-100 text-sm"
-                                                       data-testid="grade-edit-action-${id}">
-                                                        Edit
-                                                    </a>
-                                                    <button type="button"
-                                                            onclick="deleteGrade('${id}')"
-                                                            class="w-full text-left block px-3 py-1.5 text-sm text-red-600 hover:bg-red-50"
-                                                            data-testid="grade-delete-action-${id}">
-                                                        Delete
-                                                    </button>
-                                                </div>
+                                            <div id="actions-menu-${id}" class="grade-actions-menu hidden absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10">
+                                                <a href="${editUrl}" class="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">
+                                                    Edit
+                                                </a>
+                                                <button type="button" onclick="delGrade('${id}')"
+                                                        class="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100">
+                                                    Delete
+                                                </button>
                                             </div>
-                                        </div>
-                                    </td>
-                                </tr>`;
-                });
+                                        </div>`;
+                        }
+                    }
+                ],
+                initComplete: function () {
+                    const wrapper = $('#grade-table_wrapper');
+                    const $length = wrapper.find('.dataTables_length, .dt-length');
+                    const $filter = wrapper.find('.dataTables_filter, .dt-search');
+                    const $controls = $('<div class="flex items-center gap-4"></div>');
+                    $controls.append($length).append($filter);
+                    $('#grade-table-toolbar').append($controls);
 
-                $("#tbl").html(html);
+                    $length.addClass('flex items-center gap-2 text-sm text-gray-600');
+                    $length.find('label').addClass('flex items-center gap-2');
+                    $length.find('select').addClass('border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500');
+
+                    $filter.addClass('flex items-center gap-2 text-sm text-gray-600');
+                    $filter.find('label').addClass('flex items-center gap-2');
+                    const $searchInput = $filter.find('input');
+                    $searchInput.addClass('border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full md:w-64')
+                        .attr('placeholder', 'Search...');
+
+                    stylePagination();
+                },
+                drawCallback: function () {
+                    setTimeout(stylePagination, 50);
+                }
+            });
+
+            $('#btnFilter').on('click', function () {
+                table.ajax.reload();
             });
         }
 
-        function toggleGradeActions(id) {
-            const $menu = $('#grade-menu-' + id);
-            if (!$menu.length) return;
-            const isHidden = $menu.hasClass('hidden');
-            $('.grade-actions-menu').addClass('hidden');
-            if (isHidden) $menu.removeClass('hidden');
+        function stylePagination() {
+            const wrapper = $('#grade-table_wrapper');
+            let $info = wrapper.find('.dataTables_info').first() || wrapper.find('.dt-info').first();
+            let $paginate = wrapper.find('.dataTables_paginate').first() || wrapper.find('.dt-paging').first();
+
+            if ($info.length > 0) {
+                $('#table-info-container').empty().append($info);
+                $info.removeClass().addClass('text-sm');
+            }
+
+            if ($paginate.length > 0) {
+                $('#table-pagination-container').empty().append($paginate);
+                $paginate.removeClass().addClass('inline-flex items-center border border-gray-300 rounded-md overflow-hidden');
+
+                $paginate.find('a, span').each(function () {
+                    const $btn = $(this);
+                    const current = $btn.hasClass('current');
+                    const disabled = $btn.hasClass('disabled');
+                    $btn.removeClass();
+
+                    let classes = 'inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 last:border-r-0 min-w-[40px] transition-colors duration-150';
+
+                    if (current) classes += ' bg-blue-900 text-white cursor-default';
+                    else if (disabled) classes += ' bg-gray-50 text-gray-400 cursor-not-allowed';
+                    else classes += ' bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900 cursor-pointer';
+
+                    $btn.addClass(classes);
+                });
+            }
         }
 
-        function deleteGrade(id) {
-            if (!confirm("Delete this grade set?")) return;
+        function toggleActionsMenu(event, id) {
+            event.stopPropagation();
+            $('.grade-actions-menu').addClass('hidden');
+            $('#actions-menu-' + id).toggleClass('hidden');
+        }
+
+        function delGrade(id) {
+            $('.grade-actions-menu').addClass('hidden');
+            if (!confirm("Delete this grade record?")) return;
 
             $.ajax({
                 url: "/Grade/Delete",
                 type: "POST",
                 contentType: "application/json",
-                data: JSON.stringify({ id }),
+                data: JSON.stringify({ id: id }),
                 success: res => {
-                    if (res.success) loadGrades();
-                    else alert(res.message || "Failed to delete grade");
-                }
+                    if (res.success) {
+                        $('#grade-table').DataTable().ajax.reload(null, false);
+                    } else {
+                        alert(res.message || "Failed to delete grade record");
+                    }
+                },
+                error: () => alert("An error occurred while deleting the grade record.")
             });
         }
     </script>

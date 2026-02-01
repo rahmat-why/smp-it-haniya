@@ -1,316 +1,181 @@
-﻿@using System.Collections.Generic
-
+﻿<!-- ~/Views/PortalAdmin/Schedule/Edit.cshtml -->
 @{
     Layout = "_LayoutAdmin";
-    var id = ViewBag.scheduleId;
-    IEnumerable<dynamic> classOptions = ViewBag.ClassOptions as IEnumerable<dynamic> ?? new List<dynamic>();
-    IEnumerable<dynamic> subjectOptions = ViewBag.SubjectOptions as IEnumerable<dynamic> ?? new List<dynamic>();
-    IEnumerable<dynamic> teacherOptions = ViewBag.TeacherOptions as IEnumerable<dynamic> ?? new List<dynamic>();
+    ViewData["Title"] = "Edit Schedule";
 }
 
-<input type="hidden" id="schedule_id" name="schedule_id" value="@id">
+<input type="hidden" id="schedule_id" value="@ViewBag.scheduleId">
+<input type="hidden" id="academic_class_id">
 
-<h2 class="text-xl font-semibold mb-4">Edit Schedule</h2>
+<h2 class="text-2xl font-bold text-gray-800 mb-6">Edit Schedule</h2>
 
-<div class="bg-white p-6 rounded-lg shadow w-full space-y-6">
+<div class="bg-white p-6 rounded-xl shadow-lg w-full">
+    <form id="scheduleForm" class="space-y-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Academic Class <span class="text-red-600">*</span>
+                </label>
+                <div id="class_display" class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">-- Loading --</div>
+            </div>
 
-    <form id="frm" class="space-y-6 w-full">
-
-        <div class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label for="academic_class_id" class="block text-sm font-medium text-gray-700 mb-1">
-                        Class <span class="text-red-500">*</span>
-                    </label>
-                    <select id="academic_class_id"
-                            class="w-full border border-gray-300 rounded-md p-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            data-testid="schedule-class-select">
-                        <option value="">-- Select Class --</option>
-                        @foreach (var c in classOptions)
-                        {
-                            string cid = c.Id as string ?? "";
-                            string cname = c.Name as string ?? "";
-                            <option value="@cid">@cname</option>
-                        }
-                    </select>
-                    <p id="error-class"
-                       class="mt-1 text-xs text-red-600 hidden validation-error-message"
-                       data-testid="error-class"></p>
-                </div>
-
-                <div>
-                    <label for="day" class="block text-sm font-medium text-gray-700 mb-1">
-                        Day <span class="text-red-500">*</span>
-                    </label>
-                    <select id="day"
-                            class="w-full border border-gray-300 rounded-md p-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            data-testid="schedule-day-select">
-                        <option value="">-- Select Day --</option>
-                        <option>MONDAY</option>
-                        <option>TUESDAY</option>
-                        <option>WEDNESDAY</option>
-                        <option>THURSDAY</option>
-                        <option>FRIDAY</option>
-                        <option>SATURDAY</option>
-                        <option>SUNDAY</option>
-                    </select>
-                    <p id="error-day"
-                       class="mt-1 text-xs text-red-600 hidden validation-error-message"
-                       data-testid="error-day"></p>
-                </div>
+            <div>
+                <label for="day" class="block text-sm font-medium text-gray-700 mb-2">
+                    Day <span class="text-red-600">*</span>
+                </label>
+                <select id="day" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                        data-placeholder="-- Select Day --" required></select>
+                <p id="error-day" class="mt-1 text-sm text-red-600 hidden"></p>
             </div>
         </div>
 
-        <!-- DETAILS -->
-        <div class="space-y-3">
-            <div class="flex items-center justify-between">
-                <h3 class="text-sm font-semibold text-gray-700">Schedule Details</h3>
-                <button type="button"
-                        onclick="addDetailRow()"
-                        class="inline-flex items-center px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-600"
-                        data-testid="schedule-add-row-button">
+        <div class="space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-800">Schedule Details</h3>
+                <button type="button" onclick="addDetailRow()"
+                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md">
                     + Add Row
                 </button>
             </div>
 
-            <div class="overflow-auto border border-gray-200 rounded-md">
-                <table class="min-w-full text-xs">
-                    <thead class="bg-gray-100 text-left text-gray-700">
+            <div class="overflow-x-auto border border-gray-200 rounded-lg max-h-[500px] shadow-inner">
+                <table class="min-w-full divide-y divide-gray-200 table-fixed">
+                    <thead class="bg-gray-100 sticky top-0 z-10">
                         <tr>
-                            <th class="p-2 font-medium">Subject</th>
-                            <th class="p-2 font-medium">Teacher</th>
-                            <th class="p-2 font-medium">Start Time</th>
-                            <th class="p-2 font-medium">End Time</th>
-                            <th class="p-2 font-medium text-right">Action</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-4/12">Subject</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-4/12">Teacher</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-2/12">Start Time</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-2/12">End Time</th>
+                            <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Action</th>
                         </tr>
                     </thead>
-                    <tbody id="tbody-details" data-testid="schedule-details-body"></tbody>
-
-                    <!-- hidden template -->
-                    <tbody id="row-template-body" class="hidden">
-                        <tr class="detail-row">
-                            <td class="p-1">
-                                <select class="subject-select w-full border border-gray-300 rounded-md p-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
-                                    <option value="">-- Subject --</option>
-                                    @foreach (var s in subjectOptions)
-                                    {
-                                        string sid = s.Id as string ?? "";
-                                        string sname = s.Name as string ?? "";
-                                        <option value="@sid">@sname</option>
-                                    }
-                                </select>
-                            </td>
-                            <td class="p-1">
-                                <select class="teacher-select w-full border border-gray-300 rounded-md p-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
-                                    <option value="">-- Teacher --</option>
-                                    @foreach (var t in teacherOptions)
-                                    {
-                                        string tid = t.Id as string ?? "";
-                                        string tname = t.Name as string ?? "";
-                                        <option value="@tid">@tname</option>
-                                    }
-                                </select>
-                            </td>
-                            <td class="p-1">
-                                <input type="time"
-                                       class="start-time-input w-full border border-gray-300 rounded-md p-1 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
-                            </td>
-                            <td class="p-1">
-                                <input type="time"
-                                       class="end-time-input w-full border border-gray-300 rounded-md p-1 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
-                            </td>
-                            <td class="p-1 text-right">
-                                <button type="button"
-                                        onclick="removeDetailRow(this)"
-                                        class="inline-flex items-center px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs font-medium rounded-md"
-                                        data-testid="schedule-remove-row-button">
-                                    Remove
-                                </button>
-                            </td>
-                        </tr>
-                    </tbody>
+                    <tbody id="tbody-details"></tbody>
                 </table>
             </div>
-
-            <p id="error-details"
-               class="mt-1 text-xs text-red-600 hidden validation-error-message"
-               data-testid="error-details"></p>
+            <p id="error-details" class="text-sm text-red-600 hidden"></p>
         </div>
 
-        <input type="hidden" id="details" name="details" />
-
-        <div class="pt-4 flex items-center justify-end space-x-2">
-            <button type="button"
-                    onclick="goBackSchedule()"
-                    class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
-                    data-testid="schedule-back-button">
-                <svg class="w-4 h-4 mr-2 text-gray-600"
-                     fill="none"
-                     viewBox="0 0 24 24"
-                     stroke="currentColor">
-                    <path stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M15 19l-7-7 7-7" />
-                </svg>
-                <span>Back</span>
-            </button>
-
-            <button type="button"
-                    onclick="updateSchedule()"
-                    class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900"
-                    data-testid="schedule-update-button">
-                <span>Update</span>
-                <svg class="w-4 h-4 ml-2 text-white"
-                     fill="none"
-                     viewBox="0 0 24 24"
-                     stroke="currentColor">
-                    <path stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M5 13l4 4L19 7" />
-                </svg>
-            </button>
+        <div class="flex justify-end gap-4 pt-6 border-t border-gray-200">
+            <button type="button" onclick="goBackSchedule()" class="px-6 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-lg font-medium transition">Back</button>
+            <button type="button" onclick="updateSchedule()" class="px-6 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-medium transition">Update</button>
         </div>
-
     </form>
 </div>
 
 @section Scripts {
     <script>
-        function addDetailRow(prefill) {
-            const $tmpl = $('#row-template-body tr.detail-row').first().clone();
-            if (prefill) {
-                $tmpl.find('.subject-select').val(prefill.subject_id || '');
-                $tmpl.find('.teacher-select').val(prefill.teacher_id || '');
-                if (prefill.start_time) {
-                    $tmpl.find('.start-time-input').val(prefill.start_time.substring(0, 5));
-                }
-                if (prefill.end_time) {
-                    $tmpl.find('.end-time-input').val(prefill.end_time.substring(0, 5));
-                }
+        let preloadedDay = null;
+
+        function addDetailRow(prefill = {}) {
+            const row = `
+                        <tr class="hover:bg-gray-50 border-b last:border-0">
+                            <td class="px-4 py-3">
+                                <select class="subject-select w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" data-placeholder="-- Select Subject --"></select>
+                            </td>
+                            <td class="px-4 py-3">
+                                <select class="teacher-select w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" data-placeholder="-- Select Teacher --"></select>
+                            </td>
+                            <td class="px-4 py-3">
+                                <input type="time" class="start-time w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" value="${prefill.start_time || ''}" />
+                            </td>
+                            <td class="px-4 py-3">
+                                <input type="time" class="end-time w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" value="${prefill.end_time || ''}" />
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <button type="button" onclick="removeRow(this)" class="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md">Remove</button>
+                            </td>
+                        </tr>`;
+            $('#tbody-details').append(row);
+
+            const $newRow = $('#tbody-details tr:last');
+            const $subject = $newRow.find('.subject-select');
+            const $teacher = $newRow.find('.teacher-select');
+
+            $subject.select2({
+                placeholder: "-- Select Subject --",
+                allowClear: true,
+                ajax: {
+                    url: '/Select2/Subjects',
+                    dataType: 'json',
+                    delay: 250,
+                    data: p => ({ q: p.term || '', page: p.page || 1 }),
+                    processResults: d => ({ results: d.results, pagination: d.pagination }),
+                    cache: true
+                },
+                minimumInputLength: 0
+            });
+
+            $teacher.select2({
+                placeholder: "-- Select Teacher --",
+                allowClear: true,
+                ajax: {
+                    url: '/Select2/Teachers',
+                    dataType: 'json',
+                    delay: 250,
+                    data: p => ({ q: p.term || '', page: p.page || 1 }),
+                    processResults: d => ({ results: d.results, pagination: d.pagination }),
+                    cache: true
+                },
+                minimumInputLength: 0
+            });
+
+            if (prefill.subject_id && prefill.subject_name) {
+                $subject.append(new Option(prefill.subject_name, prefill.subject_id, true, true)).trigger('change');
             }
-            $('#tbody-details').append($tmpl);
+            if (prefill.teacher_id && prefill.teacher_name) {
+                $teacher.append(new Option(prefill.teacher_name, prefill.teacher_id, true, true)).trigger('change');
+            }
         }
 
-        function removeDetailRow(btn) {
+        function removeRow(btn) {
             $(btn).closest('tr').remove();
         }
 
         function collectDetails() {
-            const rows = [];
-            $('#tbody-details tr.detail-row').each(function () {
+            const details = [];
+            $('#tbody-details tr').each(function () {
                 const $row = $(this);
-                const subjectId = ($row.find('.subject-select').val() || '').toString().trim();
-                const teacherId = ($row.find('.teacher-select').val() || '').toString().trim();
-                const startTime = ($row.find('.start-time-input').val() || '').toString().trim();
-                const endTime = ($row.find('.end-time-input').val() || '').toString().trim();
+                const subject_id = $row.find('.subject-select').val()?.trim() || '';
+                const teacher_id = $row.find('.teacher-select').val()?.trim() || '';
+                const start_time = $row.find('.start-time').val()?.trim() || '';
+                const end_time = $row.find('.end-time').val()?.trim() || '';
 
-                if (subjectId || teacherId || startTime || endTime) {
-                    rows.push({
-                        subject_id: subjectId,
-                        teacher_id: teacherId,
-                        start_time: startTime,
-                        end_time: endTime
-                    });
+                if (subject_id || teacher_id || start_time || end_time) {
+                    details.push({ subject_id, teacher_id, start_time, end_time });
                 }
             });
-            return rows;
-        }
-
-        function showError($input, $error, message) {
-            if ($input && $input.length) {
-                $input.addClass('border-red-500').removeClass('border-gray-300');
-            }
-            if ($error && $error.length) {
-                $error.text(message).removeClass('hidden');
-            }
-        }
-
-        function clearError($input, $error) {
-            if ($input && $input.length) {
-                $input.removeClass('border-red-500').addClass('border-gray-300');
-            }
-            if ($error && $error.length) {
-                $error.text('').addClass('hidden');
-            }
-        }
-
-        function clearAllValidation() {
-            clearError($('#academic_class_id'), $('#error-class'));
-            clearError($('#day'), $('#error-day'));
-            clearError($('#tbody-details'), $('#error-details'));
+            return details;
         }
 
         function validateForm() {
-            clearAllValidation();
+            $('.text-red-600').addClass('hidden');
+            let valid = true;
 
-            let isValid = true;
+            if (!$('#day').val()) {
+                $('#error-day').removeClass('hidden');
+                valid = false;
+            }
 
-            const cls = ($('#academic_class_id').val() || '').trim();
-            const day = ($('#day').val() || '').trim();
             const details = collectDetails();
-
-            if (!cls) {
-                isValid = false;
-                showError($('#academic_class_id'), $('#error-class'), 'Class is required.');
-            }
-
-            if (!day) {
-                isValid = false;
-                showError($('#day'), $('#error-day'), 'Day is required.');
-            }
-
-            if (!details.length) {
-                isValid = false;
-                showError($('#tbody-details'), $('#error-details'), 'At least one detail row is required.');
-            }
-
-            details.forEach(d => {
-                if (!d.subject_id || !d.teacher_id || !d.start_time || !d.end_time) {
-                    isValid = false;
-                    showError($('#tbody-details'), $('#error-details'), 'Each row must have subject, teacher, start & end time.');
+            if (details.length === 0) {
+                $('#error-details').text('At least one detail row is required').removeClass('hidden');
+                valid = false;
+            } else {
+                let allComplete = true;
+                details.forEach(d => {
+                    if (!d.subject_id || !d.teacher_id || !d.start_time || !d.end_time) allComplete = false;
+                });
+                if (!allComplete) {
+                    $('#error-details').text('All fields in each row are required').removeClass('hidden');
+                    valid = false;
                 }
-            });
+            }
 
-            $('#details').val(JSON.stringify(details));
-            return isValid;
+            return valid;
         }
 
         function goBackSchedule() {
             window.location.href = "/Schedule";
-        }
-
-        function loadSchedule() {
-            const id = $('#schedule_id').val();
-            if (!id) return;
-
-            $.get("/Schedule/GetById", { id: id }, function (res) {
-                if (!res.success) {
-                    alert(res.message || "Failed to load schedule");
-                    return;
-                }
-
-                const d = res.data;
-
-                $('#academic_class_id').val(d.academic_class_id || '');
-                $('#day').val(d.day || '');
-
-                $('#tbody-details').empty();
-
-                if (Array.isArray(d.details) && d.details.length) {
-                    d.details.forEach(row => {
-                        addDetailRow({
-                            subject_id: row.subject_id,
-                            teacher_id: row.teacher_id,
-                            start_time: row.start_time,
-                            end_time: row.end_time
-                        });
-                    });
-                } else {
-                    addDetailRow();
-                }
-            });
         }
 
         function updateSchedule() {
@@ -320,7 +185,7 @@
             fd.append("schedule_id", $('#schedule_id').val());
             fd.append("academic_class_id", $('#academic_class_id').val());
             fd.append("day", $('#day').val());
-            fd.append("details", $('#details').val());
+            fd.append("details", JSON.stringify(collectDetails()));
 
             $.ajax({
                 url: "/Schedule/Update",
@@ -328,17 +193,82 @@
                 data: fd,
                 processData: false,
                 contentType: false,
+                success: res => res.success ? location.href = "/Schedule" : alert(res.message || "Update failed"),
+                error: () => alert("Error updating schedule")
+            });
+        }
+
+        function loadSchedule() {
+            const id = $('#schedule_id').val().trim();
+            if (!id) {
+                alert("Invalid schedule ID");
+                return;
+            }
+
+            $.ajax({
+                url: `/Schedule/GetById?id=${id}`,
+                type: 'GET',
+                dataType: 'json',
                 success: res => {
-                    if (res.success) {
-                        window.location.href = "/Schedule";
-                    } else {
-                        alert(res.message || "Failed to update schedule");
+                    if (!res.success) {
+                        alert(res.message || "Failed to load schedule");
+                        return;
                     }
-                }
+                    const d = res.data;
+
+                    $('#academic_class_id').val(d.academic_class_id);
+                    $('#class_display').text(d.class_name || '--');
+
+                    // Preload selected day with description
+                    preloadedDay = { id: d.day, text: d.day_desc || d.day };
+                    $('#day').append(new Option(preloadedDay.text, preloadedDay.id, true, true)).trigger('change');
+
+                    $('#tbody-details').empty();
+                    if (d.details && d.details.length > 0) {
+                        d.details.forEach(detail => {
+                            addDetailRow({
+                                subject_id: detail.subject_id,
+                                subject_name: detail.subject_name,
+                                teacher_id: detail.teacher_id,
+                                teacher_name: detail.teacher_name,
+                                start_time: detail.start_time,
+                                end_time: detail.end_time
+                            });
+                        });
+                    } else {
+                        addDetailRow();
+                    }
+                },
+                error: () => alert("Error loading schedule data")
             });
         }
 
         $(document).ready(function () {
+            // Day called from Select2 /Select2/Days with preload support
+            $('#day').select2({
+                placeholder: "-- Select Day --",
+                allowClear: false,
+                ajax: {
+                    url: '/Select2/Days',
+                    dataType: 'json',
+                    delay: 250,
+                    data: p => ({ q: p.term || '', page: p.page || 1 }),
+                    processResults: d => ({ results: d.results, pagination: d.pagination }),
+                    cache: true
+                },
+                minimumInputLength: 0
+            });
+
+            // Ensure preloaded day is available when searching
+            $('#day').on('select2:open', () => {
+                if (preloadedDay) {
+                    const $select = $('#day');
+                    if ($select.find(`option[value="${preloadedDay.id}"]`).length === 0) {
+                        $select.append(new Option(preloadedDay.text, preloadedDay.id));
+                    }
+                }
+            });
+
             loadSchedule();
         });
     </script>

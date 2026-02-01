@@ -1,219 +1,124 @@
-﻿@using System.Collections.Generic
-
-@{
+﻿@{
     Layout = "_LayoutAdmin";
-    var id = ViewBag.paymentId;
-    IEnumerable<dynamic> scOptions = ViewBag.StudentClassOptions as IEnumerable<dynamic> ?? new List<dynamic>();
+    ViewData["Title"] = "Edit Payment";
 }
 
-<input type="hidden" id="payment_id" name="payment_id" value="@id">
+<input type="hidden" id="payment_id" value="@ViewBag.paymentId">
 
-<h2 class="text-xl font-semibold mb-4">Edit Payment</h2>
+<h2 class="text-2xl font-bold text-gray-800 mb-6">Edit Payment</h2>
 
-<div class="bg-white p-6 rounded-lg shadow w-full space-y-6">
-
-    <form id="frm" class="space-y-6 w-full">
-
-        <div class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <label for="student_class_id" class="block text-sm font-medium text-gray-700 mb-1">
-                        Student Class <span class="text-red-500">*</span>
-                    </label>
-                    <select id="student_class_id"
-                            class="w-full border border-gray-300 rounded-md p-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            data-testid="payment-student-class-select">
-                        <option value="">-- Select Student Class --</option>
-                        @foreach (var sc in scOptions)
-                        {
-                            string sid = sc.Id as string ?? "";
-                            string sname = sc.Name as string ?? "";
-                            <option value="@sid">@sname</option>
-                        }
-                    </select>
-                    <p id="error-student-class"
-                       class="mt-1 text-xs text-red-600 hidden validation-error-message"
-                       data-testid="error-student-class"></p>
-                </div>
-
-                <div>
-                    <label for="payment_type" class="block text-sm font-medium text-gray-700 mb-1">
-                        Payment Type <span class="text-red-500">*</span>
-                    </label>
-                    <input id="payment_type"
-                           class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                           data-testid="payment-type-input" />
-                    <p id="error-payment-type"
-                       class="mt-1 text-xs text-red-600 hidden validation-error-message"
-                       data-testid="error-payment-type"></p>
-                </div>
-
-                <div>
-                    <label for="total_price" class="block text-sm font-medium text-gray-700 mb-1">
-                        Total Price <span class="text-red-500">*</span>
-                    </label>
-                    <input id="total_price"
-                           type="number"
-                           step="0.01"
-                           class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                           data-testid="payment-total-price-input" />
-                    <p id="error-total-price"
-                       class="mt-1 text-xs text-red-600 hidden validation-error-message"
-                       data-testid="error-total-price"></p>
-                </div>
+<div class="bg-white p-6 rounded-xl shadow-lg w-full">
+    <form id="paymentForm" class="space-y-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+                <label for="student_class_id" class="block text-sm font-medium text-gray-700 mb-2">
+                    Student <span class="text-red-600">*</span>
+                </label>
+                <select id="student_class_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                        data-placeholder="-- Select Student --" required></select>
+                <p id="error-student" class="mt-1 text-sm text-red-600 hidden"></p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <label for="payment_method" class="block text-sm font-medium text-gray-700 mb-1">
-                        Payment Method
-                    </label>
-                    <input id="payment_method"
-                           class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                           data-testid="payment-method-input" />
-                </div>
+            <div>
+                <label for="payment_type" class="block text-sm font-medium text-gray-700 mb-2">
+                    Payment Type <span class="text-red-600">*</span>
+                </label>
+                <select id="payment_type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                        data-placeholder="-- Select Payment Type --" required></select>
+                <p id="error-payment-type" class="mt-1 text-sm text-red-600 hidden"></p>
+            </div>
 
-                <div>
-                    <label for="payment_date" class="block text-sm font-medium text-gray-700 mb-1">
-                        Payment Date
-                    </label>
-                    <input type="date"
-                           id="payment_date"
-                           class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                           data-testid="payment-date-input" />
-                </div>
+            <div>
+                <label for="total_price" class="block text-sm font-medium text-gray-700 mb-2">
+                    Total Price <span class="text-red-600">*</span>
+                </label>
+                <input type="number" id="total_price" step="1" min="0" required
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
+                <p id="error-total-price" class="mt-1 text-sm text-red-600 hidden"></p>
+            </div>
 
-                <div>
-                    <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">
-                        Notes
-                    </label>
-                    <input id="notes"
-                           class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                           data-testid="payment-notes-input" />
-                </div>
+            <div>
+                <label for="payment_method" class="block text-sm font-medium text-gray-700 mb-2">
+                    Payment Method
+                </label>
+                <select id="payment_method" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                        data-placeholder="-- Select Payment Method --"></select>
+            </div>
+
+            <div>
+                <label for="payment_date" class="block text-sm font-medium text-gray-700 mb-2">
+                    Payment Date <span class="text-red-600">*</span>
+                </label>
+                <input type="date" id="payment_date" required
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
+                <p id="error-payment-date" class="mt-1 text-sm text-red-600 hidden"></p>
             </div>
         </div>
 
-        <!-- INSTALMENTS -->
-        <div class="space-y-3">
+        <div class="space-y-4">
             <div class="flex items-center justify-between">
-                <h3 class="text-sm font-semibold text-gray-700">Payment Instalments</h3>
-                <button type="button"
-                        onclick="addInstalmentRow()"
-                        class="inline-flex items-center px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-600"
-                        data-testid="payment-add-row-button">
+                <h3 class="text-lg font-semibold text-gray-800">Payment Instalments</h3>
+                <button type="button" onclick="addInstalmentRow()"
+                        class="inline-flex items-center px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-600">
                     + Add Instalment
                 </button>
             </div>
-
-            <div class="overflow-auto border border-gray-200 rounded-md">
-                <table class="min-w-full text-xs">
-                    <thead class="bg-gray-100 text-left text-gray-700">
+            <div class="overflow-x-auto border border-gray-200 rounded-lg max-h-[400px] shadow-inner">
+                <table class="min-w-full divide-y divide-gray-200 table-fixed">
+                    <thead class="bg-gray-100 sticky top-0 z-10">
                         <tr>
-                            <th class="p-2 font-medium">#</th>
-                            <th class="p-2 font-medium">Amount</th>
-                            <th class="p-2 font-medium">Payment Date</th>
-                            <th class="p-2 font-medium">Notes</th>
-                            <th class="p-2 font-medium text-right">Action</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-1/12">#</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-3/12">Amount</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-3/12">Payment Date</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-4/12">Notes</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-1/12">Action</th>
                         </tr>
                     </thead>
-                    <tbody id="tbody-instalments" data-testid="payment-instalments-body"></tbody>
-
-                    <tbody id="row-template-body" class="hidden">
-                        <tr class="inst-row">
-                            <td class="p-1 instalment-number-cell"></td>
-                            <td class="p-1">
-                                <input type="number"
-                                       step="0.01"
-                                       class="inst-amount-input w-full border border-gray-300 rounded-md p-1 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
-                            </td>
-                            <td class="p-1">
-                                <input type="date"
-                                       class="inst-date-input w-full border border-gray-300 rounded-md p-1 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
-                            </td>
-                            <td class="p-1">
-                                <input type="text"
-                                       class="inst-notes-input w-full border border-gray-300 rounded-md p-1 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
-                            </td>
-                            <td class="p-1 text-right">
-                                <button type="button"
-                                        onclick="removeInstalmentRow(this)"
-                                        class="inline-flex items-center px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs font-medium rounded-md"
-                                        data-testid="payment-remove-row-button">
-                                    Remove
-                                </button>
-                            </td>
-                        </tr>
-                    </tbody>
+                    <tbody id="tbody-instalments"></tbody>
                 </table>
             </div>
-
-            <p id="error-instalments"
-               class="mt-1 text-xs text-red-600 hidden validation-error-message"
-               data-testid="error-instalments"></p>
+            <p id="error-instalments" class="text-sm text-red-600 hidden"></p>
         </div>
 
-        <input type="hidden" id="instalments" name="instalments" />
-
-        <div class="pt-4 flex items-center justify-end space-x-2">
-            <button type="button"
-                    onclick="goBackPayment()"
-                    class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
-                    data-testid="payment-back-button">
-                <svg class="w-4 h-4 mr-2 text-gray-600"
-                     fill="none"
-                     viewBox="0 0 24 24"
-                     stroke="currentColor">
-                    <path stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M15 19l-7-7 7-7" />
-                </svg>
-                <span>Back</span>
-            </button>
-
-            <button type="button"
-                    onclick="updatePayment()"
-                    class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900"
-                    data-testid="payment-update-button">
-                <span>Update</span>
-                <svg class="w-4 h-4 ml-2 text-white"
-                     fill="none"
-                     viewBox="0 0 24 24"
-                     stroke="currentColor">
-                    <path stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M5 13l4 4L19 7" />
-                </svg>
-            </button>
+        <div class="flex justify-end gap-4 pt-6 border-t border-gray-200">
+            <button type="button" onclick="goBackPayment()" class="px-6 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-lg font-medium transition">Back</button>
+            <button type="button" onclick="updatePayment()" class="px-6 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-medium transition">Update</button>
         </div>
-
     </form>
 </div>
 
 @section Scripts {
     <script>
+        // ────────────────────────────────────────────────
+        // Fungsi sama seperti di Create.cshtml
+        // ────────────────────────────────────────────────
         function renumberInstalments() {
             $('#tbody-instalments tr.inst-row').each(function (idx) {
                 $(this).find('.instalment-number-cell').text(idx + 1);
             });
         }
 
-        function addInstalmentRow(prefill) {
-            const $tmpl = $('#row-template-body tr.inst-row').first().clone();
-            if (prefill) {
-                $tmpl.find('.inst-amount-input').val(prefill.total_payment || '');
-                if (prefill.payment_date) {
-                    const dt = new Date(prefill.payment_date);
-                    const yyyy = dt.getFullYear();
-                    const mm = String(dt.getMonth() + 1).padStart(2, '0');
-                    const dd = String(dt.getDate()).padStart(2, '0');
-                    $tmpl.find('.inst-date-input').val(`${yyyy}-${mm}-${dd}`);
-                }
-                $tmpl.find('.inst-notes-input').val(prefill.notes || '');
-            }
-            $('#tbody-instalments').append($tmpl);
+        function addInstalmentRow(prefill = {}) {
+            const row = `
+                        <tr class="inst-row hover:bg-gray-50 border-b last:border-0">
+                            <td class="px-4 py-3 instalment-number-cell"></td>
+                            <td class="px-4 py-3">
+                                <input type="number" step="1" class="inst-amount-input w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" value="${prefill.total_payment || ''}" />
+                            </td>
+                            <td class="px-4 py-3">
+                                <input type="date" class="inst-date-input w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" value="${prefill.payment_date || ''}" />
+                            </td>
+                            <td class="px-4 py-3">
+                                <input type="text" class="inst-notes-input w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" value="${prefill.notes || ''}" />
+                            </td>
+                            <td class="px-4 py-3">
+                                <button type="button" onclick="removeInstalmentRow(this)"
+                                        class="px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs font-medium rounded">
+                                    Remove
+                                </button>
+                            </td>
+                        </tr>`;
+            $('#tbody-instalments').append(row);
             renumberInstalments();
         }
 
@@ -237,113 +142,44 @@
             return rows;
         }
 
-        function showError($input, $error, message) {
-            if ($input && $input.length) {
-                $input.addClass('border-red-500').removeClass('border-gray-300');
-            }
-            if ($error && $error.length) {
-                $error.text(message).removeClass('hidden');
-            }
-        }
-
-        function clearError($input, $error) {
-            if ($input && $input.length) {
-                $input.removeClass('border-red-500').addClass('border-gray-300');
-            }
-            if ($error && $error.length) {
-                $error.text('').addClass('hidden');
-            }
-        }
-
-        function clearAllValidation() {
-            clearError($('#student_class_id'), $('#error-student-class'));
-            clearError($('#payment_type'), $('#error-payment-type'));
-            clearError($('#total_price'), $('#error-total-price'));
-            clearError($('#tbody-instalments'), $('#error-instalments'));
-        }
-
         function validateForm() {
-            clearAllValidation();
-            let isValid = true;
+            $('.text-red-600').addClass('hidden');
+            let valid = true;
 
-            const sc = ($('#student_class_id').val() || '').trim();
-            const type = ($('#payment_type').val() || '').trim();
-            const totalPrice = ($('#total_price').val() || '').trim();
+            if (!$('#student_class_id').val()) {
+                $('#error-student').text('Please select student').removeClass('hidden');
+                valid = false;
+            }
+            if (!$('#payment_type').val()) {
+                $('#error-payment-type').text('Please select payment type').removeClass('hidden');
+                valid = false;
+            }
+            if (!$('#total_price').val() || parseFloat($('#total_price').val()) <= 0) {
+                $('#error-total-price').text('Please enter valid total price').removeClass('hidden');
+                valid = false;
+            }
+            if (!$('#payment_date').val()) {
+                $('#error-payment-date').text('Please select payment date').removeClass('hidden');
+                valid = false;
+            }
+
             const instalments = collectInstalments();
-
-            if (!sc) {
-                isValid = false;
-                showError($('#student_class_id'), $('#error-student-class'), 'Student class is required.');
-            }
-            if (!type) {
-                isValid = false;
-                showError($('#payment_type'), $('#error-payment-type'), 'Payment type is required.');
-            }
-            if (!totalPrice || isNaN(parseFloat(totalPrice))) {
-                isValid = false;
-                showError($('#total_price'), $('#error-total-price'), 'Valid total price is required.');
-            }
-
             instalments.forEach(it => {
-                if (it.total_payment && isNaN(parseFloat(it.total_payment))) {
-                    isValid = false;
-                    showError($('#tbody-instalments'), $('#error-instalments'),
-                        'Each instalment must have valid amount.');
+                if (it.total_payment && (isNaN(parseFloat(it.total_payment)) || parseFloat(it.total_payment) <= 0)) {
+                    $('#error-instalments').text('Each instalment must have valid amount').removeClass('hidden');
+                    valid = false;
                 }
                 if (it.total_payment && !it.payment_date) {
-                    isValid = false;
-                    showError($('#tbody-instalments'), $('#error-instalments'),
-                        'Instalment with amount must have payment date.');
+                    $('#error-instalments').text('Instalment with amount must have payment date').removeClass('hidden');
+                    valid = false;
                 }
             });
 
-            $('#instalments').val(JSON.stringify(instalments));
-            return isValid;
+            return valid;
         }
 
         function goBackPayment() {
             window.location.href = "/Payment";
-        }
-
-        function loadPayment() {
-            const id = $('#payment_id').val();
-            if (!id) return;
-
-            $.get("/Payment/GetById", { id }, function (res) {
-                if (!res.success) {
-                    alert(res.message || "Failed to load payment");
-                    return;
-                }
-
-                const d = res.data;
-
-                $('#student_class_id').val(d.student_class_id || '');
-                $('#payment_type').val(d.payment_type || '');
-                $('#total_price').val(d.total_price || '');
-                $('#payment_method').val(d.payment_method || '');
-                $('#notes').val(d.notes || '');
-
-                if (d.payment_date) {
-                    const dt = new Date(d.payment_date);
-                    const yyyy = dt.getFullYear();
-                    const mm = String(dt.getMonth() + 1).padStart(2, '0');
-                    const dd = String(dt.getDate()).padStart(2, '0');
-                    $('#payment_date').val(`${yyyy}-${mm}-${dd}`);
-                }
-
-                $('#tbody-instalments').empty();
-                if (Array.isArray(d.instalments) && d.instalments.length) {
-                    d.instalments.forEach(row => {
-                        addInstalmentRow({
-                            total_payment: row.total_payment,
-                            payment_date: row.payment_date,
-                            notes: row.notes
-                        });
-                    });
-                } else {
-                    addInstalmentRow();
-                }
-            });
         }
 
         function updatePayment() {
@@ -354,10 +190,9 @@
             fd.append("student_class_id", $('#student_class_id').val());
             fd.append("payment_type", $('#payment_type').val());
             fd.append("total_price", $('#total_price').val());
-            fd.append("payment_method", $('#payment_method').val());
+            fd.append("payment_method", $('#payment_method').val() || '');
             fd.append("payment_date", $('#payment_date').val());
-            fd.append("notes", $('#notes').val());
-            fd.append("instalments", $('#instalments').val());
+            fd.append("instalments", JSON.stringify(collectInstalments()));
 
             $.ajax({
                 url: "/Payment/Update",
@@ -367,15 +202,153 @@
                 contentType: false,
                 success: res => {
                     if (res.success) {
-                        window.location.href = "/Payment";
+                        location.href = "/Payment";
                     } else {
-                        alert(res.message || "Failed to update payment");
+                        alert(res.message || "Update failed");
                     }
+                },
+                error: () => alert("Error updating payment")
+            });
+        }
+
+        // ────────────────────────────────────────────────
+        // Fungsi load data untuk Edit (ini yang diperbaiki)
+        // ────────────────────────────────────────────────
+        function loadPayment() {
+            const id = $('#payment_id').val().trim();
+            if (!id) {
+                alert("Invalid payment ID");
+                return;
+            }
+
+            $.ajax({
+                url: `/Payment/GetById?id=${id}`,
+                type: 'GET',
+                dataType: 'json',
+                success: function (res) {
+                    if (!res.success) {
+                        alert(res.message || "Gagal memuat data");
+                        return;
+                    }
+                    const d = res.data;
+
+                    // Student: Nama - NIS
+                    const $student = $('#student_class_id');
+                    const studentText = d.student_name
+                        ? `${d.student_name} - ${d.nis || '-'}`
+                        : `Student (${d.student_class_id})`;
+                    const studentOpt = new Option(studentText, d.student_class_id, true, true);
+                    $student.append(studentOpt).val(d.student_class_id).trigger('change');
+
+                    // Payment Type
+                    const $ptype = $('#payment_type');
+                    const ptypeText = d.payment_type_desc || d.payment_type;
+                    const ptypeOpt = new Option(ptypeText, d.payment_type, true, true);
+                    $ptype.append(ptypeOpt).val(d.payment_type).trigger('change');  // trigger auto-fill harga
+
+                    // Payment Method
+                    if (d.payment_method) {
+                        const $pm = $('#payment_method');
+                        const pmText = d.payment_method_desc || d.payment_method;
+                        const pmOpt = new Option(pmText, d.payment_method, true, true);
+                        $pm.append(pmOpt).val(d.payment_method).trigger('change');
+                    }
+
+                    // Total Price (tanpa paksa 2 desimal)
+                    let price = d.total_price;
+                    $('#total_price').val(Number.isInteger(price) ? price : price.toFixed(2));
+
+                    $('#payment_date').val(d.payment_date || '');
+
+                    // Instalments
+                    $('#tbody-instalments').empty();
+                    if (d.instalments && d.instalments.length > 0) {
+                        d.instalments.forEach(inst => addInstalmentRow(inst));
+                    } else {
+                        addInstalmentRow();
+                    }
+                },
+                error: function () {
+                    alert("Gagal memuat data pembayaran");
                 }
             });
         }
 
         $(document).ready(function () {
+            // Inisialisasi Select2 (sama seperti Create)
+            $('#student_class_id').select2({
+                placeholder: "-- Select Student --",
+                allowClear: true,
+                ajax: {
+                    url: '/Select2/Students',
+                    dataType: 'json',
+                    delay: 250,
+                    data: params => ({ q: params.term || '', page: params.page || 1 }),
+                    processResults: data => ({ results: data.results, pagination: data.pagination }),
+                    cache: true
+                },
+                minimumInputLength: 0
+            });
+
+            $('#payment_type').select2({
+                placeholder: "-- Select Payment Type --",
+                allowClear: false,
+                ajax: {
+                    url: '/Select2/PaymentTypes',
+                    dataType: 'json',
+                    delay: 250,
+                    data: p => ({ q: p.term || '', page: p.page || 1 }),
+                    processResults: d => ({ results: d.results, pagination: d.pagination }),
+                    cache: true
+                },
+                minimumInputLength: 0
+            });
+
+            $('#payment_method').select2({
+                placeholder: "-- Select Payment Method --",
+                allowClear: true,
+                ajax: {
+                    url: '/Select2/PaymentMethods',
+                    dataType: 'json',
+                    delay: 250,
+                    data: p => ({ q: p.term || '', page: p.page || 1 }),
+                    processResults: d => ({ results: d.results, pagination: d.pagination }),
+                    cache: true
+                },
+                minimumInputLength: 0
+            });
+
+            // Auto-fill total price (sama seperti Create, tapi tanpa .toFixed paksa)
+            $('#payment_type').on('change', function () {
+                const selectedId = $(this).val();
+                if (!selectedId) {
+                    $('#total_price').val('');
+                    return;
+                }
+
+                $.ajax({
+                    url: '/Payment/GetTotalPriceByPaymentType',
+                    type: 'GET',
+                    data: { paymentTypeId: selectedId },
+                    dataType: 'json',
+                    success: function (res) {
+                        if (res.success) {
+                            let val = res.amount;
+                            // Tampilkan tanpa desimal jika bulat
+                            $('#total_price').val(Number.isInteger(val) ? val : val.toFixed(2));
+                        } else {
+                            $('#total_price').val('');
+                            if (res.message) alert(res.message);
+                        }
+                    },
+                    error: function () {
+                        alert('Gagal mengambil nominal biaya.');
+                        $('#total_price').val('');
+                    }
+                });
+            });
+
+            // Load data saat halaman dibuka
             loadPayment();
         });
     </script>
