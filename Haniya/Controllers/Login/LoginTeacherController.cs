@@ -93,7 +93,7 @@ namespace Haniya.Controllers.Login
                 // Create claims for session
                 var claims = new List<Claim>
                 {
-                    new Claim(ClaimTypes.NameIdentifier, teacherId),
+                    new Claim("TeacherId", teacherId),
                     new Claim(ClaimTypes.Name, teacherNpk),
                     new Claim(ClaimTypes.GivenName, firstName),
                     new Claim(ClaimTypes.Surname, lastName),

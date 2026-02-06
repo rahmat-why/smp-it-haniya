@@ -3,7 +3,265 @@
     ViewData["Title"] = "Student Dashboard";
 }
 
-<div class="space-y-4">
-    <h2 class="text-xl font-bold text-gray-800">Selamat datang, @User.FindFirst("FullName")?.Value</h2>
-    <p class="text-sm text-gray-600">Ini adalah dashboard student.</p>
+<div class="space-y-6">
+
+    <!-- Welcome -->
+    <div class="bg-white rounded-lg shadow p-5">
+        <h2 class="text-xl font-bold text-gray-800">
+            Selamat Datang, @User.FindFirst("FullName")?.Value 👋
+        </h2>
+
+        <p class="text-sm text-gray-600 mt-1">
+            Berikut ringkasan aktivitas akademik kamu.
+        </p>
+    </div>
+
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+        <!-- Grade -->
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-500">Average Grade</p>
+            <h3 class="text-2xl font-bold text-blue-900 mt-1" id="avgGrade">
+                -
+            </h3>
+        </div>
+
+        <!-- Attendance -->
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-500">Attendance</p>
+            <h3 class="text-2xl font-bold text-green-600 mt-1" id="attendanceRate">
+                -
+            </h3>
+        </div>
+
+        <!-- Payment -->
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-500">Outstanding Payment</p>
+            <h3 class="text-2xl font-bold text-red-600 mt-1" id="outstandingPay">
+                -
+            </h3>
+        </div>
+
+        <!-- Schedule -->
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-500">Today Schedule</p>
+            <h3 class="text-2xl font-bold text-gray-800 mt-1" id="todaySchedule">
+                -
+            </h3>
+        </div>
+
+    </div>
+
+
+    <!-- Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+
+        <!-- Grade Chart -->
+        <div class="bg-white rounded-lg shadow p-5">
+
+            <h3 class="font-semibold mb-3">
+                📊 Grade Performance
+            </h3>
+
+            <canvas id="gradeChart" height="200"></canvas>
+
+        </div>
+
+
+        <!-- Attendance Chart -->
+        <div class="bg-white rounded-lg shadow p-5">
+
+            <h3 class="font-semibold mb-3">
+                📅 Attendance Summary
+            </h3>
+
+            <canvas id="attendanceChart" height="200"></canvas>
+
+        </div>
+
+    </div>
+
+
+    <!-- Recent Schedule -->
+    <div class="bg-white rounded-lg shadow p-5">
+
+        <h3 class="font-semibold mb-3">
+            📚 Upcoming Schedule
+        </h3>
+
+        <div class="overflow-x-auto">
+
+            <table class="min-w-full text-sm text-left text-gray-700">
+
+                <thead class="bg-gray-100 border-y">
+
+                    <tr>
+                        <th class="px-3 py-2">Day</th>
+                        <th class="px-3 py-2">Time</th>
+                        <th class="px-3 py-2">Subject</th>
+                        <th class="px-3 py-2">Teacher</th>
+                    </tr>
+
+                </thead>
+
+                <tbody id="scheduleBody"></tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
 </div>
+
+
+@section Scripts {
+
+    <!-- Chart JS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+
+        $(document).ready(function () {
+
+            loadDashboardData();
+
+        });
+
+
+        /* ===============================
+           LOAD DASHBOARD DATA
+        =============================== */
+        function loadDashboardData() {
+
+            $.get('/StDashboard/GetSummary', function (res) {
+
+                if (!res.success) {
+                    alert(res.message);
+                    return;
+                }
+
+                // Cards
+                $('#avgGrade').text(res.data.avgGrade);
+                $('#attendanceRate').text(res.data.attendance + '%');
+                $('#outstandingPay').text('Rp ' + res.data.payment);
+                $('#todaySchedule').text(res.data.todaySchedule + ' Class');
+
+
+                // Charts
+                renderGradeChart(res.data.grades);
+                renderAttendanceChart(res.data.attendanceChart);
+
+
+                // Schedule
+                renderSchedule(res.data.schedules);
+
+            });
+
+        }
+
+
+        /* ===============================
+           GRADE CHART
+        =============================== */
+        function renderGradeChart(data) {
+
+            new Chart(document.getElementById('gradeChart'), {
+
+                type: 'line',
+
+                data: {
+
+                    labels: data.labels,
+
+                    datasets: [{
+
+                        label: 'Grade',
+
+                        data: data.values,
+
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: false
+
+                    }]
+
+                }
+
+            });
+
+        }
+
+
+        /* ===============================
+           ATTENDANCE CHART
+        =============================== */
+        function renderAttendanceChart(data) {
+
+            new Chart(document.getElementById('attendanceChart'), {
+
+                type: 'doughnut',
+
+                data: {
+
+                    labels: ['Present', 'Absent', 'Late'],
+
+                    datasets: [{
+
+                        data: [
+                            data.present,
+                            data.absent,
+                            data.late
+                        ],
+
+                        borderWidth: 1
+
+                    }]
+
+                }
+
+            });
+
+        }
+
+
+        /* ===============================
+           SCHEDULE TABLE
+        =============================== */
+        function renderSchedule(data) {
+
+            let html = '';
+
+            data.forEach(x => {
+
+                html += `
+                    <tr class="border-b">
+
+                        <td class="px-3 py-2">${x.day}</td>
+
+                        <td class="px-3 py-2">
+                            ${x.start} - ${x.end}
+                        </td>
+
+                        <td class="px-3 py-2">
+                            ${x.subject}
+                        </td>
+
+                        <td class="px-3 py-2">
+                            ${x.teacher}
+                        </td>
+
+                    </tr>
+                `;
+
+            });
+
+            $('#scheduleBody').html(html);
+
+        }
+
+    </script>
+}

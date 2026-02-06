@@ -647,7 +647,7 @@ namespace Haniya.Controllers
         }
 
         [HttpGet]
-        public IActionResult Subjects(string q = "", int page = 1, int pageSize = 20)
+        public IActionResult Subjects(string classLevel = null, string q = "", int page = 1, int pageSize = 20)
         {
             try
             {
@@ -658,19 +658,27 @@ namespace Haniya.Controllers
                 conn.Open();
 
                 var where = "WHERE status = 'ACTIVE'";
+                var parameters = new Dictionary<string, object>();
+
                 if (!string.IsNullOrWhiteSpace(q))
                 {
                     where += " AND subject_name LIKE @q";
+                    parameters["@q"] = $"%{q}%";
+                }
+
+                if (!string.IsNullOrEmpty(classLevel))
+                {
+                    where += " AND class_level = @classLevel"; // Asumsikan kolom class_level ada di mst_subjects (varchar/int)
+                    parameters["@classLevel"] = classLevel;   // Jika int → int.Parse(classLevel)
                 }
 
                 var countSql = $"SELECT COUNT(*) FROM mst_subjects {where}";
                 using var countCmd = new SqlCommand(countSql, conn);
-                if (!string.IsNullOrWhiteSpace(q))
-                    countCmd.Parameters.AddWithValue("@q", $"%{q}%");
+                foreach (var p in parameters)
+                    countCmd.Parameters.AddWithValue(p.Key, p.Value);
                 var total = (int)countCmd.ExecuteScalar();
 
                 var offset = (page - 1) * pageSize;
-
                 var sql = $@"
             SELECT subject_id, subject_name
             FROM mst_subjects
@@ -679,8 +687,8 @@ namespace Haniya.Controllers
             OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY";
 
                 using var cmd = new SqlCommand(sql, conn);
-                if (!string.IsNullOrWhiteSpace(q))
-                    cmd.Parameters.AddWithValue("@q", $"%{q}%");
+                foreach (var p in parameters)
+                    cmd.Parameters.AddWithValue(p.Key, p.Value);
                 cmd.Parameters.AddWithValue("@offset", offset);
                 cmd.Parameters.AddWithValue("@pageSize", pageSize);
 
@@ -696,7 +704,6 @@ namespace Haniya.Controllers
                 }
 
                 var more = (page * pageSize) < total;
-
                 return Json(new
                 {
                     results,

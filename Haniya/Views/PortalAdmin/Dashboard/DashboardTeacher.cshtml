@@ -151,11 +151,22 @@
 
         $('#gradesFilterSubject').select2({
             ajax: {
-                url: '/Select2/Subjects',
+                url: '/Select2/Subjects', // Sesuaikan jika route berbeda
                 dataType: 'json',
                 delay: 250,
                 data: function (params) {
-                    return { q: params.term, page: params.page || 1 };
+                    // Ambil text kelas yang sedang dipilih (misal "7A")
+                    var selectedClassData = $('#gradesFilterClass').select2('data')[0];
+                    var classLevel = '';
+                    if (selectedClassData && selectedClassData.text) {
+                        classLevel = selectedClassData.text.charAt(0); // split first character → "7", "8", "9"
+                    }
+
+                    return {
+                        q: params.term || '',
+                        page: params.page || 1,
+                        classLevel: classLevel
+                    };
                 },
                 processResults: function (data) {
                     return {
@@ -165,7 +176,25 @@
                 }
             },
             placeholder: 'Pilih Mata Pelajaran',
-            allowClear: true
+            allowClear: true,
+            minimumInputLength: 0 // Izinkan buka dropdown tanpa typing untuk lihat semua
+        });
+
+        $('#scheduleFilterClass, #gradesFilterClass').on('change', function () {
+            var selectedVal = $(this).val();
+            // Sync kedua dropdown kelas
+            $('#scheduleFilterClass').val(selectedVal).trigger('change.select2');
+            $('#gradesFilterClass').val(selectedVal).trigger('change.select2');
+
+            // Clear & refresh dropdown mata pelajaran (akan load ulang berdasarkan kelas baru)
+            $('#gradesFilterSubject').val(null).trigger('change');
+
+            // Auto reload data dashboard
+            loadTeacherDashboard();
+        });
+
+        $('#gradesFilterSubject').on('change', function () {
+            loadTeacherDashboard();
         });
 
         loadTeacherDashboard();
@@ -210,23 +239,32 @@
     }
 
     function renderWeeklySchedule(schedule) {
-        const today = new Date().toLocaleDateString('id-ID', { weekday: 'long' });
+        const classSelected = !!$('#scheduleFilterClass').val()?.trim();
         let html = '';
 
-        // Group by day
-        const grouped = {};
-        schedule.forEach(item => {
-            if (!grouped[item.day]) grouped[item.day] = [];
-            grouped[item.day].push(item);
-        });
+        if (!classSelected) {
+            html = '<tr><td colspan="4" class="text-center py-8 text-gray-500">Pilih kelas terlebih dahulu untuk melihat jadwal</td></tr>';
+        } else if (schedule.length === 0) {
+            html = '<tr><td colspan="4" class="text-center py-8 text-gray-500">Tidak ada jadwal untuk kelas ini</td></tr>';
+        } else {
+            const today = new Date().toLocaleDateString('id-ID', { weekday: 'long' });
+            const grouped = {};
+            schedule.forEach(item => {
+                if (!grouped[item.day]) grouped[item.day] = [];
+                grouped[item.day].push(item);
+            });
 
-        const daysOrder = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-        daysOrder.forEach(day => {
-            const items = grouped[day] || [];
-            const isToday = day === today;
-            html += `
+            const daysOrder = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+
+            daysOrder.forEach(day => {
+                const items = grouped[day] || [];
+                const isToday = day === today;
+
+                html += `
                     <tr class="${isToday ? 'bg-gradient-to-r from-amber-50 to-amber-100 border-l-4 border-amber-400' : 'hover:bg-gray-50'}">
-                        <td class="px-6 py-4 font-medium ${isToday ? 'text-amber-900' : 'text-gray-900'}">${day} ${isToday ? '(Hari Ini)' : ''}</td>
+                        <td class="px-6 py-4 font-medium ${isToday ? 'text-amber-900' : 'text-gray-900'}">
+                            ${day} ${isToday ? '(Hari Ini)' : ''}
+                        </td>
                         <td colspan="3" class="px-6 py-4">
                             <div class="space-y-3">
                                 ${items.length > 0 ? items.map(i => `
@@ -239,13 +277,14 @@
                                             </div>
                                         </div>
                                     </div>
-                                `).join('') : '<p class="text-gray-500 italic">Tidak ada jadwal</p>'}
+                                `).join('') : '<p class="text-gray-500 italic">Tidak ada kelas pada hari ini</p>'}
                             </div>
                         </td>
                     </tr>`;
-        });
+            });
+        }
 
-        $('#weekly-schedule').html(html || '<tr><td colspan="4" class="text-center py-8 text-gray-500">Tidak ada jadwal untuk kelas ini</td></tr>');
+        $('#weekly-schedule').html(html);
     }
 
     function renderAttendancePie(pieData) {
@@ -271,17 +310,26 @@
     }
 
     function renderGrades(grades) {
+        const classSelected = !!$('#gradesFilterClass').val()?.trim();
+
         let html = '';
-        grades.forEach(g => {
-            html += `
+
+        if (!classSelected) {
+            html = '<tr><td colspan="3" class="text-center py-8 text-gray-500">Pilih kelas terlebih dahulu untuk melihat nilai siswa</td></tr>';
+        } else if (grades.length === 0) {
+            html = '<tr><td colspan="3" class="text-center py-8 text-gray-500">Tidak ada data nilai untuk filter ini</td></tr>';
+        } else {
+            grades.forEach(g => {
+                html += `
                     <tr class="border-b hover:bg-gray-50">
                         <td class="px-6 py-4">${g.student}</td>
                         <td class="px-6 py-4">${g.subject}</td>
-                        <td class="px-6 py-4 font-semibold">${g.avg}</td>
+                        <td class="px-6 py-4 font-semibold text-indigo-900">${g.avg}</td>
                     </tr>`;
-        });
+            });
+        }
 
-        $('#grades-body').html(html || '<tr><td colspan="3" class="text-center py-8 text-gray-500">Tidak ada data nilai</td></tr>');
+        $('#grades-body').html(html);
     }
 
     function renderEventsArticles(events, articles) {

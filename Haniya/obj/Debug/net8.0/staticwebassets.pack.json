@@ -37,6 +37,10 @@
       "PackagePath": "staticwebassets\\image\\student\\STD0005.jpg"
     },
     {
+      "Id": "D:\\Portfolio\\e-raport\\haniya\\Haniya\\wwwroot\\image\\student\\STU000125.png",
+      "PackagePath": "staticwebassets\\image\\student\\STU000125.png"
+    },
+    {
       "Id": "D:\\Portfolio\\e-raport\\haniya\\Haniya\\wwwroot\\image\\teacher\\TCH0001.png",
       "PackagePath": "staticwebassets\\image\\teacher\\TCH0001.png"
     },

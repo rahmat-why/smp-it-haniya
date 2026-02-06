@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "yhmwWdo0C917Pehk+AmMLSGIzQC3Eq8OqGLKPAj/vD0=",
+  "Hash": "ipjim85adz5hswmP+r4nEcSAPtJlOcRIykigtRliCHE=",
   "Source": "Haniya",
   "BasePath": "_content/Haniya",
   "Mode": "Default",
@@ -186,6 +186,25 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot\\image\\student\\STD0005.jpg"
+    },
+    {
+      "Identity": "D:\\Portfolio\\e-raport\\haniya\\Haniya\\wwwroot\\image\\student\\STU000125.png",
+      "SourceId": "Haniya",
+      "SourceType": "Discovered",
+      "ContentRoot": "D:\\Portfolio\\e-raport\\haniya\\Haniya\\wwwroot\\",
+      "BasePath": "_content/Haniya",
+      "RelativePath": "image/student/STU000125.png",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\image\\student\\STU000125.png"
     },
     {
       "Identity": "D:\\Portfolio\\e-raport\\haniya\\Haniya\\wwwroot\\image\\teacher\\TCH0001.png",

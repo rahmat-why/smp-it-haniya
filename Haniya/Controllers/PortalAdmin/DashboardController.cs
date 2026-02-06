@@ -225,47 +225,51 @@ namespace Haniya.Controllers.PortalAdmin
         private List<dynamic> GetWeeklySchedule(SqlConnection conn, string classId)
         {
             var list = new List<dynamic>();
+
+            // Jika tidak ada kelas yang dipilih, kembalikan list kosong (default empty)
+            if (string.IsNullOrEmpty(classId))
+            {
+                return list;
+            }
+
             var sql = @"
-                SELECT 
-                    s.day,
-                    sd.start_time,
-                    sd.end_time,
-                    sub.subject_name,
-                    ISNULL(t.first_name + ' ' + t.last_name, 'Tidak Ditentukan') AS teacher
-                FROM txn_schedules s
-                JOIN txn_schedule_details sd ON s.schedule_id = sd.schedule_id
-                JOIN mst_subjects sub ON sd.subject_id = sub.subject_id
-                LEFT JOIN mst_teachers t ON sd.teacher_id = t.teacher_id
-                JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id";
-
-            if (!string.IsNullOrEmpty(classId))
-                sql += " WHERE ac.academic_class_id = @classId";
-
-            sql += @" ORDER BY 
-                CASE s.day 
-                    WHEN 'Senin' THEN 1 
-                    WHEN 'Selasa' THEN 2 
-                    WHEN 'Rabu' THEN 3 
-                    WHEN 'Kamis' THEN 4 
-                    WHEN 'Jumat' THEN 5 
-                    WHEN 'Sabtu' THEN 6 
-                END, sd.start_time";
+        SELECT
+            s.day,
+            sd.start_time,
+            sd.end_time,
+            sub.subject_name,
+            ISNULL(t.first_name + ' ' + t.last_name, 'Tidak Ditentukan') AS teacher
+        FROM txn_schedules s
+        JOIN txn_schedule_details sd ON s.schedule_id = sd.schedule_id
+        JOIN mst_subjects sub ON sd.subject_id = sub.subject_id
+        LEFT JOIN mst_teachers t ON sd.teacher_id = t.teacher_id
+        JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
+        WHERE ac.academic_class_id = @classId
+        ORDER BY
+            CASE s.day
+                WHEN 'Senin' THEN 1
+                WHEN 'Selasa' THEN 2
+                WHEN 'Rabu' THEN 3
+                WHEN 'Kamis' THEN 4
+                WHEN 'Jumat' THEN 5
+                WHEN 'Sabtu' THEN 6
+            END, sd.start_time";
 
             var cmd = new SqlCommand(sql, conn);
-            if (!string.IsNullOrEmpty(classId))
-                cmd.Parameters.AddWithValue("@classId", classId);
+            cmd.Parameters.AddWithValue("@classId", classId);
 
             using var rd = cmd.ExecuteReader();
             while (rd.Read())
             {
                 list.Add(new
                 {
-                    day = rd["day"],
-                    time = rd["start_time"] + " - " + rd["end_time"],
-                    subject = rd["subject_name"],
-                    teacher = rd["teacher"]
+                    day = rd["day"].ToString(),
+                    time = rd["start_time"].ToString() + " - " + rd["end_time"].ToString(),
+                    subject = rd["subject_name"].ToString(),
+                    teacher = rd["teacher"].ToString()
                 });
             }
+
             return list;
         }
 
@@ -317,39 +321,46 @@ namespace Haniya.Controllers.PortalAdmin
         private List<dynamic> GetGrades(SqlConnection conn, string classId, string subjectId)
         {
             var list = new List<dynamic>();
-            var sql = @"
-                SELECT 
-                    s.full_name AS student,
-                    sub.subject_name AS subject,
-                    AVG(gd.grade_value) AS avg_grade
-                FROM txn_grade_details gd
-                JOIN txn_grades g ON gd.grade_id = g.grade_id
-                JOIN mst_subjects sub ON g.subject_id = sub.subject_id
-                JOIN mst_students s ON gd.student_id = s.student_id
-                JOIN mst_academic_classes ac ON g.academic_class_id = ac.academic_class_id
-                WHERE 1=1";
 
-            if (!string.IsNullOrEmpty(classId))
-                sql += " AND ac.academic_class_id = @classId";
+            // Jika kelas belum dipilih, kembalikan empty (hindari query semua data)
+            if (string.IsNullOrEmpty(classId))
+            {
+                return list;
+            }
+
+            var sql = @"
+        SELECT
+            s.full_name AS student,
+            sub.subject_name AS subject,
+            AVG(gd.grade_value) AS avg_grade
+        FROM txn_grade_details gd
+        JOIN txn_grades g ON gd.grade_id = g.grade_id
+        JOIN mst_subjects sub ON g.subject_id = sub.subject_id
+        JOIN mst_students s ON gd.student_id = s.student_id
+        JOIN mst_academic_classes ac ON g.academic_class_id = ac.academic_class_id
+        WHERE ac.academic_class_id = @classId";
+
             if (!string.IsNullOrEmpty(subjectId))
                 sql += " AND sub.subject_id = @subjectId";
 
-            sql += " GROUP BY s.full_name, sub.subject_name";
+            sql += " GROUP BY s.full_name, sub.subject_name ORDER BY s.full_name";
 
-            var cmd = new SqlCommand(sql, conn);
-            if (!string.IsNullOrEmpty(classId)) cmd.Parameters.AddWithValue("@classId", classId);
-            if (!string.IsNullOrEmpty(subjectId)) cmd.Parameters.AddWithValue("@subjectId", subjectId);
+    var cmd = new SqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@classId", classId);
+            if (!string.IsNullOrEmpty(subjectId))
+                cmd.Parameters.AddWithValue("@subjectId", subjectId);
 
             using var rd = cmd.ExecuteReader();
             while (rd.Read())
             {
                 list.Add(new
                 {
-                    student = rd["student"],
-                    subject = rd["subject"],
-                    avg = Math.Round((decimal)rd["avg_grade"], 2)
+                    student = rd["student"].ToString(),
+                    subject = rd["subject"].ToString(),
+                    avg = Math.Round(Convert.ToDecimal(rd["avg_grade"]), 2)
                 });
             }
+
             return list;
         }
     }

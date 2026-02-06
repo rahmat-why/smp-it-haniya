@@ -26,7 +26,7 @@ namespace Haniya.Controllers.Login
             // Jika sudah login sebagai student, langsung ke dashboard student
             if (User.Identity.IsAuthenticated && User.HasClaim("UserType", "Student"))
             {
-                return RedirectToAction("Student", "Dashboard");
+                return RedirectToAction("Student", "StDashboard");
             }
 
             return View("~/Views/Login/LoginStudent.cshtml");
@@ -98,7 +98,7 @@ namespace Haniya.Controllers.Login
 
                 var claims = new List<Claim>
                 {
-                    new Claim(ClaimTypes.NameIdentifier, studentId),
+                    new Claim("StudentId", studentId),
                     // Name = NIS (bisa dipakai di tampilan)
                     new Claim(ClaimTypes.Name, studentNis),
                     new Claim(ClaimTypes.GivenName, firstName),

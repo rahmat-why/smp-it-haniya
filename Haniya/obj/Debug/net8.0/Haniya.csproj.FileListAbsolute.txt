@@ -72,3 +72,4 @@ D:\Portfolio\e-raport\haniya\Haniya\obj\Debug\net8.0\refint\Haniya.dll
 D:\Portfolio\e-raport\haniya\Haniya\obj\Debug\net8.0\Haniya.pdb
 D:\Portfolio\e-raport\haniya\Haniya\obj\Debug\net8.0\Haniya.genruntimeconfig.cache
 D:\Portfolio\e-raport\haniya\Haniya\obj\Debug\net8.0\ref\Haniya.dll
+D:\Portfolio\e-raport\haniya\Haniya\obj\Debug\net8.0\Haniya.sourcelink.json

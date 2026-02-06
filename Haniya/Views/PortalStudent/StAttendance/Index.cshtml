@@ -1,0 +1,294 @@
+﻿@{
+    Layout = "_LayoutStudent";
+    ViewData["Title"] = "My Attendance";
+}
+
+<div class="flex justify-between items-center mb-4">
+    <h2 class="text-xl font-semibold">My Attendance</h2>
+</div>
+
+<div class="bg-white rounded-lg shadow">
+
+    <!-- Toolbar -->
+    <div class="px-4 pt-4">
+        <div id="attendance-toolbar"
+             class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto px-4 pt-4">
+
+        <table id="attendance-table"
+               class="min-w-full text-sm text-left text-gray-700 border-collapse">
+
+            <thead class="bg-gray-100 border-y border-gray-200">
+                <tr>
+                    <th class="px-4 py-3 text-xs font-semibold uppercase">
+                        Date
+                    </th>
+
+                    <th class="px-4 py-3 text-xs font-semibold uppercase">
+                        Class
+                    </th>
+
+                    <th class="px-4 py-3 text-xs font-semibold uppercase">
+                        Teacher
+                    </th>
+
+                    <th class="px-4 py-3 text-xs font-semibold uppercase text-center">
+                        Status
+                    </th>
+
+                    <th class="px-4 py-3 text-xs font-semibold uppercase">
+                        Notes
+                    </th>
+                </tr>
+            </thead>
+
+            <tbody class="bg-white divide-y divide-gray-100"></tbody>
+
+        </table>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="px-4 pb-4 pt-3">
+
+        <div id="attendance-footer"
+             class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+
+            <div id="table-info"></div>
+            <div id="table-pagination"></div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+@section Scripts {
+
+    <script>
+
+        $(document).ready(function () {
+
+            initAttendanceTable();
+
+        });
+
+
+        function initAttendanceTable() {
+
+            const table = $('#attendance-table').DataTable({
+
+                processing: true,
+                serverSide: false,
+                searching: true,
+                lengthChange: true,
+                ordering: true,
+
+                ajax: {
+                    url: '/StAttendance/GetMyAttendance',
+                    type: 'GET',
+
+                    dataSrc: function (res) {
+
+                        if (!res.success) {
+                            alert(res.message);
+                            return [];
+                        }
+
+                        return res.data;
+                    }
+                },
+
+                dom: 'lftip',
+
+                language: {
+                    lengthMenu: "Show _MENU_ rows",
+                    search: "",
+                    searchPlaceholder: "Search...",
+                    paginate: {
+                        next: "Next",
+                        previous: "Prev"
+                    },
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries"
+                },
+
+                columns: [
+
+                    {
+                        data: 'date',
+                        className: 'py-3 font-medium text-gray-900'
+                    },
+
+                    {
+                        data: 'class_name',
+                        className: 'py-3'
+                    },
+
+                    {
+                        data: 'teacher',
+                        className: 'py-3'
+                    },
+
+                    {
+                        data: 'status',
+                        className: 'py-3 text-center font-semibold',
+
+                        render: function (data) {
+
+                            if (data === 'Present')
+                                return '<span class="text-green-600">Present</span>';
+
+                            if (data === 'Absent')
+                                return '<span class="text-red-600">Absent</span>';
+
+                            if (data === 'Late')
+                                return '<span class="text-yellow-600">Late</span>';
+
+                            return data ?? '-';
+                        }
+                    },
+
+                    {
+                        data: 'notes',
+                        className: 'py-3',
+
+                        render: data => data || '-'
+                    }
+
+                ],
+
+
+                /* ===============================
+                   ROWSPAN BY DATE
+                =============================== */
+                drawCallback: function () {
+
+                    let api = this.api();
+                    let rows = api.rows({ page: 'current' }).nodes();
+
+                    let lastDate = null;
+                    let rowspan = 1;
+                    let lastCell = null;
+
+                    api.column(0, { page: 'current' }).data().each(function (date, i) {
+
+                        let cell = $('td:eq(0)', rows[i]);
+
+                        if (lastDate === date) {
+
+                            cell.remove();
+                            rowspan++;
+
+                            lastCell.attr('rowspan', rowspan);
+
+                        } else {
+
+                            lastDate = date;
+                            rowspan = 1;
+                            lastCell = cell;
+                        }
+
+                    });
+
+                    stylePagination();
+                },
+
+
+                initComplete: function () {
+
+                    const wrapper = $('#attendance-table_wrapper');
+
+                    const $length = wrapper.find('.dataTables_length');
+                    const $filter = wrapper.find('.dataTables_filter');
+
+                    const $controls = $('<div class="flex items-center gap-4"></div>');
+
+                    $controls.append($length).append($filter);
+
+                    $('#attendance-toolbar').append($controls);
+
+
+                    // Length
+                    $length.addClass('flex items-center gap-2 text-sm');
+                    $length.find('select')
+                        .addClass('border rounded-md px-2 py-1');
+
+
+                    // Search
+                    const $search = $filter.find('input');
+
+                    $search.addClass('border rounded-md px-3 py-1.5 w-full md:w-64')
+                        .attr('placeholder', 'Search...');
+
+                }
+
+            });
+
+        }
+
+
+        /* ===============================
+           PAGINATION STYLE
+        =============================== */
+        function stylePagination() {
+
+            const wrapper = $('#attendance-table_wrapper');
+
+            let $info = wrapper.find('.dataTables_info');
+            let $paginate = wrapper.find('.dataTables_paginate');
+
+
+            if ($info.length) {
+
+                $('#table-info').empty().append($info);
+
+                $info.removeClass().addClass('text-sm');
+
+            }
+
+
+            if ($paginate.length) {
+
+                $('#table-pagination').empty().append($paginate);
+
+                $paginate.removeClass()
+                    .addClass('inline-flex border rounded-md overflow-hidden');
+
+
+                $paginate.find('a, span').each(function () {
+
+                    const $btn = $(this);
+
+                    const current = $btn.hasClass('current');
+                    const disabled = $btn.hasClass('disabled');
+
+                    $btn.removeClass();
+
+                    let cls = 'px-3 py-2 text-sm border-r last:border-r-0';
+
+                    if (current)
+                        cls += ' bg-blue-900 text-white';
+
+                    else if (disabled)
+                        cls += ' bg-gray-100 text-gray-400';
+
+                    else
+                        cls += ' bg-white hover:bg-gray-50 cursor-pointer';
+
+
+                    $btn.addClass(cls);
+
+                });
+
+            }
+
+        }
+
+    </script>
+
+}

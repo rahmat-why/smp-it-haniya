@@ -174,8 +174,24 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUG9ydGFsQWRtaW5cVGVhY2hlclxJbmRleC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
+[D:/Portfolio/e-raport/haniya/Haniya/Views/PortalStudent/StAttendance/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUG9ydGFsU3R1ZGVudFxTdEF0dGVuZGFuY2VcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [D:/Portfolio/e-raport/haniya/Haniya/Views/PortalStudent/StDashboard/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUG9ydGFsU3R1ZGVudFxTdERhc2hib2FyZFxJbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/Portfolio/e-raport/haniya/Haniya/Views/PortalStudent/StGrade/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUG9ydGFsU3R1ZGVudFxTdEdyYWRlXEluZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/Portfolio/e-raport/haniya/Haniya/Views/PortalStudent/StPayment/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUG9ydGFsU3R1ZGVudFxTdFBheW1lbnRcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/Portfolio/e-raport/haniya/Haniya/Views/PortalStudent/StSchedule/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUG9ydGFsU3R1ZGVudFxTdFNjaGVkdWxlXEluZGV4LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
 [D:/Portfolio/e-raport/haniya/Haniya/Views/Shared/Error.cshtml]

@@ -1,0 +1,124 @@
+﻿@{
+    Layout = "_LayoutStudent";
+    ViewData["Title"] = "My Payments";
+}
+
+<div class="flex justify-between items-center mb-4">
+    <h2 class="text-xl font-semibold">My Payments</h2>
+</div>
+
+
+<div class="bg-white rounded-lg shadow">
+
+    <div class="overflow-x-auto px-4 pt-4">
+
+        <table id="payment-table"
+               class="min-w-full text-sm text-left text-gray-700">
+
+            <thead class="bg-gray-100 border-y">
+
+                <tr>
+                    <th class="px-3 py-2">Date</th>
+                    <th class="px-3 py-2">Class</th>
+                    <th class="px-3 py-2">Type</th>
+                    <th class="px-3 py-2">Total</th>
+                    <th class="px-3 py-2">Paid</th>
+                    <th class="px-3 py-2">Remaining</th>
+                    <th class="px-3 py-2">Status</th>
+                    <th class="px-3 py-2">Method</th>
+                </tr>
+
+            </thead>
+
+            <tbody></tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+
+@section Scripts {
+
+    <script>
+
+        $(document).ready(function () {
+
+            $('#payment-table').DataTable({
+
+                ajax: {
+                    url: '/StPayment/GetMyPayments',
+                    type: 'GET',
+                    dataSrc: function (res) {
+
+                        if (!res.success) {
+                            alert(res.message);
+                            return [];
+                        }
+
+                        return res.data;
+                    }
+                },
+
+                searching: true,
+                lengthChange: true,
+
+                columns: [
+
+                    {
+                        data: 'payment_date',
+                        render: d => d
+                            ? new Date(d).toLocaleDateString('id-ID')
+                            : '-'
+                    },
+
+                    { data: 'class_name' },
+
+                    { data: 'payment_type' },
+
+                    {
+                        data: 'total_price',
+                        render: d => d
+                            ? 'Rp ' + Number(d).toLocaleString('id-ID')
+                            : '-'
+                    },
+
+                    {
+                        data: 'total_payment',
+                        render: d => d
+                            ? 'Rp ' + Number(d).toLocaleString('id-ID')
+                            : '-'
+                    },
+
+                    {
+                        data: 'remaining_payment',
+                        render: d => d
+                            ? 'Rp ' + Number(d).toLocaleString('id-ID')
+                            : '-'
+                    },
+
+                    {
+                        data: 'status',
+                        render: d => {
+
+                            if (d === 'PAID')
+                                return '<span class="text-green-600 font-semibold">PAID</span>';
+
+                            if (d === 'PARTIAL')
+                                return '<span class="text-yellow-600 font-semibold">PARTIAL</span>';
+
+                            return '<span class="text-red-600 font-semibold">UNPAID</span>';
+                        }
+                    },
+
+                    { data: 'payment_method' }
+
+                ]
+
+            });
+
+        });
+
+    </script>
+}
