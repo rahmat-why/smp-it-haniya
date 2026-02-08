@@ -1,9 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using System.Data.SqlClient;
 using System.Security.Claims;
 
 namespace Haniya.Controllers.PortalStudent
 {
+    [Authorize]
     public class StAttendanceController : Controller
     {
         private readonly IConfiguration _config;
@@ -21,25 +23,16 @@ namespace Haniya.Controllers.PortalStudent
         // View
         public IActionResult Index()
         {
-            return View("~/Views/PortalStudent/StPayment/Index.cshtml");
+            return View("~/Views/PortalStudent/StAttendance/Index.cshtml");
         }
 
         [HttpGet]
-        public IActionResult GetMyAttendance()
+        public IActionResult GetMyAttendance(string student_id)
         {
             try
             {
                 // Ambil student_id dari Claims Login
-                var studentId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(studentId))
-                {
-                    return Json(new
-                    {
-                        success = false,
-                        message = "User not logged in"
-                    });
-                }
+                var studentId = User.FindFirst("StudentId")?.Value;
 
                 using var conn = GetConn();
                 conn.Open();
@@ -52,7 +45,7 @@ namespace Haniya.Controllers.PortalStudent
                         d.status,
                         d.notes,
 
-                        c.class_name,
+                        cl.class_name,
                         t.full_name AS teacher_name
 
                     FROM txn_attendances a
@@ -62,6 +55,9 @@ namespace Haniya.Controllers.PortalStudent
 
                     JOIN mst_academic_classes c
                         ON a.academic_class_id = c.academic_class_id
+
+                    JOIN mst_classes cl
+                        ON cl.class_id = c.class_id
 
                     JOIN mst_teachers t
                         ON a.teacher_id = t.teacher_id

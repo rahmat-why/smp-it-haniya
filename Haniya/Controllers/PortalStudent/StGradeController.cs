@@ -1,9 +1,11 @@
 ﻿using Haniya.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Data.SqlClient;
 
 namespace Haniya.Controllers.PortalStudent
 {
+    [Authorize]
     public class StGradeController : Controller
     {
         private readonly IConfiguration _config;

@@ -112,8 +112,8 @@ namespace Haniya.Controllers.PortalStudent
                 var today = DateTime.Now.DayOfWeek.ToString().ToUpper();
                 var schedCountCmd = new SqlCommand(@"
                     SELECT COUNT(*)
-                    FROM txn_schedules s
-                    JOIN txn_schedule_details d
+                    FROM mst_schedules s
+                    JOIN mst_schedule_details d
                         ON s.schedule_id = d.schedule_id
                     JOIN mst_student_classes sc
                         ON sc.academic_class_id = s.academic_class_id
@@ -168,8 +168,8 @@ namespace Haniya.Controllers.PortalStudent
                         d.end_time,
                         sub.subject_name,
                         t.full_name AS teacher
-                    FROM txn_schedules s
-                    JOIN txn_schedule_details d
+                    FROM mst_schedules s
+                    JOIN mst_schedule_details d
                         ON s.schedule_id=d.schedule_id
                     JOIN mst_subjects sub
                         ON d.subject_id=sub.subject_id

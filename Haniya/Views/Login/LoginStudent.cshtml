@@ -12,29 +12,25 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-blue-900 via-blue-700 to-blue-500 flex items-center justify-center p-4">
+<body class="min-h-screen bg-gradient-to-br from-red-900 via-red-700 to-red-500 flex items-center justify-center p-4">
     <div class="w-full max-w-md">
         <div class="bg-white rounded-lg shadow-2xl overflow-hidden">
-            <!-- Header -->
-            <div class="bg-blue-900 text-white p-8 text-center">
+            <div class="bg-red-900 text-white p-8 text-center">
                 <div class="mb-4">
                     <svg class="w-20 h-20 mx-auto" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" />
                     </svg>
                 </div>
                 <h1 class="text-2xl font-bold">SMP IT HANIYA</h1>
-                <p class="text-blue-200 mt-2">Student Portal Login</p>
+                <p class="text-red-200 mt-2">Student Portal Login</p>
             </div>
 
-            <!-- Form -->
             <div class="p-8">
                 <form id="loginForm">
                     @Html.AntiForgeryToken()
 
-                    <!-- Alert -->
                     <div id="alertMessage" class="hidden mb-4 p-4 rounded-lg"></div>
 
-                    <!-- nis -->
                     <div class="mb-6">
                         <label class="block text-gray-700 text-sm font-semibold mb-2" for="nis">
                             NIS (Nomor Induk Siswa)
@@ -48,14 +44,13 @@
                             <input type="text"
                                    id="nis"
                                    name="nis"
-                                   class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                   placeholder="Masukkan nis Anda"
+                                   class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                   placeholder="Masukkan NIS Anda"
                                    autocomplete="off"
                                    required>
                         </div>
                     </div>
 
-                    <!-- Password -->
                     <div class="mb-6">
                         <label class="block text-gray-700 text-sm font-semibold mb-2" for="password">
                             Password
@@ -69,7 +64,7 @@
                             <input type="password"
                                    id="password"
                                    name="password"
-                                   class="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                   class="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                                    placeholder="Masukkan password"
                                    autocomplete="current-password"
                                    required>
@@ -87,23 +82,21 @@
                         </div>
                     </div>
 
-                    <!-- Remember Me -->
                     <div class="mb-6 flex items-center justify-between">
                         <div class="flex items-center">
                             <input type="checkbox"
                                    id="remember_me"
                                    name="remember_me"
-                                   class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                   class="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500">
                             <label for="remember_me" class="ml-2 text-sm text-gray-700">
                                 Ingat saya 30 hari
                             </label>
                         </div>
                     </div>
 
-                    <!-- Submit -->
                     <button type="submit"
                             id="loginBtn"
-                            class="w-full bg-blue-900 text-white py-3 rounded-lg font-semibold hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200">
+                            class="w-full bg-red-900 text-white py-3 rounded-lg font-semibold hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition duration-200">
                         <span id="btnText">Login</span>
                         <span id="btnLoader" class="hidden">
                             <svg class="animate-spin h-5 w-5 inline-block" fill="none" viewBox="0 0 24 24">
@@ -115,13 +108,12 @@
                     </button>
                 </form>
 
-                <!-- Links -->
                 <div class="mt-6 text-center text-sm text-gray-600">
                     <p class="mb-2">Login sebagai:</p>
                     <div class="flex justify-center space-x-4">
-                        <a href="/LoginAdmin/Index" class="text-blue-600 hover:text-blue-800 font-medium transition">Admin</a>
+                        <a href="/LoginAdmin/Index" class="text-red-600 hover:text-red-800 font-medium transition">Admin</a>
                         <span class="text-gray-400">|</span>
-                        <a href="/LoginTeacher/Index" class="text-blue-600 hover:text-blue-800 font-medium transition">Teacher</a>
+                        <a href="/LoginTeacher/Index" class="text-red-600 hover:text-red-800 font-medium transition">Teacher</a>
                     </div>
                 </div>
             </div>
@@ -191,10 +183,11 @@
 
             function showAlert(type, message) {
                 const alertDiv = $('#alertMessage');
-                alertDiv.removeClass('hidden bg-red-100 bg-blue-100 text-red-700 text-blue-700 border-red-400 border-blue-400');
+                alertDiv.removeClass('hidden bg-red-100 bg-red-50 text-red-700 border-red-400');
 
                 if (type === 'success') {
-                    alertDiv.addClass('bg-blue-100 text-blue-700 border border-blue-400');
+                    // Success alert tetap hijau atau bisa pakai shade merah yang sangat soft
+                    alertDiv.addClass('bg-green-100 text-green-700 border border-green-400');
                 } else {
                     alertDiv.addClass('bg-red-100 text-red-700 border border-red-400');
                 }
@@ -207,6 +200,7 @@
                                 <span>${message}</span>
                             </div>
                         `);
+                alertDiv.removeClass('hidden');
             }
 
             function resetButton() {

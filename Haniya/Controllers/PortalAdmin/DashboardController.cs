@@ -239,8 +239,8 @@ namespace Haniya.Controllers.PortalAdmin
             sd.end_time,
             sub.subject_name,
             ISNULL(t.first_name + ' ' + t.last_name, 'Tidak Ditentukan') AS teacher
-        FROM txn_schedules s
-        JOIN txn_schedule_details sd ON s.schedule_id = sd.schedule_id
+        FROM mst_schedules s
+        JOIN mst_schedule_details sd ON s.schedule_id = sd.schedule_id
         JOIN mst_subjects sub ON sd.subject_id = sub.subject_id
         LEFT JOIN mst_teachers t ON sd.teacher_id = t.teacher_id
         JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id

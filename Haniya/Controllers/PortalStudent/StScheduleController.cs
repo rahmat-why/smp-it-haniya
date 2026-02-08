@@ -59,9 +59,9 @@ namespace Haniya.Controllers.PortalStudent
                     FROM mst_student_classes sc
                     JOIN mst_academic_classes ac
                         ON sc.academic_class_id = ac.academic_class_id
-                    JOIN txn_schedules sch
+                    JOIN mst_schedules sch
                         ON sch.academic_class_id = ac.academic_class_id
-                    JOIN txn_schedule_details sd
+                    JOIN mst_schedule_details sd
                         ON sd.schedule_id = sch.schedule_id
                     JOIN mst_subjects sub
                         ON sd.subject_id = sub.subject_id

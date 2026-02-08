@@ -1002,5 +1002,69 @@ namespace Haniya.Controllers
                 return Json(DTOResponse.fail(ex.Message, 500));
             }
         }
+
+        [HttpGet]
+        public IActionResult RPSActivities(string q = "", int page = 1, int pageSize = 20)
+        {
+            try
+            {
+                if (page <= 0) page = 1;
+                if (pageSize <= 0) pageSize = 20;
+
+                using var conn = GetConn();
+                conn.Open();
+
+                var where = "WHERE status = 'ACTIVE' AND header_id = 'RPS_ACTIVITY'";
+                if (!string.IsNullOrWhiteSpace(q))
+                {
+                    where += " AND item_desc LIKE @q";
+                }
+
+                var countSql = $"SELECT COUNT(*) FROM mst_detail_settings {where}";
+                using var countCmd = new SqlCommand(countSql, conn);
+                if (!string.IsNullOrWhiteSpace(q))
+                    countCmd.Parameters.AddWithValue("@q", $"%{q}%");
+
+                var total = (int)countCmd.ExecuteScalar();
+
+                var offset = (page - 1) * pageSize;
+
+                var sql = $@"
+            SELECT detail_id, item_desc
+            FROM mst_detail_settings
+            {where}
+            ORDER BY CAST(item_desc AS NVARCHAR(4000))
+            OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY";
+
+                using var cmd = new SqlCommand(sql, conn);
+                if (!string.IsNullOrWhiteSpace(q))
+                    cmd.Parameters.AddWithValue("@q", $"%{q}%");
+                cmd.Parameters.AddWithValue("@offset", offset);
+                cmd.Parameters.AddWithValue("@pageSize", pageSize);
+
+                var results = new List<object>();
+                using var rd = cmd.ExecuteReader();
+                while (rd.Read())
+                {
+                    results.Add(new
+                    {
+                        id = rd["detail_id"]?.ToString(),
+                        text = rd["item_desc"]?.ToString()
+                    });
+                }
+
+                var more = (page * pageSize) < total;
+
+                return Json(new
+                {
+                    results,
+                    pagination = new { more }
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(DTOResponse.fail(ex.Message, 500));
+            }
+        }
     }
 }

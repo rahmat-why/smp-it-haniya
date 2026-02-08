@@ -126,6 +126,18 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUG9ydGFsQWRtaW5cUGF5bWVudFxJbmRleC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
+[D:/Portfolio/e-raport/haniya/Haniya/Views/PortalAdmin/RPS/Create.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUG9ydGFsQWRtaW5cUlBTXENyZWF0ZS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/Portfolio/e-raport/haniya/Haniya/Views/PortalAdmin/RPS/Edit.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUG9ydGFsQWRtaW5cUlBTXEVkaXQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/Portfolio/e-raport/haniya/Haniya/Views/PortalAdmin/RPS/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUG9ydGFsQWRtaW5cUlBTXEluZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
 [D:/Portfolio/e-raport/haniya/Haniya/Views/PortalAdmin/Schedule/Create.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUG9ydGFsQWRtaW5cU2NoZWR1bGVcQ3JlYXRlLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 

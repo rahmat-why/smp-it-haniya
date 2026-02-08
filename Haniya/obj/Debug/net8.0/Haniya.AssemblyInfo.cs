@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Haniya")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+99e219c4640d33729fb613b0853fa1fc5fd1c853")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ba4141cf04fd82289edeb940ee6007ae5b3244b3")]
 [assembly: System.Reflection.AssemblyProductAttribute("Haniya")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Haniya")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

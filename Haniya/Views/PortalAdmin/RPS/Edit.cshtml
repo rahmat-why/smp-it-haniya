@@ -1,0 +1,442 @@
+<!-- ~/Views/PortalAdmin/RPS/Edit.cshtml -->
+@{
+    Layout = "_LayoutAdmin";
+    ViewData["Title"] = "Edit RPS";
+}
+
+<input type="hidden" id="rps_id" value="@ViewBag.rpsId">
+
+<h2 class="text-2xl font-bold text-gray-800 mb-6">Edit RPS (Rencana Pembelajaran Study)</h2>
+
+<div class="bg-white p-6 rounded-xl shadow-lg w-full">
+    <form id="rpsForm" class="space-y-8">
+        <!-- Header Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="class_id" class="block text-sm font-medium text-gray-700 mb-2">
+                    Class <span class="text-red-600">*</span>
+                </label>
+                <select id="class_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                        data-placeholder="-- Select Class --" required></select>
+                <p id="error-class" class="mt-1 text-sm text-red-600 hidden"></p>
+            </div>
+
+            <div>
+                <label for="subject_id" class="block text-sm font-medium text-gray-700 mb-2">
+                    Subject <span class="text-red-600">*</span>
+                </label>
+                <select id="subject_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                        data-placeholder="-- Select Subject --" required></select>
+                <p id="error-subject" class="mt-1 text-sm text-red-600 hidden"></p>
+            </div>
+
+            <div>
+                <label for="academic_year_id" class="block text-sm font-medium text-gray-700 mb-2">
+                    Academic Year <span class="text-red-600">*</span>
+                </label>
+                <select id="academic_year_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                        data-placeholder="-- Select Academic Year --" required></select>
+                <p id="error-academic-year" class="mt-1 text-sm text-red-600 hidden"></p>
+            </div>
+
+            <div>
+                <label for="teacher_id" class="block text-sm font-medium text-gray-700 mb-2">
+                    Teacher <span class="text-red-600">*</span>
+                </label>
+                <select id="teacher_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                        data-placeholder="-- Select Teacher --" required></select>
+                <p id="error-teacher" class="mt-1 text-sm text-red-600 hidden"></p>
+            </div>
+        </div>
+
+        <div>
+            <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
+                Description
+            </label>
+            <textarea id="description" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                      placeholder="Enter RPS description..."></textarea>
+        </div>
+
+        <!-- Grading Weights Section -->
+        <div class="border-t border-gray-200 pt-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Grading Weights (Total must = 100%)</h3>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div>
+                    <label for="weight_attendance" class="block text-sm font-medium text-gray-700 mb-2">
+                        Attendance (%)
+                    </label>
+                    <input type="number" id="weight_attendance" step="0.01" min="0" max="100" value="0"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                           oninput="calculateTotalWeight()">
+                </div>
+                <div>
+                    <label for="weight_task" class="block text-sm font-medium text-gray-700 mb-2">
+                        Task (%)
+                    </label>
+                    <input type="number" id="weight_task" step="0.01" min="0" max="100" value="0"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                           oninput="calculateTotalWeight()">
+                </div>
+                <div>
+                    <label for="weight_uh" class="block text-sm font-medium text-gray-700 mb-2">
+                        UH (%)
+                    </label>
+                    <input type="number" id="weight_uh" step="0.01" min="0" max="100" value="0"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                           oninput="calculateTotalWeight()">
+                </div>
+                <div>
+                    <label for="weight_pts" class="block text-sm font-medium text-gray-700 mb-2">
+                        PTS (%)
+                    </label>
+                    <input type="number" id="weight_pts" step="0.01" min="0" max="100" value="0"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                           oninput="calculateTotalWeight()">
+                </div>
+                <div>
+                    <label for="weight_pas" class="block text-sm font-medium text-gray-700 mb-2">
+                        PAS (%)
+                    </label>
+                    <input type="number" id="weight_pas" step="0.01" min="0" max="100" value="0"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                           oninput="calculateTotalWeight()">
+                </div>
+            </div>
+            <div class="mt-3">
+                <p class="text-sm font-medium">
+                    Total Weight: <span id="total-weight" class="font-bold text-blue-700">0</span>%
+                    <span id="weight-status" class="ml-2"></span>
+                </p>
+                <p id="error-weight" class="mt-1 text-sm text-red-600 hidden"></p>
+            </div>
+        </div>
+
+        <!-- Meeting Details Section -->
+        <div class="space-y-4 border-t border-gray-200 pt-6">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-800">Meeting Details</h3>
+                <button type="button" onclick="addMeetingRow()"
+                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md">
+                    + Add Meeting
+                </button>
+            </div>
+
+            <div class="overflow-x-auto border border-gray-200 rounded-lg max-h-[500px] shadow-inner">
+                <table class="min-w-full divide-y divide-gray-200 table-fixed">
+                    <thead class="bg-gray-100 sticky top-0 z-10">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-1/12">Meeting #</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-6/12">Topic</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-4/12">Activity</th>
+                            <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700 w-1/12">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-meetings"></tbody>
+                </table>
+            </div>
+            <p id="error-meetings" class="text-sm text-red-600 hidden"></p>
+        </div>
+
+        <div class="flex justify-end gap-4 pt-6 border-t border-gray-200">
+            <button type="button" onclick="goBackRPS()" class="px-6 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-lg font-medium transition">Back</button>
+            <button type="button" onclick="updateRPS()" class="px-6 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-medium transition">Update</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        let meetingCounter = 0;
+
+        function calculateTotalWeight() {
+            const attendance = parseFloat($('#weight_attendance').val() || 0);
+            const task = parseFloat($('#weight_task').val() || 0);
+            const uh = parseFloat($('#weight_uh').val() || 0);
+            const pts = parseFloat($('#weight_pts').val() || 0);
+            const pas = parseFloat($('#weight_pas').val() || 0);
+
+            const total = attendance + task + uh + pts + pas;
+            $('#total-weight').text(total.toFixed(2));
+
+            const $status = $('#weight-status');
+            if (total === 100) {
+                $status.html('<span class="text-green-600 font-medium">✓ Valid</span>');
+                $('#error-weight').addClass('hidden');
+            } else {
+                $status.html('<span class="text-red-600 font-medium">✗ Must equal 100%</span>');
+            }
+        }
+
+        function addMeetingRow(prefill = {}) {
+            meetingCounter++;
+            const meetingNum = prefill.meeting_number || meetingCounter;
+
+            const row = `
+                <tr class="hover:bg-gray-50 border-b last:border-0" data-meeting="${meetingNum}">
+                    <td class="px-4 py-3">
+                        <input type="number" class="meeting-number w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" 
+                               value="${meetingNum}" min="1" readonly />
+                    </td>
+                    <td class="px-4 py-3">
+                        <input type="text" class="topic w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" 
+                               placeholder="Enter topic..." value="${prefill.topic || ''}" />
+                    </td>
+                    <td class="px-4 py-3">
+                        <select class="activity-select w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" 
+                                data-placeholder="-- Select Activity --"></select>
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        <button type="button" onclick="removeMeetingRow(this)" class="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md">Remove</button>
+                    </td>
+                </tr>`;
+            $('#tbody-meetings').append(row);
+
+            const $newRow = $('#tbody-meetings tr:last');
+            const $activity = $newRow.find('.activity-select');
+
+            $activity.select2({
+                placeholder: "-- Select Activity --",
+                allowClear: true,
+                ajax: {
+                    url: '/Select2/RPSActivities',
+                    dataType: 'json',
+                    delay: 250,
+                    data: p => ({ q: p.term || '', page: p.page || 1 }),
+                    processResults: d => ({ results: d.results, pagination: d.pagination }),
+                    cache: true
+                },
+                minimumInputLength: 0
+            });
+
+            if (prefill.activity && prefill.activity_desc) {
+                $activity.append(new Option(prefill.activity_desc, prefill.activity, true, true)).trigger('change');
+            }
+        }
+
+        function removeMeetingRow(btn) {
+            $(btn).closest('tr').remove();
+            reorderMeetingNumbers();
+        }
+
+        function reorderMeetingNumbers() {
+            $('#tbody-meetings tr').each(function (index) {
+                $(this).find('.meeting-number').val(index + 1);
+                $(this).attr('data-meeting', index + 1);
+            });
+        }
+
+        function collectMeetings() {
+            const meetings = [];
+            $('#tbody-meetings tr').each(function () {
+                const $row = $(this);
+                const meeting_number = parseInt($row.find('.meeting-number').val() || 0);
+                const topic = $row.find('.topic').val()?.trim() || '';
+                const activity = $row.find('.activity-select').val()?.trim() || '';
+
+                if (topic || activity) {
+                    meetings.push({ meeting_number, topic, activity });
+                }
+            });
+            return meetings;
+        }
+
+        function validateForm() {
+            $('.text-red-600').addClass('hidden');
+            let valid = true;
+
+            if (!$('#subject_id').val()) {
+                $('#error-subject').text('Subject is required').removeClass('hidden');
+                valid = false;
+            }
+            if (!$('#class_id').val()) {
+                $('#error-class').text('Class is required').removeClass('hidden');
+                valid = false;
+            }
+            if (!$('#academic_year_id').val()) {
+                $('#error-academic-year').text('Academic Year is required').removeClass('hidden');
+                valid = false;
+            }
+            if (!$('#teacher_id').val()) {
+                $('#error-teacher').text('Teacher is required').removeClass('hidden');
+                valid = false;
+            }
+
+            // Validate total weight
+            const total = parseFloat($('#total-weight').text());
+            if (total !== 100) {
+                $('#error-weight').text('Total weight must equal 100%').removeClass('hidden');
+                valid = false;
+            }
+
+            const meetings = collectMeetings();
+            if (meetings.length === 0) {
+                $('#error-meetings').text('At least one meeting is required').removeClass('hidden');
+                valid = false;
+            } else {
+                let allComplete = true;
+                meetings.forEach(m => {
+                    if (!m.topic || !m.activity) allComplete = false;
+                });
+                if (!allComplete) {
+                    $('#error-meetings').text('All fields in each meeting row are required').removeClass('hidden');
+                    valid = false;
+                }
+            }
+
+            return valid;
+        }
+
+        function goBackRPS() {
+            window.location.href = "/RPS";
+        }
+
+        function updateRPS() {
+            if (!validateForm()) return;
+
+            const fd = new FormData();
+            fd.append("rps_id", $('#rps_id').val());
+            fd.append("subject_id", $('#subject_id').val());
+            fd.append("class_id", $('#class_id').val());
+            fd.append("academic_year_id", $('#academic_year_id').val());
+            fd.append("teacher_id", $('#teacher_id').val());
+            fd.append("description", $('#description').val());
+            fd.append("weight_attendance", $('#weight_attendance').val());
+            fd.append("weight_task", $('#weight_task').val());
+            fd.append("weight_uh", $('#weight_uh').val());
+            fd.append("weight_pts", $('#weight_pts').val());
+            fd.append("weight_pas", $('#weight_pas').val());
+            fd.append("details", JSON.stringify(collectMeetings()));
+
+            $.ajax({
+                url: "/RPS/Update",
+                type: "POST",
+                data: fd,
+                processData: false,
+                contentType: false,
+                success: res => res.success ? location.href = "/RPS" : alert(res.message || "Update failed"),
+                error: () => alert("Error updating RPS")
+            });
+        }
+
+        function loadRPS() {
+            const id = $('#rps_id').val().trim();
+            if (!id) {
+                alert("Invalid RPS ID");
+                return;
+            }
+
+            $.ajax({
+                url: `/RPS/GetById?id=${id}`,
+                type: 'GET',
+                dataType: 'json',
+                success: res => {
+                    if (!res.success) {
+                        alert(res.message || "Failed to load RPS");
+                        return;
+                    }
+                    const d = res.data;
+
+                    // Populate Subject
+                    $('#subject_id').append(new Option(d.subject_name, d.subject_id, true, true)).trigger('change');
+
+                    // Populate Class
+                    $('#class_id').append(new Option(d.class_name, d.class_id, true, true)).trigger('change');
+
+                    // Populate Academic Year
+                    $('#academic_year_id').append(new Option(d.academic_year_display, d.academic_year_id, true, true)).trigger('change');
+
+                    // Populate Teacher
+                    $('#teacher_id').append(new Option(d.teacher_name, d.teacher_id, true, true)).trigger('change');
+
+                    // Populate Description
+                    $('#description').val(d.description || '');
+
+                    // Populate Weights
+                    $('#weight_attendance').val(d.weight_attendance || 0);
+                    $('#weight_task').val(d.weight_task || 0);
+                    $('#weight_uh').val(d.weight_uh || 0);
+                    $('#weight_pts').val(d.weight_pts || 0);
+                    $('#weight_pas').val(d.weight_pas || 0);
+                    calculateTotalWeight();
+
+                    // Populate Meeting Details
+                    $('#tbody-meetings').empty();
+                    if (d.details && d.details.length > 0) {
+                        d.details.forEach(meeting => {
+                            addMeetingRow({
+                                meeting_number: meeting.meeting_number,
+                                topic: meeting.topic,
+                                activity: meeting.activity,
+                                activity_desc: meeting.activity_desc
+                            });
+                        });
+                        meetingCounter = d.details.length;
+                    } else {
+                        addMeetingRow();
+                    }
+                },
+                error: () => alert("Error loading RPS data")
+            });
+        }
+
+        $(document).ready(function () {
+            $('#subject_id').select2({
+                placeholder: "-- Select Subject --",
+                allowClear: false,
+                ajax: {
+                    url: '/Select2/Subjects',
+                    dataType: 'json',
+                    delay: 250,
+                    data: p => ({ q: p.term || '', page: p.page || 1 }),
+                    processResults: d => ({ results: d.results, pagination: d.pagination }),
+                    cache: true
+                },
+                minimumInputLength: 0
+            });
+
+            $('#class_id').select2({
+                placeholder: "-- Select Class --",
+                allowClear: false,
+                ajax: {
+                    url: '/Select2/Classes',
+                    dataType: 'json',
+                    delay: 250,
+                    data: p => ({ q: p.term || '', page: p.page || 1 }),
+                    processResults: d => ({ results: d.results, pagination: d.pagination }),
+                    cache: true
+                },
+                minimumInputLength: 0
+            });
+
+            $('#academic_year_id').select2({
+                placeholder: "-- Select Academic Year --",
+                allowClear: false,
+                ajax: {
+                    url: '/Select2/AcademicYears',
+                    dataType: 'json',
+                    delay: 250,
+                    data: p => ({ q: p.term || '', page: p.page || 1 }),
+                    processResults: d => ({ results: d.results, pagination: d.pagination }),
+                    cache: true
+                },
+                minimumInputLength: 0
+            });
+
+            $('#teacher_id').select2({
+                placeholder: "-- Select Teacher --",
+                allowClear: false,
+                ajax: {
+                    url: '/Select2/Teachers',
+                    dataType: 'json',
+                    delay: 250,
+                    data: p => ({ q: p.term || '', page: p.page || 1 }),
+                    processResults: d => ({ results: d.results, pagination: d.pagination }),
+                    cache: true
+                },
+                minimumInputLength: 0
+            });
+
+            loadRPS();
+        });
+    </script>
+}
