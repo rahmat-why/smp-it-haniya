@@ -59,8 +59,10 @@ namespace Haniya.Controllers.PortalAdmin
 
                 var (draw, start, length, searchValue, orderColumnIndex, orderDir) = ParseDataTablesQuery();
 
-                // Get the actual SQL column to sort by
-                string orderColumn = "ay.start_date"; // default sort
+                string orderColumn = "ay.start_date"; 
+
+                if (string.IsNullOrWhiteSpace(orderDir)) orderDir = "DESC";
+                
                 if (columnMapping.TryGetValue(orderColumnIndex, out var mappedColumn))
                 {
                     orderColumn = mappedColumn;

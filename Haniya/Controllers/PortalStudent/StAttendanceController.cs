@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Data.SqlClient;
 using System.Security.Claims;
+using Haniya.Models;
 
 namespace Haniya.Controllers.PortalStudent
 {

@@ -55,8 +55,8 @@ namespace Haniya.Controllers.PortalAdmin
 
             var searchValue = q["search[value]"].ToString() ?? string.Empty;
 
-            var orderColumn = "full_name";
-            var orderDir = "ASC";
+            var orderColumn = "created_at";
+            var orderDir = "DESC";
 
             var orderColIdxStr = q["order[0][column]"].ToString();
             if (int.TryParse(orderColIdxStr, out var orderColIdx))

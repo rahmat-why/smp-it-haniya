@@ -5,28 +5,28 @@
 
 <div class="flex justify-between items-center mb-4">
     <h2 class="text-xl font-semibold">Teacher List</h2>
-    <a href="/Teacher/Create"
-       class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900"
+    <a href="/Teacher/Create" class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900"
        data-testid="teacher-add-button">
         + Add Teacher
     </a>
 </div>
 
 <div class="bg-white rounded-lg shadow">
-    <!-- Toolbar & search akan diisi oleh DataTables dom=lf -->
+    <!-- Toolbar -->
     <div class="px-4 pt-4">
-        <div id="teacher-table-toolbar" class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <!-- DataTables akan inject .dataTables_length & .dataTables_filter di sini -->
+        <div id="teacher-table-toolbar"
+             class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         </div>
     </div>
 
+    <!-- Table -->
     <div class="overflow-x-auto px-4 pt-4">
         <table id="teacher-table"
                class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 260px;">Teacher</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 80px;">Gender</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 80px;">Gender</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 130px;">Birth Date</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 130px;">Birth Place</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Address</th>
@@ -40,255 +40,256 @@
         </table>
     </div>
 
-    <!-- Info + pagination -->
+    <!-- Footer -->
     <div class="px-4 pb-4 pt-3">
-        <div id="teacher-table-footer" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div id="table-info-container"></div>
-            <div id="table-pagination-container"></div>
+        <div id="teacher-table-footer"
+             class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div id="teacher-table-info"></div>
+            <div id="teacher-table-pagination"></div>
         </div>
     </div>
 </div>
 
 @section Scripts {
-    <script>
-        $(document).ready(function () {
-            initTeacherTable();
+<script>
+    $(document).ready(function () {
+        initTeacherTable();
 
-            // Close menu when clicking outside
-            $(document).on('click', function (e) {
-                if (!$(e.target).closest('.teacher-actions-wrapper').length) {
-                    $('.teacher-actions-menu').addClass('hidden');
-                }
-            });
+        // Close dropdown when click outside
+        $(document).on('click', function (e) {
+            if (!$(e.target).closest('.teacher-actions-wrapper').length) {
+                $('.teacher-actions-menu').addClass('hidden');
+            }
         });
+    });
 
-        function initTeacherTable() {
-            const table = $('#teacher-table').DataTable({
-                processing: true,
-                serverSide: true,
-                searching: true,
-                lengthChange: true,
-                ajax: {
-                    url: '/Teacher/GetAll',
-                    type: 'GET'
+    function initTeacherTable() {
+        $('#teacher-table').DataTable({
+            processing: true,
+            serverSide: true,
+            searching: true,
+            lengthChange: true,
+            ordering: true,
+
+            ajax: {
+                url: '/Teacher/GetAll',
+                type: 'GET'
+            },
+
+            dom: 'lftip',
+
+            language: {
+                lengthMenu: "Show _MENU_ rows",
+                search: "",
+                searchPlaceholder: "Search...",
+                paginate: {
+                    first: "First",
+                    last: "Last",
+                    next: "Next",
+                    previous: "Previous"
                 },
-                dom: 'lftip',
-                language: {
-                    lengthMenu: "Show _MENU_ rows",
-                    search: "",
-                    searchPlaceholder: "Search...",
-                    paginate: {
-                        first: "First",
-                        last: "Last",
-                        next: "Next",
-                        previous: "Previous"
-                    },
-                    info: "Showing _START_ to _END_ of _TOTAL_ entries"
-                },
-                columns: [
-                    {
-                        data: null,
-                        orderable: true,
-                        name: 'full_name',
-                        className: 'py-3',
-                        render: function (data, type, row) {
-                            var src = row.profile_photo || '/image/no-image.png';
-                            var name = row.full_name || '-';
-                            var npk = row.npk || '-';
-                            return `
-                                        <div class="flex items-center gap-3">
-                                            <img src="${src}" class="w-10 h-10 rounded-full object-cover border-2 border-gray-200 flex-shrink-0" alt="Photo">
-                                            <div class="min-w-0 flex-1">
-                                                <div class="font-medium text-gray-900 truncate">${name}</div>
-                                                <div class="text-xs text-gray-500 truncate">NPK: ${npk}</div>
-                                            </div>
-                                        </div>
-                                    `;
-                        }
-                    },
-                    {
-                        data: 'gender',
-                        className: 'text-center py-3'
-                    },
-                    {
-                        data: 'birth_date',
-                        className: 'py-3',
-                        render: function (data) {
-                            return formatDate(data);
-                        }
-                    },
-                    {
-                        data: 'birth_place',
-                        className: 'py-3'
-                    },
-                    {
-                        data: 'address',
-                        className: 'py-3'
-                    },
-                    {
-                        data: 'phone',
-                        className: 'py-3'
-                    },
-                    {
-                        data: 'entry_date',
-                        className: 'py-3',
-                        render: function (data) {
-                            return formatDate(data);
-                        }
-                    },
-                    {
-                        data: 'level',
-                        className: 'py-3'
-                    },
-                    {
-                        data: null,
-                        orderable: false,
-                        searchable: false,
-                        className: 'text-center py-3',
-                        render: function (data, type, row) {
-                            var id = row.teacher_id;
-                            var editUrl = '/Teacher/Edit?id=' + id;
-                            return `
-                                        <div class="flex justify-center teacher-actions-wrapper relative">
-                                            <button type="button"
-                                                    onclick="toggleActionsMenu(event, '${id}')"
-                                                    class="p-1.5 hover:bg-gray-100 rounded-md transition-colors duration-150"
-                                                    data-testid="teacher-actions-toggle-${id}">
-                                                <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                                                </svg>
-                                            </button>
-                                            <div id="actions-menu-${id}" class="teacher-actions-menu hidden absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10">
-                                                <a href="${editUrl}"
-                                                   class="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50"
-                                                   data-testid="teacher-edit-action-${id}">
-                                                    <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                    </svg>
-                                                    Edit
-                                                </a>
-                                                <button type="button"
-                                                        onclick="delTeacher('${id}')"
-                                                        class="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100"
-                                                        data-testid="teacher-delete-action-${id}">
-                                                    <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                    Delete
-                                                </button>
-                                            </div>
-                                        </div>`;
-                        }
+                info: "Showing _START_ to _END_ of _TOTAL_ entries"
+            },
+
+            columns: [
+                {
+                    data: null,
+                    orderable: true,
+                    name: 'full_name',
+                    className: 'py-3',
+                    render: function (data, type, row) {
+                        const src = row.profile_photo || '/image/no-image.png';
+                        const name = row.full_name || '-';
+                        const npk = row.npk || '-';
+
+                        return `
+                            <div class="flex items-center gap-3">
+                                <img src="${src}" class="w-10 h-10 rounded-full object-cover border-2 border-gray-200 flex-shrink-0" alt="Photo">
+                                <div class="min-w-0 flex-1">
+                                    <div class="font-medium text-gray-900 truncate">${name}</div>
+                                    <div class="text-xs text-gray-500 truncate">NPK: ${npk}</div>
+                                </div>
+                            </div>
+                        `;
                     }
-                ],
-                initComplete: function () {
-                    const wrapper = $('#teacher-table_wrapper');
-                    // Move length & search to custom toolbar
-                    const $length = wrapper.find('.dataTables_length, .dt-length');
-                    const $filter = wrapper.find('.dataTables_filter, .dt-search');
-                    $('#teacher-table-toolbar').empty().append($length).append($filter);
-
-                    // Style length (rows per page)
-                    $length.addClass('flex items-center gap-2 text-sm text-gray-600');
-                    $length.find('label').addClass('flex items-center gap-2');
-                    $length.find('select').addClass(
-                        'border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 ' +
-                        'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-                    );
-
-                    // Style search
-                    $filter.addClass('flex items-center gap-2 text-sm text-gray-600');
-                    $filter.find('label').addClass('flex items-center gap-2');
-                    const $searchInput = $filter.find('input');
-                    $searchInput
-                        .addClass(
-                            'border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 ' +
-                            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full md:w-64'
-                        )
-                        .attr('placeholder', 'Search...');
-                    $filter.addClass('w-full md:w-auto justify-end');
-
-                    // Initial pagination style
-                    stylePagination();
                 },
-                drawCallback: function () {
-                    // Re-style pagination on every draw
-                    setTimeout(stylePagination, 50);
+                {
+                    data: 'gender',
+                    className: 'text-center py-3'
+                },
+                {
+                    data: 'birth_date',
+                    className: 'py-3',
+                    render: data => formatDate(data)
+                },
+                {
+                    data: 'birth_place',
+                    className: 'py-3'
+                },
+                {
+                    data: 'address',
+                    className: 'py-3'
+                },
+                {
+                    data: 'phone',
+                    className: 'py-3'
+                },
+                {
+                    data: 'entry_date',
+                    className: 'py-3',
+                    render: data => formatDate(data)
+                },
+                {
+                    data: 'level',
+                    className: 'py-3'
+                },
+                {
+                    data: null,
+                    orderable: false,
+                    searchable: false,
+                    className: 'text-center py-3',
+                    render: function (data, type, row) {
+                        const id = row.teacher_id;
+                        const editUrl = '/Teacher/Edit?id=' + id;
+
+                        return `
+                            <div class="flex justify-center teacher-actions-wrapper relative">
+                                <button type="button"
+                                        onclick="toggleActionsMenu(event, '${id}')"
+                                        class="p-1.5 hover:bg-gray-100 rounded-md transition-colors duration-150">
+                                    <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                                    </svg>
+                                </button>
+
+                                <div id="actions-menu-${id}"
+                                     class="teacher-actions-menu hidden absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-100">
+                                    <a href="${editUrl}"
+                                       class="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">
+                                        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                        Edit
+                                    </a>
+
+                                    <button type="button"
+                                            onclick="delTeacher('${id}')"
+                                            class="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100">
+                                        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+            ],
+
+            initComplete: function () {
+                const wrapper = $('#teacher-table_wrapper');
+
+                const $length = wrapper.find('.dataTables_length, .dt-length');
+                const $filter = wrapper.find('.dataTables_filter, .dt-search');
+
+                const $controls = $('<div class="flex items-center gap-4 w-full md:w-auto"></div>');
+                $controls.append($length).append($filter);
+
+                $('#teacher-table-toolbar').append($controls);
+
+                // Length style
+                $length.addClass('flex items-center gap-2 text-sm text-gray-600');
+                $length.find('select')
+                    .addClass('border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500');
+
+                // Search style
+                const $search = $filter.find('input');
+                $search.addClass('border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full md:w-64')
+                       .attr('placeholder', 'Search...');
+
+                styleTeacherPagination();
+            },
+
+            drawCallback: function () {
+                setTimeout(styleTeacherPagination, 50);
+            }
+        });
+    }
+
+    function styleTeacherPagination() {
+        const wrapper = $('#teacher-table_wrapper');
+
+        let $info = wrapper.find('.dataTables_info').first();
+        let $paginate = wrapper.find('.dataTables_paginate').first();
+
+        if ($info.length) {
+            $('#teacher-table-info').empty().append($info);
+            $info.removeClass().addClass('text-sm text-gray-600');
+        }
+
+        if ($paginate.length) {
+            $('#teacher-table-pagination').empty().append($paginate);
+
+            $paginate.removeClass()
+                .addClass('inline-flex items-center border border-gray-300 rounded-md overflow-hidden');
+
+            $paginate.find('a, span').each(function () {
+                const $btn = $(this);
+                const isCurrent = $btn.hasClass('current');
+                const isDisabled = $btn.hasClass('disabled');
+
+                $btn.removeClass();
+
+                let cls = 'inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 last:border-r-0 min-w-[40px] transition-colors duration-150';
+
+                if (isCurrent) {
+                    cls += ' bg-blue-900 text-white cursor-default';
+                    $btn.addClass(cls).addClass('current');
+                } else if (isDisabled) {
+                    cls += ' bg-gray-50 text-gray-400 cursor-not-allowed';
+                    $btn.addClass(cls).addClass('disabled');
+                } else {
+                    cls += ' bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900 cursor-pointer';
+                    $btn.addClass(cls);
                 }
             });
         }
+    }
 
-        // Identical pagination styling function used in Student page
-        function stylePagination() {
-            const wrapper = $('#teacher-table_wrapper');
-            let $info = wrapper.find('.dataTables_info').first();
-            if ($info.length === 0) $info = wrapper.find('.dt-info').first();
+    function toggleActionsMenu(event, id) {
+        event.stopPropagation();
+        $('.teacher-actions-menu').addClass('hidden');
+        $('#actions-menu-' + id).toggleClass('hidden');
+    }
 
-            let $paginate = wrapper.find('.dataTables_paginate').first();
-            if ($paginate.length === 0) $paginate = wrapper.find('.dt-paging').first();
+    function delTeacher(id) {
+        $('.teacher-actions-menu').addClass('hidden');
 
-            if ($info.length > 0) {
-                $('#table-info-container').empty().append($info);
-                $info.removeClass().addClass('text-sm');
-            }
+        if (!confirm("Delete this data?")) return;
 
-            if ($paginate.length > 0) {
-                $('#table-pagination-container').empty().append($paginate);
-                $paginate.removeClass().addClass('inline-flex items-center border border-gray-300 rounded-md overflow-hidden');
-
-                $paginate.find('a, span').each(function () {
-                    const $btn = $(this);
-                    const hasCurrentClass = $btn.hasClass('current');
-                    const hasDisabledClass = $btn.hasClass('disabled');
-                    $btn.removeClass();
-
-                    let classes = 'inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 last:border-r-0 min-w-[40px] transition-colors duration-150';
-
-                    if (hasCurrentClass) {
-                        classes += ' bg-blue-900 text-white cursor-default';
-                        $btn.addClass(classes).addClass('current');
-                    } else if (hasDisabledClass) {
-                        classes += ' bg-gray-50 text-gray-400 cursor-not-allowed';
-                        $btn.addClass(classes).addClass('disabled');
-                    } else {
-                        classes += ' bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900 cursor-pointer';
-                        $btn.addClass(classes);
-                    }
-                });
-            }
-        }
-
-        function toggleActionsMenu(event, id) {
-            event.stopPropagation();
-            $('.teacher-actions-menu').addClass('hidden');
-            const menu = $('#actions-menu-' + id);
-            menu.toggleClass('hidden');
-        }
-
-        function delTeacher(id) {
-            $('.teacher-actions-menu').addClass('hidden');
-            if (!confirm("Delete this data?")) return;
-
-            $.ajax({
-                url: "/Teacher/Delete",
-                type: "POST",
-                contentType: "application/json",
-                data: JSON.stringify({
-                    action: "delete",
-                    id: id,
-                    data: null
-                }),
-                success: res => {
-                    if (res.success) {
-                        $('#teacher-table').DataTable().ajax.reload(null, false);
-                    } else {
-                        alert(res.message);
-                    }
-                },
-                error: function () {
-                    alert("An error occurred while deleting the teacher.");
+        $.ajax({
+            url: "/Teacher/Delete",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                action: "delete",
+                id: id,
+                data: null
+            }),
+            success: res => {
+                if (res.success) {
+                    $('#teacher-table').DataTable().ajax.reload(null, false);
+                } else {
+                    alert(res.message);
                 }
-            });
-        }
-    </script>
+            },
+            error: function () {
+                alert("An error occurred while deleting the teacher.");
+            }
+        });
+    }
+</script>
 }

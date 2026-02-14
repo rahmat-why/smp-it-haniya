@@ -74,234 +74,261 @@
 </div>
 
 @section Scripts {
-    <script>
-        $(document).ready(function () {
-            $('#filter_class').select2({
-                placeholder: "-- All Class --",
-                allowClear: true,
-                ajax: {
-                    url: '/Select2/AcademicClasses',
-                    dataType: 'json',
-                    delay: 250,
-                    data: params => ({ q: params.term || '', page: params.page || 1 }),
-                    processResults: data => ({ results: data.results, pagination: data.pagination }),
-                    cache: true
-                },
-                minimumInputLength: 0
-            });
-
-            initPaymentTable();
-
-            $(document).on('click', function (e) {
-                if (!$(e.target).closest('.payment-actions-wrapper').length) {
-                    $('.payment-actions-menu').addClass('hidden');
-                }
-            });
+<script>
+    $(document).ready(function () {
+        $('#filter_class').select2({
+            placeholder: "-- All Class --",
+            allowClear: true,
+            ajax: {
+                url: '/Select2/AcademicClasses',
+                dataType: 'json',
+                delay: 250,
+                data: params => ({ q: params.term || '', page: params.page || 1 }),
+                processResults: data => ({ results: data.results, pagination: data.pagination }),
+                cache: true
+            },
+            minimumInputLength: 0
         });
 
-        function initPaymentTable() {
-            const table = $('#payment-table').DataTable({
-                processing: true,
-                serverSide: true,
-                searching: true,
-                lengthChange: true,
-                ajax: {
-                    url: '/Payment/GetAll',
-                    type: 'GET',
-                    data: function (d) {
-                        d.academic_class_id = $('#filter_class').val() || null;
-                        d.status = $('#filter_status').val() || null;
+        initPaymentTable();
+
+        $(document).on('click', function (e) {
+            if (!$(e.target).closest('.payment-actions-wrapper').length) {
+                $('.payment-actions-menu').addClass('hidden');
+            }
+        });
+    });
+
+    function initPaymentTable() {
+        const table = $('#payment-table').DataTable({
+            processing: true,
+            serverSide: true,
+            searching: true,
+            lengthChange: true,
+            ajax: {
+                url: '/Payment/GetAll',
+                type: 'GET',
+                data: function (d) {
+                    d.academic_class_id = $('#filter_class').val() || null;
+                    d.status = $('#filter_status').val() || null;
+                }
+            },
+            dom: 'lftip',
+            language: {
+                lengthMenu: "Show _MENU_ rows",
+                search: "",
+                searchPlaceholder: "Search...",
+                paginate: {
+                    first: "First",
+                    last: "Last",
+                    next: "Next",
+                    previous: "Previous"
+                },
+                info: "Showing _START_ to _END_ of _TOTAL_ entries"
+            },
+            columns: [
+                {
+                    data: 'payment_date',
+                    className: 'py-3 font-medium text-gray-900',
+                    render: data => data
+                        ? new Date(data).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })
+                        : '-'
+                },
+                {
+                    data: null,
+                    orderable: true,
+                    className: 'py-3',
+                    render: function (data, type, row) {
+                        var src = row.profile_photo && row.profile_photo.trim() !== ''
+                            ? row.profile_photo
+                            : '/image/no-image.png';
+
+                        var name = row.student_name || '-';
+                        var nis = row.nis || '-';
+
+                        return `
+                            <div class="flex items-center gap-3">
+                                <img 
+                                    src="${src}" 
+                                    class="w-10 h-10 rounded-full object-cover border-2 border-gray-200 flex-shrink-0"
+                                    alt="Photo"
+                                    loading="lazy"
+                                >
+                                <div class="min-w-0 flex-1">
+                                    <div class="font-medium text-gray-900 truncate">${name}</div>
+                                    <div class="text-xs text-gray-500 truncate">NIS: ${nis}</div>
+                                </div>
+                            </div>`;
                     }
                 },
-                dom: 'lftip',
-                language: {
-                    lengthMenu: "Show _MENU_ rows",
-                    search: "",
-                    searchPlaceholder: "Search...",
-                    paginate: {
-                        first: "First",
-                        last: "Last",
-                        next: "Next",
-                        previous: "Previous"
-                    },
-                    info: "Showing _START_ to _END_ of _TOTAL_ entries"
+                { data: 'class_name', className: 'py-3 text-gray-700', render: d => d || '-' },
+                { data: 'payment_type', className: 'py-3 text-gray-700', render: d => d || '-' },
+                {
+                    data: 'total_price',
+                    className: 'py-3 text-right text-gray-700',
+                    render: d => d ? 'Rp ' + Number(d).toLocaleString('id-ID') : '-'
                 },
-                columns: [
-                    {
-                        data: 'payment_date',
-                        className: 'py-3 font-medium text-gray-900',
-                        render: data => data ? new Date(data).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }) : '-'
-                    },
-                    {
-                        data: null,
-                        orderable: true,
-                        className: 'py-3',
-                        render: function (data, type, row) {
-                            var src = row.profile_photo || '/image/no-image.png';
-                            var name = row.student_name || '-';
-                            var nis = row.nis || '-';
-                            return `
-                                        <div class="flex items-center gap-3">
-                                            <img src="${src}" class="w-10 h-10 rounded-full object-cover border-2 border-gray-200 flex-shrink-0" alt="Photo" onerror="this.src='/image/no-image.png'">
-                                            <div class="min-w-0 flex-1">
-                                                <div class="font-medium text-gray-900 truncate">${name}</div>
-                                                <div class="text-xs text-gray-500 truncate">NIS: ${nis}</div>
-                                            </div>
-                                        </div>
-                                    `;
-                        }
-                    },
-                    {
-                        data: 'class_name',
-                        className: 'py-3 text-gray-700',
-                        render: data => data || '-'
-                    },
-                    { data: 'payment_type', className: 'py-3 text-gray-700', render: data => data || '-' },
-                    {
-                        data: 'total_price',
-                        className: 'py-3 text-right text-gray-700',
-                        render: data => data ? 'Rp ' + Number(data).toLocaleString('id-ID') : '-'
-                    },
-                    {
-                        data: 'total_payment',
-                        className: 'py-3 text-right text-gray-700',
-                        render: data => data ? 'Rp ' + Number(data).toLocaleString('id-ID') : '-'
-                    },
-                    {
-                        data: 'remaining_payment',
-                        className: 'py-3 text-right text-gray-700',
-                        render: data => data ? 'Rp ' + Number(data).toLocaleString('id-ID') : '-'
-                    },
-                    {
-                        data: 'status',
-                        className: 'py-3 text-center',
-                        render: function (data) {
-                            let badge = '';
-                            if (data === 'PAID') badge = 'bg-green-100 text-green-800';
-                            else if (data === 'PARTIAL') badge = 'bg-yellow-100 text-yellow-800';
-                            else if (data === 'UNPAID') badge = 'bg-red-100 text-red-800';
-                            else badge = 'bg-gray-100 text-gray-700';
-                            return `<span class="inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${badge}">${data || 'UNKNOWN'}</span>`;
-                        }
-                    },
-                    {
-                        data: 'instalment_count',
-                        className: 'py-3 text-center text-gray-700'
-                    },
-                    {
-                        data: null,
-                        orderable: false,
-                        searchable: false,
-                        className: 'text-center py-3',
-                        render: function (data, type, row) {
-                            var id = row.payment_id;
-                            var editUrl = '/Payment/Edit?id=' + id;
-                            return `
-                                        <div class="flex justify-center payment-actions-wrapper relative">
-                                            <button type="button" onclick="toggleActionsMenu(event, '${id}')"
-                                                    class="p-1.5 hover:bg-gray-100 rounded-md transition-colors duration-150">
-                                                <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                                                </svg>
-                                            </button>
-                                            <div id="actions-menu-${id}" class="payment-actions-menu hidden absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10">
-                                                <a href="${editUrl}" class="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">
-                                                    Edit
-                                                </a>
-                                                <button type="button" onclick="delPayment('${id}')"
-                                                        class="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100">
-                                                    Delete
-                                                </button>
-                                            </div>
-                                        </div>`;
-                        }
+                {
+                    data: 'total_payment',
+                    className: 'py-3 text-right text-gray-700',
+                    render: d => d ? 'Rp ' + Number(d).toLocaleString('id-ID') : '-'
+                },
+                {
+                    data: 'remaining_payment',
+                    className: 'py-3 text-right text-gray-700',
+                    render: d => d ? 'Rp ' + Number(d).toLocaleString('id-ID') : '-'
+                },
+                {
+                    data: 'status',
+                    className: 'py-3 text-center',
+                    render: function (data) {
+                        let badge = '';
+                        if (data === 'PAID') badge = 'bg-green-100 text-green-800';
+                        else if (data === 'PARTIAL') badge = 'bg-yellow-100 text-yellow-800';
+                        else if (data === 'UNPAID') badge = 'bg-red-100 text-red-800';
+                        else badge = 'bg-gray-100 text-gray-700';
+
+                        return `<span class="inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${badge}">${data || 'UNKNOWN'}</span>`;
                     }
-                ],
-                initComplete: function () {
-                    const wrapper = $('#payment-table_wrapper');
-                    const $length = wrapper.find('.dataTables_length, .dt-length');
-                    const $filter = wrapper.find('.dataTables_filter, .dt-search');
-                    const $controls = $('<div class="flex items-center gap-4"></div>');
-                    $controls.append($length).append($filter);
-                    $('#payment-table-toolbar').append($controls);
+                },
+                { data: 'instalment_count', className: 'py-3 text-center text-gray-700' },
+                {
+                    data: null,
+                    orderable: false,
+                    searchable: false,
+                    className: 'text-center py-3',
+                    render: function (data, type, row) {
+                        var id = row.payment_id;
+                        var editUrl = '/Payment/Edit?id=' + id;
+                        return `
+                            <div class="flex justify-center payment-actions-wrapper relative">
+                                <button type="button" onclick="toggleActionsMenu(event, '${id}')"
+                                        class="p-1.5 hover:bg-gray-100 rounded-md transition-colors duration-150">
+                                    <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                                    </svg>
+                                </button>
+                                <div id="actions-menu-${id}" class="payment-actions-menu hidden absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10">
+                                    <a href="${editUrl}" class="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">
+                                        Edit
+                                    </a>
+                                    <button type="button" onclick="delPayment('${id}')"
+                                            class="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>`;
+                    }
+                }
+            ],
+            initComplete: function () {
+                const wrapper = $('#payment-table_wrapper');
 
-                    $length.addClass('flex items-center gap-2 text-sm text-gray-600');
-                    $length.find('label').addClass('flex items-center gap-2');
-                    $length.find('select').addClass('border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500');
+                const $length = wrapper.find('.dataTables_length, .dt-length');
+                const $filter = wrapper.find('.dataTables_filter, .dt-search');
 
-                    $filter.addClass('flex items-center gap-2 text-sm text-gray-600');
-                    $filter.find('label').addClass('flex items-center gap-2');
-                    const $searchInput = $filter.find('input');
-                    $searchInput.addClass('border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full md:w-64')
-                        .attr('placeholder', 'Search...');
+                const $controls = $('<div class="flex items-center gap-4"></div>');
+                $controls.append($length).append($filter);
+                $('#payment-table-toolbar').append($controls);
 
+                // LENGTH
+                $length.addClass('flex items-center gap-2 text-sm text-gray-600');
+                $length.find('label').addClass('flex items-center gap-2');
+                $length.find('select').addClass(
+                    'border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 ' +
+                    'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+                );
+
+                // SEARCH
+                $filter.addClass('flex items-center gap-2 text-sm text-gray-600');
+                $filter.find('label').addClass('flex items-center gap-2');
+                const $searchInput = $filter.find('input');
+                $searchInput
+                    .addClass(
+                        'border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 ' +
+                        'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full md:w-64'
+                    )
+                    .attr('placeholder', 'Search...');
+
+                stylePagination();
+            },
+            drawCallback: function () {
+                setTimeout(function () {
                     stylePagination();
-                },
-                drawCallback: function () {
-                    setTimeout(stylePagination, 50);
+                }, 50);
+            }
+        });
+
+        $('#btnFilter').on('click', function () {
+            table.ajax.reload();
+        });
+    }
+
+    function stylePagination() {
+        const wrapper = $('#payment-table_wrapper');
+
+        let $info = wrapper.find('.dataTables_info').first();
+        if ($info.length === 0) $info = wrapper.find('.dt-info').first();
+
+        let $paginate = wrapper.find('.dataTables_paginate').first();
+        if ($paginate.length === 0) $paginate = wrapper.find('.dt-paging').first();
+
+        if ($info.length > 0) {
+            $('#table-info-container').empty().append($info);
+            $info.removeClass().addClass('text-sm');
+        }
+
+        if ($paginate.length > 0) {
+            $('#table-pagination-container').empty().append($paginate);
+            $paginate.removeClass().addClass('inline-flex items-center border border-gray-300 rounded-md overflow-hidden');
+
+            $paginate.find('a, span').each(function () {
+                const $btn = $(this);
+                const hasCurrent = $btn.hasClass('current');
+                const hasDisabled = $btn.hasClass('disabled');
+
+                $btn.removeClass();
+
+                let cls = 'inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 last:border-r-0 min-w-[40px] transition-colors duration-150';
+
+                if (hasCurrent) {
+                    cls += ' bg-blue-900 text-white cursor-default';
+                    $btn.addClass(cls).addClass('current');
+                } else if (hasDisabled) {
+                    cls += ' bg-gray-50 text-gray-400 cursor-not-allowed';
+                    $btn.addClass(cls).addClass('disabled');
+                } else {
+                    cls += ' bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900 cursor-pointer';
+                    $btn.addClass(cls);
                 }
             });
-
-            $('#btnFilter').on('click', function () {
-                table.ajax.reload();
-            });
         }
+    }
 
-        function stylePagination() {
-            const wrapper = $('#payment-table_wrapper');
-            let $info = wrapper.find('.dataTables_info').first() || wrapper.find('.dt-info').first();
-            let $paginate = wrapper.find('.dataTables_paginate').first() || wrapper.find('.dt-paging').first();
+    function toggleActionsMenu(event, id) {
+        event.stopPropagation();
+        $('.payment-actions-menu').addClass('hidden');
+        $('#actions-menu-' + id).toggleClass('hidden');
+    }
 
-            if ($info.length > 0) {
-                $('#table-info-container').empty().append($info);
-                $info.removeClass().addClass('text-sm');
-            }
+    function delPayment(id) {
+        $('.payment-actions-menu').addClass('hidden');
+        if (!confirm("Delete this payment record?")) return;
 
-            if ($paginate.length > 0) {
-                $('#table-pagination-container').empty().append($paginate);
-                $paginate.removeClass().addClass('inline-flex items-center border border-gray-300 rounded-md overflow-hidden');
-
-                $paginate.find('a, span').each(function () {
-                    const $btn = $(this);
-                    const current = $btn.hasClass('current');
-                    const disabled = $btn.hasClass('disabled');
-                    $btn.removeClass();
-
-                    let classes = 'inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 last:border-r-0 min-w-[40px] transition-colors duration-150';
-
-                    if (current) classes += ' bg-blue-900 text-white cursor-default';
-                    else if (disabled) classes += ' bg-gray-50 text-gray-400 cursor-not-allowed';
-                    else classes += ' bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900 cursor-pointer';
-
-                    $btn.addClass(classes);
-                });
-            }
-        }
-
-        function toggleActionsMenu(event, id) {
-            event.stopPropagation();
-            $('.payment-actions-menu').addClass('hidden');
-            $('#actions-menu-' + id).toggleClass('hidden');
-        }
-
-        function delPayment(id) {
-            $('.payment-actions-menu').addClass('hidden');
-            if (!confirm("Delete this payment record?")) return;
-
-            $.ajax({
-                url: "/Payment/Delete",
-                type: "POST",
-                contentType: "application/json",
-                data: JSON.stringify({ id: id }),
-                success: res => {
-                    if (res.success) {
-                        $('#payment-table').DataTable().ajax.reload(null, false);
-                    } else {
-                        alert(res.message || "Failed to delete payment");
-                    }
-                },
-                error: () => alert("An error occurred while deleting the payment.")
-            });
-        }
-    </script>
+        $.ajax({
+            url: "/Payment/Delete",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ id: id }),
+            success: res => {
+                if (res.success) {
+                    $('#payment-table').DataTable().ajax.reload(null, false);
+                } else {
+                    alert(res.message || "Failed to delete payment");
+                }
+            },
+            error: () => alert("An error occurred while deleting the payment.")
+        });
+    }
+</script>
 }
