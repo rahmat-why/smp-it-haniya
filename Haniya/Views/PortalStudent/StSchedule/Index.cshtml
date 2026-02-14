@@ -15,51 +15,44 @@
 
     <!-- Table Wrapper -->
     <div class="overflow-x-auto px-4 pt-4">
-
         <table id="schedule-table"
-               class="min-w-full text-sm text-left text-gray-700 border-collapse">
-
-            <thead class="bg-gray-100 border-y border-gray-200">
-                <tr>
-                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide">
+               class="min-w-full text-sm text-gray-700 border border-gray-200 rounded-lg overflow-hidden">
+            <thead class="bg-gray-50 border-b border-gray-200">
+                <tr class="text-gray-600">
+                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                         Day
                     </th>
-
-                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide">
+                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                         Time
                     </th>
-
-                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide">
+                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                         Subject
                     </th>
-
-                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide">
+                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                         Teacher
                     </th>
-
-                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide">
+                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                         Class
                     </th>
                 </tr>
             </thead>
 
             <tbody class="bg-white divide-y divide-gray-100"></tbody>
-
         </table>
-
     </div>
 
     <!-- Footer -->
-    <div class="px-4 pb-4 pt-3 text-sm text-gray-600">
-        <span id="schedule-info"></span>
+    <div class="px-4 pb-4 pt-3 border-t border-gray-100 bg-white">
+        <span id="schedule-info" class="text-sm text-gray-500"></span>
     </div>
+
 
 </div>
 
 
 @section Scripts {
     <script>
-        $(document).ready(function () {
+                $(document).ready(function () {
             $('#schedule-table').DataTable({
                 ajax: {
                     url: '/StSchedule/GetMySchedule',
@@ -79,17 +72,18 @@
                 ordering: true,
 
                 columns: [
-                    { data: 'day' },
+                    { data: 'day', className: 'py-3 font-medium text-gray-900 whitespace-nowrap' },
                     {
                         data: null,
+                        className: 'py-3 text-gray-700 whitespace-nowrap',
                         render: d => `${d.start_time} - ${d.end_time}`
                     },
-                    { data: 'subject' },
-                    { data: 'teacher' },
-                    { data: 'class_name' }
+                    { data: 'subject', className: 'py-3 text-gray-700' },
+                    { data: 'teacher', className: 'py-3 text-gray-700' },
+                    { data: 'class_name', className: 'py-3 text-gray-700' }
                 ],
 
-                drawCallback: function (settings) {
+                drawCallback: function () {
                     let api = this.api();
                     let rows = api.rows({ page: 'current' }).nodes();
 
@@ -98,14 +92,12 @@
                     let lastCell = null;
 
                     api.column(0, { page: 'current' }).data().each(function (day, i) {
-
                         let cell = $('td:eq(0)', rows[i]);
 
                         if (lastDay === day) {
                             cell.remove();
                             rowspan++;
                             lastCell.attr('rowspan', rowspan);
-
                         } else {
                             lastDay = day;
                             rowspan = 1;
@@ -115,5 +107,6 @@
                 }
             });
         });
+
     </script>
 }

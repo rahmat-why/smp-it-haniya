@@ -7,118 +7,191 @@
     <h2 class="text-xl font-semibold">My Payments</h2>
 </div>
 
-
 <div class="bg-white rounded-lg shadow">
 
-    <div class="overflow-x-auto px-4 pt-4">
+    <!-- Toolbar -->
+    <div class="px-4 pt-4">
+        <div id="payment-toolbar"
+             class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        </div>
+    </div>
 
-        <table id="payment-table"
-               class="min-w-full text-sm text-left text-gray-700">
+    <!-- Table -->
+    <div class="px-4 pt-4">
+        <div class="overflow-x-auto border border-gray-200 rounded-xl bg-white shadow-sm">
+            <table id="payment-table"
+                   class="w-full text-sm text-left text-gray-700 border-collapse">
+                <thead class="bg-gray-50 text-gray-600 border-b border-gray-200">
+                    <tr>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Date</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Class</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Type</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-right">Total</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-right">Paid</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-right">Remaining</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-center">Status</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Method</th>
+                    </tr>
+                </thead>
 
-            <thead class="bg-gray-100 border-y">
+                <tbody class="bg-white"></tbody>
+            </table>
+        </div>
+    </div>
 
-                <tr>
-                    <th class="px-3 py-2">Date</th>
-                    <th class="px-3 py-2">Class</th>
-                    <th class="px-3 py-2">Type</th>
-                    <th class="px-3 py-2">Total</th>
-                    <th class="px-3 py-2">Paid</th>
-                    <th class="px-3 py-2">Remaining</th>
-                    <th class="px-3 py-2">Status</th>
-                    <th class="px-3 py-2">Method</th>
-                </tr>
-
-            </thead>
-
-            <tbody></tbody>
-
-        </table>
-
+    <!-- Footer -->
+    <div class="px-4 pb-4 pt-3">
+        <div id="payment-footer" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div id="table-info"></div>
+            <div id="table-pagination"></div>
+        </div>
     </div>
 
 </div>
 
-
 @section Scripts {
 
-    <script>
+<script>
+    $(document).ready(function () {
+        initPaymentTable();
+    });
 
-        $(document).ready(function () {
+    function initPaymentTable() {
 
-            $('#payment-table').DataTable({
+        const table = $('#payment-table').DataTable({
+            processing: true,
+            serverSide: false,
+            searching: true,
+            lengthChange: true,
+            dom: 't',
 
-                ajax: {
-                    url: '/StPayment/GetMyPayments',
-                    type: 'GET',
-                    dataSrc: function (res) {
+            ajax: {
+                url: '/StPayment/GetMyPayments',
+                type: 'GET',
+                dataSrc: function (res) {
+                    if (!res.success) {
+                        alert(res.message);
+                        return [];
+                    }
+                    return res.data;
+                }
+            },
 
-                        if (!res.success) {
-                            alert(res.message);
-                            return [];
-                        }
+            columns: [
+                {
+                    data: 'payment_date',
+                    className: 'px-5 py-3 font-medium text-gray-900 whitespace-nowrap',
+                    render: d => d
+                        ? new Date(d).toLocaleDateString('id-ID')
+                        : '-'
+                },
+                { data: 'class_name', className: 'px-5 py-3 whitespace-nowrap' },
+                { data: 'payment_type', className: 'px-5 py-3 whitespace-nowrap' },
+                {
+                    data: 'total_price',
+                    className: 'px-5 py-3 text-right font-semibold text-gray-900 whitespace-nowrap',
+                    render: d => d
+                        ? 'Rp ' + Number(d).toLocaleString('id-ID')
+                        : '-'
+                },
+                {
+                    data: 'total_payment',
+                    className: 'px-5 py-3 text-right font-semibold text-gray-900 whitespace-nowrap',
+                    render: d => d
+                        ? 'Rp ' + Number(d).toLocaleString('id-ID')
+                        : '-'
+                },
+                {
+                    data: 'remaining_payment',
+                    className: 'px-5 py-3 text-right font-semibold text-blue-900 whitespace-nowrap',
+                    render: d => d
+                        ? 'Rp ' + Number(d).toLocaleString('id-ID')
+                        : '-'
+                },
+                {
+                    data: 'status',
+                    className: 'px-5 py-3 text-center',
+                    render: d => {
+                        if (d === 'PAID')
+                            return '<span class="px-2 py-1 text-xs rounded-md bg-green-50 text-green-700 border border-green-100 font-medium">PAID</span>';
 
-                        return res.data;
+                        if (d === 'PARTIAL')
+                            return '<span class="px-2 py-1 text-xs rounded-md bg-yellow-50 text-yellow-700 border border-yellow-100 font-medium">PARTIAL</span>';
+
+                        return '<span class="px-2 py-1 text-xs rounded-md bg-red-50 text-red-700 border border-red-100 font-medium">UNPAID</span>';
                     }
                 },
+                { data: 'payment_method', className: 'px-5 py-3 whitespace-nowrap' }
+            ],
 
-                searching: true,
-                lengthChange: true,
+            initComplete: function () {
+                renderPaymentControls(this.api());
+            },
 
-                columns: [
+            drawCallback: function () {
+                renderPaymentControls(this.api());
+            },
+        });
+    }
 
-                    {
-                        data: 'payment_date',
-                        render: d => d
-                            ? new Date(d).toLocaleDateString('id-ID')
-                            : '-'
-                    },
+    function renderPaymentControls(api) {
+        $('#payment-toolbar').html(`
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 w-full">
+                <div class="flex items-center gap-2 text-sm text-gray-600">
+                    Show 
+                    <select id="dt-length" class="border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-900">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                    </select> rows
+                </div>
 
-                    { data: 'class_name' },
+                <div>
+                    <input id="dt-search"
+                        type="text"
+                        placeholder="Search payment..."
+                        class="border border-gray-300 rounded-lg px-3 py-2 w-full md:w-72 focus:outline-none focus:ring-2 focus:ring-blue-900"/>
+                </div>
+            </div>
+        `);
 
-                    { data: 'payment_type' },
+        $('#dt-length').val(api.page.len());
 
-                    {
-                        data: 'total_price',
-                        render: d => d
-                            ? 'Rp ' + Number(d).toLocaleString('id-ID')
-                            : '-'
-                    },
-
-                    {
-                        data: 'total_payment',
-                        render: d => d
-                            ? 'Rp ' + Number(d).toLocaleString('id-ID')
-                            : '-'
-                    },
-
-                    {
-                        data: 'remaining_payment',
-                        render: d => d
-                            ? 'Rp ' + Number(d).toLocaleString('id-ID')
-                            : '-'
-                    },
-
-                    {
-                        data: 'status',
-                        render: d => {
-
-                            if (d === 'PAID')
-                                return '<span class="text-green-600 font-semibold">PAID</span>';
-
-                            if (d === 'PARTIAL')
-                                return '<span class="text-yellow-600 font-semibold">PARTIAL</span>';
-
-                            return '<span class="text-red-600 font-semibold">UNPAID</span>';
-                        }
-                    },
-
-                    { data: 'payment_method' }
-
-                ]
-
-            });
-
+        $('#dt-length').off().on('change', function () {
+            api.page.len($(this).val()).draw();
         });
 
-    </script>
+        $('#dt-search').off().on('keyup', function () {
+            api.search(this.value).draw();
+        });
+
+        const info = api.page.info();
+        $('#table-info').html(`
+            <span class="text-sm text-gray-600">
+                Showing ${info.start + 1} to ${info.end} of ${info.recordsTotal} entries
+            </span>
+        `);
+
+        let paginateHtml = `<div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm">`;
+
+        for (let i = 0; i < info.pages; i++) {
+            paginateHtml += `
+                <button data-page="${i}"
+                    class="px-3 py-2 text-sm border-r last:border-r-0 transition
+                    ${i === info.page
+                        ? 'bg-blue-900 text-white font-semibold'
+                        : 'bg-white text-gray-700 hover:bg-gray-50'}">
+                    ${i + 1}
+                </button>
+            `;
+        }
+
+        paginateHtml += `</div>`;
+        $('#table-pagination').html(paginateHtml);
+
+        $('#table-pagination button').off().on('click', function () {
+            api.page($(this).data('page')).draw('page');
+        });
+    }
+</script>
 }

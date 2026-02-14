@@ -12,28 +12,42 @@
     </a>
 </div>
 
-<div class="overflow-auto bg-white rounded shadow">
-    <table class="min-w-full text-sm">
-        <thead class="bg-gray-100 text-left text-gray-700">
-            <tr>
-                <th class="p-2 font-medium">Academic Year</th>
-                <th class="p-2 font-medium">Semester</th>
-                <th class="p-2 font-medium">Class</th>
-                <th class="p-2 font-medium">Class Level</th>
-                <th class="p-2 font-medium">Homeroom Teacher</th>
-                <th class="p-2 font-medium">Teacher NPK</th>
-                <th class="p-2 font-medium text-right">Action</th>
-            </tr>
-        </thead>
-        <tbody id="tbl"></tbody>
-    </table>
+<div class="bg-white rounded-lg shadow">
+    <div class="px-4 pt-4">
+        <div id="academic-toolbar"
+            class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        </div>
+    </div>
+    <div class="px-4 pt-4">
+        <div class="overflow-x-auto border border-gray-200 rounded-xl bg-white shadow-sm">
+            <table id="academic-class-table" class="w-full text-sm text-left text-gray-700 border-collapse">
+                <thead class="bg-gray-50 text-gray-600 border-b border-gray-200">
+                    <tr>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Academic Year</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Semester</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Class</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Class Level</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Homeroom Teacher</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Teacher NPK</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white"></tbody>
+            </table>
+        </div>
+    </div>
+    <div class="px-4 pb-4 pt-3">
+        <div id="academic-footer" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div id="table-info"></div>
+            <div id="table-pagination"></div>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
     <script>
         $(document).ready(function () {
-            load();
-
+            initAcademicClassTable();
             $(document).on('click', function (e) {
                 if (!$(e.target).closest('.academic-class-actions-wrapper').length) {
                     $('.academic-class-actions-menu').addClass('hidden');
@@ -48,68 +62,167 @@
             return date.getFullYear();
         }
 
-        function load() {
-            $.get("/AcademicClass/GetAll", res => {
-                if (!res.success) {
-                    alert(res.message || "Failed to load academic classes");
-                    return;
-                }
+        function initAcademicClassTable() {
+            const table = $('#academic-class-table').DataTable({
+                processing: true,
+                serverSide: false,
+                searching: true,
+                lengthChange: true,
+                ordering: true,
+                order: [[0, 'desc']],
+                dom: 't', 
+                ajax: {
+                    url: '/AcademicClass/GetAll',
+                    type: 'GET',
+                    dataSrc: function (res) {
+                        if (!res.success) {
+                            alert(res.message || "Failed to load academic classes");
+                            return [];
+                        }
+                        return res.data;
+                    }
+                },
+                columns: [
+                    {
+                        data: null,
+                        className: 'px-5 py-3 whitespace-nowrap',
+                        render: function(data) {
+                            return (data.start_date && data.end_date)
+                                ? `${formatDateShort(data.start_date)} / ${formatDateShort(data.end_date)}`
+                                : '-';
+                        }
+                    },
+                    {
+                        data: 'semester',
+                        className: 'px-5 py-3 whitespace-nowrap',
+                        render: data => data ? `Semester ${data}` : '-'
+                    },
+                    {
+                        data: 'class_name',
+                        className: 'px-5 py-3 whitespace-nowrap',
+                        render: data => data || '-'
+                    },
+                    {
+                        data: 'class_level',
+                        className: 'px-5 py-3 whitespace-nowrap',
+                        render: data => data || '-'
+                    },
+                    {
+                        data: 'homeroom_teacher_name',
+                        className: 'px-5 py-3 whitespace-nowrap',
+                        render: data => data || '-'
+                    },
+                    {
+                        data: 'homeroom_teacher_npk',
+                        className: 'px-5 py-3 whitespace-nowrap',
+                        render: data => data || '-'
+                    },
+                    {
+                        data: 'academic_class_id',
+                        className: 'px-5 py-3 text-right',
+                        orderable: false,
+                        render: function(data, type, row) {
+                            const id = data;
+                            return `
+                                <div class="relative inline-block text-left academic-class-actions-wrapper">
+                                    <button type="button"
+                                            onclick="toggleActionsMenu('${id}')"
+                                            class="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            data-testid="academic-class-actions-toggle-${id}">
+                                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round"
+                                                  stroke-linejoin="round"
+                                                  stroke-width="2"
+                                                  d="M12 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" />
+                                        </svg>
+                                    </button>
 
-                let html = "";
-                res.data.forEach(x => {
-                    const id = x.academic_class_id;
-
-                    const yearText = (x.start_date && x.end_date)
-                        ? `${formatDateShort(x.start_date)} / ${formatDateShort(x.end_date)}`
-                        : "";
-
-                    const semesterText = x.semester ? `Semester ${x.semester}` : "";
-
-                    html += `
-                                <tr class="border-b last:border-0 hover:bg-gray-50">
-                                    <td class="p-2">${yearText}</td>
-                                    <td class="p-2">${semesterText}</td>
-                                    <td class="p-2">${x.class_name ?? ""}</td>
-                                    <td class="p-2">${x.class_level ?? ""}</td>
-                                    <td class="p-2">${x.homeroom_teacher_name ?? ""}</td>
-                                    <td class="p-2">${x.homeroom_teacher_npk ?? ""}</td>
-                                    <td class="p-2 text-right">
-                                        <div class="relative inline-block text-left academic-class-actions-wrapper">
+                                    <div id="actions-menu-${id}"
+                                         class="academic-class-actions-menu hidden origin-top-right absolute right-0 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10"
+                                         data-testid="academic-class-actions-menu-${id}">
+                                        <div class="py-1">
+                                            <a href="/AcademicClass/Edit?id=${id}"
+                                               class="block px-3 py-1.5 text-left text-gray-700 hover:bg-gray-100 text-sm"
+                                               data-testid="academic-class-edit-action-${id}">
+                                                Edit
+                                            </a>
                                             <button type="button"
-                                                    onclick="toggleActionsMenu('${id}')"
-                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                    data-testid="academic-class-actions-toggle-${id}">
-                                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round"
-                                                          stroke-linejoin="round"
-                                                          stroke-width="2"
-                                                          d="M12 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" />
-                                                </svg>
+                                                    onclick="delAcademicClass('${id}')"
+                                                    class="w-full text-left block px-3 py-1.5 text-sm text-red-600 hover:bg-red-50"
+                                                    data-testid="academic-class-delete-action-${id}">
+                                                Delete
                                             </button>
-
-                                            <div id="actions-menu-${id}"
-                                                 class="academic-class-actions-menu hidden origin-top-right absolute right-0 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10"
-                                                 data-testid="academic-class-actions-menu-${id}">
-                                                <div class="py-1">
-                                                    <a href="/AcademicClass/Edit?id=${id}"
-                                                       class="block px-3 py-1.5 text-left text-gray-700 hover:bg-gray-100 text-sm"
-                                                       data-testid="academic-class-edit-action-${id}">
-                                                        Edit
-                                                    </a>
-                                                    <button type="button"
-                                                            onclick="delAcademicClass('${id}')"
-                                                            class="w-full text-left block px-3 py-1.5 text-sm text-red-600 hover:bg-red-50"
-                                                            data-testid="academic-class-delete-action-${id}">
-                                                        Delete
-                                                    </button>
-                                                </div>
-                                            </div>
                                         </div>
-                                    </td>
-                                </tr>`;
-                });
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+                ],
+                initComplete: function () {
+                    renderCustomControls(this.api());
+                },
+                drawCallback: function () {
+                    renderCustomControls(this.api());
+                },
+            });
+        }
 
-                $("#tbl").html(html);
+        function renderCustomControls(api) {
+            $('#academic-toolbar').html(`
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 w-full">
+                    <div class="flex items-center gap-2 text-sm text-gray-600">
+                        Show 
+                        <select id="dt-length" class="border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-900">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                        </select> rows
+                    </div>
+                    <div>
+                        <input id="dt-search"
+                            type="text"
+                            placeholder="Search academic class..."
+                            class="border border-gray-300 rounded-lg px-3 py-2 w-full md:w-72 focus:outline-none focus:ring-2 focus:ring-blue-900"/>
+                    </div>
+                </div>
+            `);
+
+            $('#dt-length').val(api.page.len());
+            $('#dt-length').off().on('change', function () {
+                api.page.len($(this).val()).draw();
+            });
+
+            $('#dt-search').off().on('keyup', function () {
+                api.search(this.value).draw();
+            });
+
+            const info = api.page.info();
+            $('#table-info').html(`
+                <span class="text-sm text-gray-600">
+                    Showing ${info.start + 1} to ${info.end} of ${info.recordsTotal} entries
+                </span>
+            `);
+
+            let paginateHtml = `<div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm">`;
+
+            for (let i = 0; i < info.pages; i++) {
+                paginateHtml += `
+                    <button data-page="${i}"
+                        class="px-3 py-2 text-sm border-r last:border-r-0 transition
+                        ${i === info.page
+                            ? 'bg-blue-900 text-white font-semibold'
+                            : 'bg-white text-gray-700 hover:bg-gray-50'}">
+                        ${i + 1}
+                    </button>
+                `;
+            }
+
+            paginateHtml += `</div>`;
+            $('#table-pagination').html(paginateHtml);
+
+            $('#table-pagination button').off().on('click', function () {
+                api.page($(this).data('page')).draw('page');
             });
         }
 
@@ -128,7 +241,7 @@
         }
 
         function delAcademicClass(id) {
-            if (!confirm("delete this academic class?")) return;
+            if (!confirm("Delete this academic class?")) return;
 
             $.ajax({
                 url: "/AcademicClass/Delete",
@@ -140,8 +253,11 @@
                     data: null
                 }),
                 success: res => {
-                    if (res.success) load();
-                    else alert(res.message);
+                    if (res.success) {
+                        $('#academic-class-table').DataTable().ajax.reload();
+                    } else {
+                        alert(res.message);
+                    }
                 }
             });
         }

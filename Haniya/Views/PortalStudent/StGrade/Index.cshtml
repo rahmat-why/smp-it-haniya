@@ -8,237 +8,162 @@
 </div>
 
 <div class="bg-white rounded-lg shadow">
-
-    <!-- Toolbar -->
     <div class="px-4 pt-4">
         <div id="grade-toolbar"
-             class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         </div>
     </div>
-
-    <!-- Table -->
-    <div class="overflow-x-auto px-4 pt-4">
-        <table id="student-grade-table"
-               class="min-w-full text-sm text-left text-gray-700 border-collapse">
-
-            <thead class="bg-gray-100 border-y border-gray-200">
-                <tr>
-                    <th class="px-4 py-3 text-xs font-semibold uppercase">Date</th>
-                    <th class="px-4 py-3 text-xs font-semibold uppercase">Class</th>
-                    <th class="px-4 py-3 text-xs font-semibold uppercase">Subject</th>
-                    <th class="px-4 py-3 text-xs font-semibold uppercase">Teacher</th>
-                    <th class="px-4 py-3 text-xs font-semibold uppercase">Type</th>
-                    <th class="px-4 py-3 text-xs font-semibold uppercase">Min</th>
-                    <th class="px-4 py-3 text-xs font-semibold uppercase text-center">Score</th>
-                    <th class="px-4 py-3 text-xs font-semibold uppercase">Notes</th>
-                </tr>
-            </thead>
-
-            <tbody class="bg-white divide-y divide-gray-100"></tbody>
-
-        </table>
+    <div class="px-4 pt-4">
+        <div class="overflow-x-auto border border-gray-200 rounded-xl bg-white shadow-sm">
+            <table id="student-grade-table"class="w-full text-sm text-left text-gray-700 border-collapse">
+                <thead class="bg-gray-50 text-gray-600 border-b border-gray-200">
+                    <tr>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Date</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Class</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Subject</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Teacher</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Type</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Min</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase text-center tracking-wider">Score</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Notes</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white"></tbody>
+            </table>
+        </div>
     </div>
-
-    <!-- Footer -->
     <div class="px-4 pb-4 pt-3">
-        <div id="grade-footer"
-             class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-
+        <div id="grade-footer" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div id="table-info"></div>
             <div id="table-pagination"></div>
-
         </div>
     </div>
-
 </div>
-
 
 @section Scripts {
 
     <script>
-
         $(document).ready(function () {
-
             initStudentGradeTable();
-
         });
-
 
         function initStudentGradeTable() {
 
-            // ambil student_id (sesuaikan kalau kamu simpan di session / claims)
             const studentId = '@User.FindFirst("StudentId")?.Value';
 
             const table = $('#student-grade-table').DataTable({
-
                 processing: true,
                 serverSide: false,
                 searching: true,
                 lengthChange: true,
-
+                ordering: true,
+                order: [[0, 'desc']],
+                dom: 't', 
                 ajax: {
                     url: '/StGrade/GetMyGrade',
                     type: 'GET',
-                    data: {
-                        student_id: studentId
-                    },
+                    data: { student_id: studentId },
                     dataSrc: function (res) {
-
                         if (!res.success) {
                             alert(res.message);
                             return [];
                         }
-
                         return res.data;
                     }
                 },
-
-                dom: 'lftip',
-
-                language: {
-                    lengthMenu: "Show _MENU_ rows",
-                    search: "",
-                    searchPlaceholder: "Search...",
-                    paginate: {
-                        next: "Next",
-                        previous: "Prev"
-                    },
-                    info: "Showing _START_ to _END_ of _TOTAL_ entries"
-                },
-
                 columns: [
-
                     {
                         data: 'grade_date',
-                        className: 'py-3 font-medium text-gray-900',
+                        className: 'px-5 py-3 font-medium text-gray-900 whitespace-nowrap',
                         render: data => data
                             ? new Date(data).toLocaleDateString('id-ID')
-                            : '-'
+                            : '-',
+                        type: 'date'
                     },
-
-                    { data: 'class_name', className: 'py-3' },
-
-                    { data: 'subject_name', className: 'py-3' },
-
-                    { data: 'teacher_name', className: 'py-3' },
-
-                    { data: 'grade_type_desc', className: 'py-3' },
-
+                    { data: 'class_name', className: 'px-5 py-3 whitespace-nowrap' },
+                    { data: 'subject_name', className: 'px-5 py-3 whitespace-nowrap' },
+                    { data: 'teacher_name', className: 'px-5 py-3 whitespace-nowrap' },
+                    { data: 'grade_type_desc', className: 'px-5 py-3 whitespace-nowrap' },
                     {
                         data: 'minimum_value',
-                        className: 'py-3',
-                        render: data => data ?? '-'
+                        className: 'px-5 py-3',
+                        render: data => data ?? '-',
+                        type: 'num'
                     },
-
                     {
                         data: 'grade_value',
-                        className: 'py-3 text-center font-semibold',
-                        render: data => data ?? '-'
+                        className: 'px-5 py-3 text-center font-semibold text-blue-900',
+                        render: data => data ?? '-',
+                        type: 'num'
                     },
-
                     {
                         data: 'notes',
-                        className: 'py-3',
-                        render: data => data || '-'
+                        className: 'px-5 py-3 text-gray-600',
+                        render: data => data || '-',
+                        orderable: false
                     }
-
                 ],
-
-
                 initComplete: function () {
-
-                    const wrapper = $('#student-grade-table_wrapper');
-
-                    const $length = wrapper.find('.dataTables_length');
-                    const $filter = wrapper.find('.dataTables_filter');
-
-                    const $controls = $('<div class="flex items-center gap-4"></div>');
-
-                    $controls.append($length).append($filter);
-
-                    $('#grade-toolbar').append($controls);
-
-
-                    // Styling length
-                    $length.addClass('flex items-center gap-2 text-sm');
-                    $length.find('select')
-                        .addClass('border rounded-md px-2 py-1');
-
-
-                    // Styling search
-                    const $search = $filter.find('input');
-
-                    $search.addClass('border rounded-md px-3 py-1.5 w-full md:w-64')
-                        .attr('placeholder', 'Search...');
-
-
-                    stylePagination();
-
+                    renderCustomControls(this.api());
                 },
-
-
                 drawCallback: function () {
-
-                    setTimeout(stylePagination, 50);
-
-                }
-
+                    renderCustomControls(this.api());
+                },
             });
-
         }
 
+        function renderCustomControls(api) {
+            $('#grade-toolbar').html(`
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 w-full">
+                    <div class="flex items-center gap-2 text-sm text-gray-600">
+                        Show 
+                        <select id="dt-length" class="border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-900">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                        </select> rows
+                    </div>
+                    <div>
+                        <input id="dt-search"
+                            type="text"
+                            placeholder="Search grade..."
+                            class="border border-gray-300 rounded-lg px-3 py-2 w-full md:w-72 focus:outline-none focus:ring-2 focus:ring-blue-900"/>
+                    </div>
+                </div>
+            `);
+            $('#dt-length').val(api.page.len());
+            $('#dt-length').off().on('change', function () {
+                api.page.len($(this).val()).draw();
+            });
+            $('#dt-search').off().on('keyup', function () {
+                api.search(this.value).draw();
+            });
+            const info = api.page.info();
+            $('#table-info').html(`
+                <span class="text-sm text-gray-600">
+                    Showing ${info.start + 1} to ${info.end} of ${info.recordsTotal} entries
+                </span>
+            `);
 
-        function stylePagination() {
+            let paginateHtml = `<div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm">`;
 
-            const wrapper = $('#student-grade-table_wrapper');
-
-            let $info = wrapper.find('.dataTables_info');
-            let $paginate = wrapper.find('.dataTables_paginate');
-
-
-            if ($info.length) {
-
-                $('#table-info').empty().append($info);
-
-                $info.removeClass().addClass('text-sm');
-
+            for (let i = 0; i < info.pages; i++) {
+                paginateHtml += `
+                    <button data-page="${i}"
+                        class="px-3 py-2 text-sm border-r last:border-r-0 transition
+                        ${i === info.page
+                            ? 'bg-blue-900 text-white font-semibold'
+                            : 'bg-white text-gray-700 hover:bg-gray-50'}">
+                        ${i + 1}
+                    </button>
+                `;
             }
 
-
-            if ($paginate.length) {
-
-                $('#table-pagination').empty().append($paginate);
-
-                $paginate.removeClass()
-                    .addClass('inline-flex border rounded-md overflow-hidden');
-
-
-                $paginate.find('a, span').each(function () {
-
-                    const $btn = $(this);
-
-                    const current = $btn.hasClass('current');
-                    const disabled = $btn.hasClass('disabled');
-
-                    $btn.removeClass();
-
-                    let cls = 'px-3 py-2 text-sm border-r last:border-r-0';
-
-                    if (current)
-                        cls += ' bg-blue-900 text-white';
-                    else if (disabled)
-                        cls += ' bg-gray-100 text-gray-400';
-                    else
-                        cls += ' bg-white hover:bg-gray-50 cursor-pointer';
-
-                    $btn.addClass(cls);
-
-                });
-
-            }
-
+            paginateHtml += `</div>`;
+            $('#table-pagination').html(paginateHtml);
+            $('#table-pagination button').off().on('click', function () {
+                api.page($(this).data('page')).draw('page');
+            });
         }
-
-    </script>
-
+        </script>
 }

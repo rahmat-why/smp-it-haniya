@@ -47,7 +47,7 @@ namespace Haniya.Controllers.PortalStudent
             LEFT JOIN mst_teachers t ON g.teacher_id = t.teacher_id
             LEFT JOIN mst_detail_settings dt ON g.grade_type = dt.detail_id AND dt.header_id = 'GRADE_TYPE'
             WHERE d.student_id = @studentId
-            ORDER BY g.grade_date DESC, s.subject_name";
+            ORDER BY d.created_at DESC, s.subject_name";
 
                 var list = new List<object>();
 

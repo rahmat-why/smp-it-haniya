@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Data.SqlClient;
 using System.Security.Claims;
+using Haniya.Models;
 
 namespace Haniya.Controllers.PortalStudent
 {
@@ -21,6 +22,7 @@ namespace Haniya.Controllers.PortalStudent
         // View
         public IActionResult Index()
         {
+            // return View("~/Views/PortalStudent/StAttendance/Index.cshtml");
             return View("~/Views/PortalStudent/StPayment/Index.cshtml");
         }
 

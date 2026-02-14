@@ -11,15 +11,15 @@
         + Add Student
     </a>
 </div>
-
 <div class="bg-white rounded-lg shadow">
-    <!-- Toolbar & search akan diisi oleh DataTables dom=lf -->
+    <!-- Toolbar -->
     <div class="px-4 pt-4">
-        <div id="student-table-toolbar" class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <!-- DataTables akan inject .dataTables_length & .dataTables_filter di sini -->
+        <div id="student-table-toolbar"
+             class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         </div>
     </div>
 
+    <!-- Table -->
     <div class="overflow-x-auto px-4 pt-4">
         <table id="student-table"
                class="min-w-full text-sm text-left text-gray-700 border-collapse">
@@ -28,7 +28,7 @@
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 250px;">Student</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 130px;">Birth Date</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 130px;">Birth Place</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 80px;">Gender</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 80px;">Gender</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Address</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 130px;">Entry Date</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 70px;">Action</th>
@@ -38,252 +38,233 @@
         </table>
     </div>
 
-    <!-- Info + pagination -->
+    <!-- Footer -->
     <div class="px-4 pb-4 pt-3">
-        <div id="student-table-footer" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div id="table-info-container"></div>
-            <div id="table-pagination-container"></div>
+        <div id="student-table-footer"
+             class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div id="student-table-info"></div>
+            <div id="student-table-pagination"></div>
         </div>
     </div>
 </div>
 
 @section Scripts {
-    <script>
-        $(document).ready(function () {
-            initStudentTable();
-
-            // Close menu when clicking outside
-            $(document).on('click', function (e) {
-                if (!$(e.target).closest('.student-actions-wrapper').length) {
-                    $('.actions-menu').addClass('hidden');
-                }
-            });
+<script>
+    $(document).ready(function () {
+        initStudentTable();
+        $(document).on('click', function (e) {
+            if (!$(e.target).closest('.student-actions-wrapper').length) {
+                $('.student-actions-menu').addClass('hidden');
+            }
         });
+    });
 
-        function initStudentTable() {
-            const table = $('#student-table').DataTable({
-                processing: true,
-                serverSide: true,
-                searching: true,
-                lengthChange: true,
-                ajax: {
-                    url: '/Student/GetAll',
-                    type: 'GET'
+    function initStudentTable() {
+        $('#student-table').DataTable({
+            processing: true,
+            serverSide: true,
+            searching: true,
+            lengthChange: true,
+            ordering: true,
+            order:[[0, 'desc']],
+            ajax: {
+                url: '/Student/GetAll',
+                type: 'GET'
+            },
+
+            dom: 'lftip',
+
+            language: {
+                lengthMenu: "Show _MENU_ rows",
+                search: "",
+                searchPlaceholder: "Search...",
+                paginate: {
+                    first: "First",
+                    last: "Last",
+                    next: "Next",
+                    previous: "Previous"
                 },
-                dom: 'lftip',
-                language: {
-                    lengthMenu: "Show _MENU_ rows",
-                    search: "",
-                    searchPlaceholder: "Search...",
-                    paginate: {
-                        first: "First",
-                        last: "Last",
-                        next: "Next",
-                        previous: "Previous"
-                    },
-                    info: "Showing _START_ to _END_ of _TOTAL_ entries"
-                },
-                columns: [
-                    {
-                        data: null,
-                        orderable: true,
-                        name: 'full_name',
-                        className: 'py-3',
-                        render: function (data, type, row) {
-                            var src = row.profile_photo || '/image/no-image.png';
-                            var name = row.full_name || '-';
-                            var nis = row.nis || '-';
-                            return `
-                                        <div class="flex items-center gap-3">
-                                            <img src="${src}" class="w-10 h-10 rounded-full object-cover border-2 border-gray-200 flex-shrink-0" alt="Photo">
-                                            <div class="min-w-0 flex-1">
-                                                <div class="font-medium text-gray-900 truncate">${name}</div>
-                                                <div class="text-xs text-gray-500 truncate">NIS: ${nis}</div>
-                                            </div>
-                                        </div>
-                                    `;
-                        }
-                    },
-                    {
-                        data: 'birth_date',
-                        className: 'py-3',
-                        render: function (data) {
-                            return formatDate(data);
-                        }
-                    },
-                    {
-                        data: 'birth_place',
-                        className: 'py-3'
-                    },
-                    {
-                        data: 'gender',
-                        className: 'text-center py-3'
-                    },
-                    {
-                        data: 'address',
-                        className: 'py-3'
-                    },
-                    {
-                        data: 'entry_date',
-                        className: 'py-3',
-                        render: function (data) {
-                            return formatDate(data);
-                        }
-                    },
-                    {
-                        data: null,
-                        orderable: false,
-                        searchable: false,
-                        className: 'text-center py-3',
-                        render: function (data, type, row) {
-                            var id = row.student_id;
-                            var editUrl = '/Student/Edit?id=' + id;
-                            return `
-                                        <div class="flex justify-center student-actions-wrapper relative">
-                                            <button type="button"
-                                                    onclick="toggleActionsMenu(event, '${id}')"
-                                                    class="p-1.5 hover:bg-gray-100 rounded-md transition-colors duration-150"
-                                                    data-testid="student-actions-toggle-${id}">
-                                                <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                                                </svg>
-                                            </button>
-                                            <div id="actions-menu-${id}" class="actions-menu hidden">
-                                                <a href="${editUrl}"
-                                                   class="text-blue-700 hover:bg-blue-50"
-                                                   data-testid="student-edit-action-${id}">
-                                                    <svg class="w-4 h-4 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                    </svg>
-                                                    Edit
-                                                </a>
-                                                <button type="button"
-                                                        onclick="delStudent('${id}')"
-                                                        class="text-red-600 hover:bg-red-50 border-t border-gray-100"
-                                                        data-testid="student-delete-action-${id}">
-                                                    <svg class="w-4 h-4 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                    Delete
-                                                </button>
-                                            </div>
-                                        </div>`;
-                        }
+                info: "Showing _START_ to _END_ of _TOTAL_ entries"
+            },
+
+            columns: [
+                {
+                    data: null,
+                    orderable: true,
+                    name: 'full_name',
+                    className: 'py-3',
+                    render: function (data, type, row) {
+                        const src = row.profile_photo || '/image/no-image.png';
+                        const name = row.full_name || '-';
+                        const nis = row.nis || '-';
+
+                        return `
+                            <div class="flex items-center gap-3">
+                                <img src="${src}" class="w-10 h-10 rounded-full object-cover border-2 border-gray-200 flex-shrink-0" alt="Photo">
+                                <div class="min-w-0 flex-1">
+                                    <div class="font-medium text-gray-900 truncate">${name}</div>
+                                    <div class="text-xs text-gray-500 truncate">NIS: ${nis}</div>
+                                </div>
+                            </div>
+                        `;
                     }
-                ],
-                initComplete: function () {
-                    const wrapper = $('#student-table_wrapper');
-
-                    // Pindahkan length & search ke toolbar custom
-                    const $length = wrapper.find('.dataTables_length, .dt-length');
-                    const $filter = wrapper.find('.dataTables_filter, .dt-search');
-                    $('#student-table-toolbar').empty().append($length).append($filter);
-
-                    // LENGTH (rows per page)
-                    $length.addClass('flex items-center gap-2 text-sm text-gray-600');
-                    $length.find('label').addClass('flex items-center gap-2');
-                    $length.find('select').addClass(
-                        'border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 ' +
-                        'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-                    );
-
-                    // SEARCH
-                    $filter.addClass('flex items-center gap-2 text-sm text-gray-600');
-                    $filter.find('label').addClass('flex items-center gap-2');
-                    const $searchInput = $filter.find('input');
-                    $searchInput
-                        .addClass(
-                            'border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 ' +
-                            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-                        )
-                        .attr('placeholder', 'Search...');
-                    $filter.addClass('w-full md:w-auto justify-end');
-                    $searchInput.addClass('w-full md:w-64');
-
-                    // Initial style pagination
-                    stylePagination();
                 },
-                drawCallback: function () {
-                    // Style pagination setiap kali table di-redraw
-                    setTimeout(function () {
-                        stylePagination();
-                    }, 50);
+                {
+                    data: 'birth_date',
+                    className: 'py-3',
+                    type: 'date',
+                    render: data => formatDate(data),
+                },
+                {
+                    data: 'birth_place',
+                    className: 'py-3'
+                },
+                {
+                    data: 'gender',
+                    className: 'text-center py-3'
+                },
+                {
+                    data: 'address',
+                    className: 'py-3'
+                },
+                {
+                    data: 'entry_date',
+                    className: 'py-3',
+                    type: 'date',
+                    render: data => formatDate(data),
+                },
+                {
+                    data: null,
+                    orderable: false,
+                    searchable: false,
+                    className: 'text-center py-3',
+                    render: function (data, type, row) {
+                        const id = row.student_id;
+                        const editUrl = '/Student/Edit?id=' + id;
+
+                        return `
+                            <div class="flex justify-center student-actions-wrapper relative">
+                                <button type="button"
+                                        onclick="toggleStudentActionsMenu(event, '${id}')"
+                                        class="p-1.5 hover:bg-gray-100 rounded-md transition-colors duration-150">
+                                    <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                                    </svg>
+                                </button>
+
+                                <div id="student-actions-menu-${id}"
+                                     class="student-actions-menu hidden absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-100">
+                                    <a href="${editUrl}"
+                                       class="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">
+                                        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                        Edit
+                                    </a>
+
+                                    <button type="button"
+                                            onclick="delStudent('${id}')"
+                                            class="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100">
+                                        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+            ],
+
+            initComplete: function () {
+                const wrapper = $('#student-table_wrapper');
+
+                const $length = wrapper.find('.dataTables_length, .dt-length');
+                const $filter = wrapper.find('.dataTables_filter, .dt-search');
+
+                const $controls = $('<div class="flex items-center gap-4 w-full md:w-auto"></div>');
+                $controls.append($length).append($filter);
+
+                $('#student-table-toolbar').append($controls);
+                $length.addClass('flex items-center gap-2 text-sm text-gray-600');
+                $length.find('select')
+                    .addClass('border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500');
+
+                // Search style
+                const $search = $filter.find('input');
+                $search.addClass('border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full md:w-64')
+                    .attr('placeholder', 'Search...');
+
+                styleStudentPagination();
+            },
+
+            drawCallback: function () {
+                setTimeout(styleStudentPagination, 50);
+            }
+        });
+    }
+
+    function styleStudentPagination() {
+        const wrapper = $('#student-table_wrapper');
+
+        let $info = wrapper.find('.dataTables_info').first();
+        let $paginate = wrapper.find('.dataTables_paginate').first();
+
+        if ($info.length) {
+            $('#student-table-info').empty().append($info);
+            $info.removeClass().addClass('text-sm text-gray-600');
+        }
+
+        if ($paginate.length) {
+            $('#student-table-pagination').empty().append($paginate);
+
+            $paginate.removeClass()
+                .addClass('inline-flex items-center border border-gray-300 rounded-md overflow-hidden');
+
+            $paginate.find('a, span').each(function () {
+                const $btn = $(this);
+                const isCurrent = $btn.hasClass('current');
+                const isDisabled = $btn.hasClass('disabled');
+
+                $btn.removeClass();
+
+                let cls = 'inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 last:border-r-0 min-w-[40px] transition-colors duration-150';
+
+                if (isCurrent) {
+                    cls += ' bg-blue-900 text-white cursor-default';
+                    $btn.addClass(cls).addClass('current');
+                } else if (isDisabled) {
+                    cls += ' bg-gray-50 text-gray-400 cursor-not-allowed';
+                    $btn.addClass(cls).addClass('disabled');
+                } else {
+                    cls += ' bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900 cursor-pointer';
+                    $btn.addClass(cls);
                 }
             });
         }
+    }
 
-        function stylePagination() {
-            const wrapper = $('#student-table_wrapper');
+    function toggleStudentActionsMenu(event, id) {
+        event.stopPropagation();
+        $('.student-actions-menu').addClass('hidden');
+        $('#student-actions-menu-' + id).toggleClass('hidden');
+    }
 
-            // Find info and pagination elements
-            let $info = wrapper.find('.dataTables_info').first();
-            if ($info.length === 0) {
-                $info = wrapper.find('.dt-info').first();
-            }
-
-            let $paginate = wrapper.find('.dataTables_paginate').first();
-            if ($paginate.length === 0) {
-                $paginate = wrapper.find('.dt-paging').first();
-            }
-
-            // Move to custom containers
-            if ($info.length > 0) {
-                $('#table-info-container').empty().append($info);
-                $info.removeClass().addClass('text-sm');
-            }
-
-            if ($paginate.length > 0) {
-                $('#table-pagination-container').empty().append($paginate);
-
-                // Reset pagination classes
-                $paginate.removeClass().addClass('inline-flex items-center border border-gray-300 rounded-md overflow-hidden');
-
-                // Style all pagination buttons
-                $paginate.find('a, span').each(function () {
-                    const $btn = $(this);
-                    const text = $btn.text().trim();
-                    const hasCurrentClass = $btn.hasClass('current');
-                    const hasDisabledClass = $btn.hasClass('disabled');
-
-                    // Remove all classes
-                    $btn.removeClass();
-
-                    // Add base classes
-                    let classes = 'inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 last:border-r-0 min-w-[40px] transition-colors duration-150';
-
-                    if (hasCurrentClass) {
-                        // Active page - Bootstrap style
-                        classes += ' bg-blue-900 text-white cursor-default';
-                        $btn.addClass(classes).addClass('current');
-                    } else if (hasDisabledClass) {
-                        // Disabled state
-                        classes += ' bg-gray-50 text-gray-400 cursor-not-allowed';
-                        $btn.addClass(classes).addClass('disabled');
-                    } else {
-                        // Normal clickable state
-                        classes += ' bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900 cursor-pointer';
-                        $btn.addClass(classes);
-                    }
-                });
-            }
-        }
-
-        function toggleActionsMenu(event, id) {
-            event.stopPropagation();
-
-            // Close all other menus
-            $('.actions-menu').addClass('hidden');
-
-            // Toggle current menu
-            const menu = $('#actions-menu-' + id);
-            menu.toggleClass('hidden');
-        }
-
-        function delStudent(id) {
-            // Close the menu
-            $('.actions-menu').addClass('hidden');
-
-            if (!confirm("Delete this data?")) return;
+    function delStudent(id) {
+        $('.student-actions-menu').addClass('hidden');
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (!result.isConfirmed) return;
 
             $.ajax({
                 url: "/Student/Delete",
@@ -297,11 +278,28 @@
                 success: res => {
                     if (res.success) {
                         $('#student-table').DataTable().ajax.reload(null, false);
+                        Swal.fire(
+                            'Deleted!',
+                            'Student data has been deleted.',
+                            'success'
+                        );
                     } else {
-                        alert(res.message);
+                        Swal.fire(
+                            'Failed!',
+                            res.message,
+                            'error'
+                        );
                     }
+                },
+                error: function () {
+                    Swal.fire(
+                        'Error!',
+                        'An error occurred while deleting the student.',
+                        'error'
+                    );
                 }
             });
-        }
-    </script>
+        });
+    }
+</script>
 }
