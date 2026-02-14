@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Haniya")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4e40ae88061024099cafe4a9010e574b0d5df702")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a517cbefacce49fe381491530fff8a45067435eb")]
 [assembly: System.Reflection.AssemblyProductAttribute("Haniya")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Haniya")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
