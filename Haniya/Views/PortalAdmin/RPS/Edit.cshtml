@@ -13,10 +13,10 @@
         <!-- Header Section -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-                <label for="class_id" class="block text-sm font-medium text-gray-700 mb-2">
+                <label for="academic_class_id" class="block text-sm font-medium text-gray-700 mb-2">
                     Class <span class="text-red-600">*</span>
                 </label>
-                <select id="class_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                <select id="academic_class_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                         data-placeholder="-- Select Class --" required></select>
                 <p id="error-class" class="mt-1 text-sm text-red-600 hidden"></p>
             </div>
@@ -31,15 +31,6 @@
             </div>
 
             <div>
-                <label for="academic_year_id" class="block text-sm font-medium text-gray-700 mb-2">
-                    Academic Year <span class="text-red-600">*</span>
-                </label>
-                <select id="academic_year_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                        data-placeholder="-- Select Academic Year --" required></select>
-                <p id="error-academic-year" class="mt-1 text-sm text-red-600 hidden"></p>
-            </div>
-
-            <div>
                 <label for="teacher_id" class="block text-sm font-medium text-gray-700 mb-2">
                     Teacher <span class="text-red-600">*</span>
                 </label>
@@ -47,14 +38,22 @@
                         data-placeholder="-- Select Teacher --" required></select>
                 <p id="error-teacher" class="mt-1 text-sm text-red-600 hidden"></p>
             </div>
-        </div>
 
-        <div>
-            <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
-                Description
-            </label>
-            <textarea id="description" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                      placeholder="Enter RPS description..."></textarea>
+            <div>
+                <label for="minimum_value" class="block text-sm font-medium text-gray-700 mb-2">
+                    Minimum Value <span class="text-red-600">*</span>
+                </label>
+                <input type="number" id="minimum_value" step="0.01" min="0" max="100" value="0" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                       placeholder="Enter minimum value"></input>
+            </div>
+
+            <div>
+                <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
+                    Description
+                </label>
+                <textarea id="description" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                          placeholder="Enter RPS description..."></textarea>
+            </div>
         </div>
 
         <!-- Grading Weights Section -->
@@ -172,23 +171,23 @@
             const meetingNum = prefill.meeting_number || meetingCounter;
 
             const row = `
-                <tr class="hover:bg-gray-50 border-b last:border-0" data-meeting="${meetingNum}">
-                    <td class="px-4 py-3">
-                        <input type="number" class="meeting-number w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" 
-                               value="${meetingNum}" min="1" readonly />
-                    </td>
-                    <td class="px-4 py-3">
-                        <input type="text" class="topic w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" 
-                               placeholder="Enter topic..." value="${prefill.topic || ''}" />
-                    </td>
-                    <td class="px-4 py-3">
-                        <select class="activity-select w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" 
-                                data-placeholder="-- Select Activity --"></select>
-                    </td>
-                    <td class="px-4 py-3 text-right">
-                        <button type="button" onclick="removeMeetingRow(this)" class="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md">Remove</button>
-                    </td>
-                </tr>`;
+                        <tr class="hover:bg-gray-50 border-b last:border-0" data-meeting="${meetingNum}">
+                            <td class="px-4 py-3">
+                                <input type="number" class="meeting-number w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition"
+                                       value="${meetingNum}" min="1" readonly />
+                            </td>
+                            <td class="px-4 py-3">
+                                <input type="text" class="topic w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition"
+                                       placeholder="Enter topic..." value="${prefill.topic || ''}" />
+                            </td>
+                            <td class="px-4 py-3">
+                                <select class="activity-select w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition"
+                                        data-placeholder="-- Select Activity --"></select>
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <button type="button" onclick="removeMeetingRow(this)" class="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md">Remove</button>
+                            </td>
+                        </tr>`;
             $('#tbody-meetings').append(row);
 
             const $newRow = $('#tbody-meetings tr:last');
@@ -248,12 +247,8 @@
                 $('#error-subject').text('Subject is required').removeClass('hidden');
                 valid = false;
             }
-            if (!$('#class_id').val()) {
+            if (!$('#academic_class_id').val()) {
                 $('#error-class').text('Class is required').removeClass('hidden');
-                valid = false;
-            }
-            if (!$('#academic_year_id').val()) {
-                $('#error-academic-year').text('Academic Year is required').removeClass('hidden');
                 valid = false;
             }
             if (!$('#teacher_id').val()) {
@@ -291,13 +286,15 @@
         }
 
         function updateRPS() {
-            if (!validateForm()) return;
+            if (!validateForm()) {
+                alert('Please complete all required fields');
+                return;
+            }
 
             const fd = new FormData();
             fd.append("rps_id", $('#rps_id').val());
             fd.append("subject_id", $('#subject_id').val());
-            fd.append("class_id", $('#class_id').val());
-            fd.append("academic_year_id", $('#academic_year_id').val());
+            fd.append("academic_class_id", $('#academic_class_id').val());
             fd.append("teacher_id", $('#teacher_id').val());
             fd.append("description", $('#description').val());
             fd.append("weight_attendance", $('#weight_attendance').val());
@@ -305,6 +302,7 @@
             fd.append("weight_uh", $('#weight_uh').val());
             fd.append("weight_pts", $('#weight_pts').val());
             fd.append("weight_pas", $('#weight_pas').val());
+            fd.append("minimum_value", $('#minimum_value').val());
             fd.append("details", JSON.stringify(collectMeetings()));
 
             $.ajax({
@@ -316,6 +314,49 @@
                 success: res => res.success ? location.href = "/RPS" : alert(res.message || "Update failed"),
                 error: () => alert("Error updating RPS")
             });
+        }
+
+        function initSubject(classLevel, selectedId = null, selectedText = null) {
+            const $subject = $('#subject_id');
+
+            // Destroy select2 if already initialized
+            if ($subject.hasClass("select2-hidden-accessible")) {
+                $subject.select2('destroy');
+            }
+
+            // Clear and reset
+            $subject.empty();
+
+            // Initialize Select2 with class level filter
+            $subject.select2({
+                placeholder: "-- Select Subject --",
+                allowClear: true,
+                width: '100%',
+                ajax: {
+                    url: `/Select2/Subjects?classLevel=${classLevel}`,
+                    dataType: 'json',
+                    delay: 250,
+                    data: p => ({
+                        q: p.term || '',
+                        page: p.page || 1
+                    }),
+                    processResults: d => ({
+                        results: d.results,
+                        pagination: d.pagination
+                    }),
+                    cache: true
+                },
+                minimumInputLength: 0
+            });
+
+            // Set selected value if provided (for edit mode)
+            if (selectedId && selectedText) {
+                // Wait for Select2 to be fully initialized
+                setTimeout(() => {
+                    const option = new Option(selectedText, selectedId, true, true);
+                    $subject.append(option).trigger('change');
+                }, 100);
+            }
         }
 
         function loadRPS() {
@@ -336,17 +377,19 @@
                     }
                     const d = res.data;
 
-                    // Populate Subject
-                    $('#subject_id').append(new Option(d.subject_name, d.subject_id, true, true)).trigger('change');
+                    // Populate Class first
+                    const classOption = new Option(d.class_name, d.academic_class_id, true, true);
+                    $('#academic_class_id').append(classOption).trigger('change');
 
-                    // Populate Class
-                    $('#class_id').append(new Option(d.class_name, d.class_id, true, true)).trigger('change');
-
-                    // Populate Academic Year
-                    $('#academic_year_id').append(new Option(d.academic_year_display, d.academic_year_id, true, true)).trigger('change');
+                    // Initialize and populate Subject after class is set
+                    // Wait a bit to ensure class change event is processed
+                    setTimeout(() => {
+                        initSubject(d.class_level, d.subject_id, d.subject_name);
+                    }, 200);
 
                     // Populate Teacher
-                    $('#teacher_id').append(new Option(d.teacher_name, d.teacher_id, true, true)).trigger('change');
+                    const teacherOption = new Option(d.teacher_name, d.teacher_id, true, true);
+                    $('#teacher_id').append(teacherOption).trigger('change');
 
                     // Populate Description
                     $('#description').val(d.description || '');
@@ -357,6 +400,7 @@
                     $('#weight_uh').val(d.weight_uh || 0);
                     $('#weight_pts').val(d.weight_pts || 0);
                     $('#weight_pas').val(d.weight_pas || 0);
+                    $('#minimum_value').val(d.minimum_value || 0);
                     calculateTotalWeight();
 
                     // Populate Meeting Details
@@ -380,25 +424,12 @@
         }
 
         $(document).ready(function () {
-            $('#subject_id').select2({
-                placeholder: "-- Select Subject --",
-                allowClear: false,
-                ajax: {
-                    url: '/Select2/Subjects',
-                    dataType: 'json',
-                    delay: 250,
-                    data: p => ({ q: p.term || '', page: p.page || 1 }),
-                    processResults: d => ({ results: d.results, pagination: d.pagination }),
-                    cache: true
-                },
-                minimumInputLength: 0
-            });
-
-            $('#class_id').select2({
+            // Initialize Class Select2
+            $('#academic_class_id').select2({
                 placeholder: "-- Select Class --",
                 allowClear: false,
                 ajax: {
-                    url: '/Select2/Classes',
+                    url: '/Select2/AcademicClasses',
                     dataType: 'json',
                     delay: 250,
                     data: p => ({ q: p.term || '', page: p.page || 1 }),
@@ -408,20 +439,27 @@
                 minimumInputLength: 0
             });
 
-            $('#academic_year_id').select2({
-                placeholder: "-- Select Academic Year --",
-                allowClear: false,
-                ajax: {
-                    url: '/Select2/AcademicYears',
-                    dataType: 'json',
-                    delay: 250,
-                    data: p => ({ q: p.term || '', page: p.page || 1 }),
-                    processResults: d => ({ results: d.results, pagination: d.pagination }),
-                    cache: true
-                },
-                minimumInputLength: 0
+            // Handle Class change event (when user manually changes class)
+            $('#academic_class_id').on('change', function () {
+                const cid = $(this).val();
+                if (cid) {
+                    $.ajax({
+                        url: `/Class/GetById?id=${cid}`,
+                        type: 'GET',
+                        dataType: 'json',
+                        success: res => {
+                            // Re-initialize subject dropdown with new class level
+                            // Don't pass selected values as this is a manual change
+                            initSubject(res.data.class_level);
+                        },
+                        error: () => {
+                            alert('Error loading class information');
+                        }
+                    });
+                }
             });
 
+            // Initialize Teacher Select2
             $('#teacher_id').select2({
                 placeholder: "-- Select Teacher --",
                 allowClear: false,
@@ -436,6 +474,7 @@
                 minimumInputLength: 0
             });
 
+            // Load RPS data
             loadRPS();
         });
     </script>

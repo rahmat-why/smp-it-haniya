@@ -108,12 +108,13 @@ namespace Haniya.Controllers.PortalAdmin
                 if (!string.IsNullOrWhiteSpace(searchValue))
                 {
                     whereSearch = @" AND (
-                        nis LIKE @search OR
-                        full_name LIKE @search OR
-                        birth_place LIKE @search OR
-                        (gender = 'M' AND 'Male' LIKE @search) OR
-                        (gender = 'F' AND 'Female' LIKE @search) OR
-                        address LIKE @search
+                        s.nis LIKE @search OR
+                        s.full_name LIKE @search OR
+                        s.birth_place LIKE @search OR
+                        (s.gender = 'M' AND 'Male' LIKE @search) OR
+                        (s.gender = 'F' AND 'Female' LIKE @search) OR
+                        s.address LIKE @search OR
+                        dt.item_desc LIKE @search
                     )";
                 }
 
@@ -129,21 +130,23 @@ namespace Haniya.Controllers.PortalAdmin
 
                 var sql = $@"
                     SELECT
-                        student_id,
-                        nis,
-                        full_name,
-                        birth_date,
-                        birth_place,
+                        s.student_id,
+                        s.nis,
+                        s.full_name,
+                        s.birth_date,
+                        s.birth_place,
                         CASE 
-                            WHEN gender = 'M' THEN 'Male'
-                            WHEN gender = 'F' THEN 'Female'
-                            ELSE gender
+                            WHEN s.gender = 'M' THEN 'Male'
+                            WHEN s.gender = 'F' THEN 'Female'
+                            ELSE s.gender
                         END as gender,
-                        address,
-                        entry_date,
-                        profile_photo
-                    FROM mst_students
-                    WHERE status = 'ACTIVE'
+                        s.address,
+                        s.entry_date,
+                        s.profile_photo,
+                        dt.item_desc as level
+                    FROM mst_students s
+                    LEFT JOIN mst_detail_settings dt ON dt.detail_id = s.level AND dt.header_id = 'LEVEL_STUDENT' AND dt.status = 'ACTIVE'
+                    WHERE s.status = 'ACTIVE'
                         {whereSearch}
                     ORDER BY {orderColumn} {orderDir}
                     OFFSET @start ROWS FETCH NEXT @length ROWS ONLY";
@@ -168,7 +171,8 @@ namespace Haniya.Controllers.PortalAdmin
                         gender = rd["gender"],
                         address = rd["address"],
                         entry_date = rd["entry_date"],
-                        profile_photo = rd["profile_photo"]
+                        profile_photo = rd["profile_photo"],
+                        level = rd["level"]
                     });
                 }
 
@@ -195,12 +199,16 @@ namespace Haniya.Controllers.PortalAdmin
                 conn.Open();
 
                 var sql = @"
-                    SELECT s.*, g.item_desc AS gender_name
+                    SELECT s.*, g.item_desc AS gender_name, s.level as level_id, dt.item_desc as level_name
                     FROM mst_students s
                     LEFT JOIN mst_detail_settings g
                         ON g.detail_id = s.gender
                        AND g.header_id = 'GENDER'
                        AND g.status = 'ACTIVE'
+                    LEFT JOIN mst_detail_settings dt
+                        ON dt.detail_id = s.level
+                       AND dt.header_id = 'LEVEL_STUDENT'
+                       AND dt.status = 'ACTIVE'
                     WHERE s.student_id = @id";
 
                 using var cmd = new SqlCommand(sql, conn);
@@ -232,7 +240,9 @@ namespace Haniya.Controllers.PortalAdmin
                     mother_phone = rd["mother_phone"]?.ToString(),
                     mother_job = rd["mother_job"]?.ToString(),
 
-                    profile_photo = rd["profile_photo"]?.ToString()
+                    profile_photo = rd["profile_photo"]?.ToString(),
+                    level_id = rd["level_id"]?.ToString(),
+                    level_name = rd["level_name"]?.ToString()
                 }));
             }
             catch (Exception ex)
@@ -287,14 +297,14 @@ namespace Haniya.Controllers.PortalAdmin
             father_name, mother_name, father_phone, mother_phone,
             father_job, mother_job,
             entry_date, graduation_date, profile_photo,
-            status, created_at
+            status, created_at, level
         ) VALUES (
             @id, @fn, @ln, @fullname, @nis,
             @bd, @bp, @gender, @addr,
             @fan, @mon, @fph, @mph,
             @fjob, @mjob,
             @entry, @grad, @photo,
-            @status, GETDATE()
+            @status, GETDATE(), @level
         )";
 
                 using var cmd = new SqlCommand(sql, conn);
@@ -321,6 +331,7 @@ namespace Haniya.Controllers.PortalAdmin
                 cmd.Parameters.AddWithValue("@grad", f["graduation_date"].ToString());
                 cmd.Parameters.AddWithValue("@photo", photoPath ?? "");
                 cmd.Parameters.AddWithValue("@status", "ACTIVE");
+                cmd.Parameters.AddWithValue("@level", f["level"].ToString());
 
                 cmd.ExecuteNonQuery();
 
@@ -344,6 +355,28 @@ namespace Haniya.Controllers.PortalAdmin
                 using var conn = GetConn();
                 conn.Open();
 
+                // ===============================
+                // GET OLD LEVEL (BEFORE UPDATE)
+                // ===============================
+                string oldLevel = null;
+
+                using (var getCmd = new SqlCommand(
+                    "SELECT level FROM mst_students WHERE student_id=@id",
+                    conn))
+                {
+                    getCmd.Parameters.AddWithValue("@id", studentId);
+
+                    var result = getCmd.ExecuteScalar();
+
+                    if (result != null && result != DBNull.Value)
+                        oldLevel = result.ToString();
+                }
+
+                string newLevel = f["level"].ToString();
+
+                // ===============================
+                // HANDLE PHOTO UPLOAD
+                // ===============================
                 string photoSql = "";
                 string photoPath = null;
 
@@ -367,27 +400,31 @@ namespace Haniya.Controllers.PortalAdmin
                     photoSql = ", profile_photo=@photo";
                 }
 
+                // ===============================
+                // UPDATE STUDENT
+                // ===============================
                 var sql = $@"
-                    UPDATE mst_students SET
-                        first_name=@fn,
-                        last_name=@ln,
-                        full_name=@fullname,
-                        nis=@nis,
-                        birth_date=@bd,
-                        birth_place=@bp,
-                        gender=@gender,
-                        address=@addr,
-                        father_name=@fan,
-                        mother_name=@mon,
-                        father_phone=@fph,
-                        mother_phone=@mph,
-                        father_job=@fjob,
-                        mother_job=@mjob,
-                        entry_date=@entry,
-                        graduation_date=@grad,
-                        updated_at=GETDATE()
-                        {photoSql}
-                    WHERE student_id=@id";
+            UPDATE mst_students SET
+                first_name=@fn,
+                last_name=@ln,
+                full_name=@fullname,
+                nis=@nis,
+                birth_date=@bd,
+                birth_place=@bp,
+                gender=@gender,
+                address=@addr,
+                father_name=@fan,
+                mother_name=@mon,
+                father_phone=@fph,
+                mother_phone=@mph,
+                father_job=@fjob,
+                mother_job=@mjob,
+                entry_date=@entry,
+                graduation_date=@grad,
+                level=@level,
+                updated_at=GETDATE()
+                {photoSql}
+            WHERE student_id=@id";
 
                 using var cmd = new SqlCommand(sql, conn);
 
@@ -396,7 +433,7 @@ namespace Haniya.Controllers.PortalAdmin
                 cmd.Parameters.AddWithValue("@ln", f["last_name"].ToString());
                 cmd.Parameters.AddWithValue(
                     "@fullname",
-                    $"{f["first_name"].ToString()} {f["last_name"].ToString()}"
+                    $"{f["first_name"]} {f["last_name"]}"
                 );
                 cmd.Parameters.AddWithValue("@nis", f["nis"].ToString());
                 cmd.Parameters.AddWithValue("@bp", f["birth_place"].ToString());
@@ -408,7 +445,9 @@ namespace Haniya.Controllers.PortalAdmin
                 cmd.Parameters.AddWithValue("@mph", f["mother_phone"].ToString());
                 cmd.Parameters.AddWithValue("@fjob", f["father_job"].ToString());
                 cmd.Parameters.AddWithValue("@mjob", f["mother_job"].ToString());
+                cmd.Parameters.AddWithValue("@level", newLevel);
 
+                // Birth Date
                 cmd.Parameters.AddWithValue(
                     "@bd",
                     string.IsNullOrEmpty(f["birth_date"])
@@ -416,6 +455,7 @@ namespace Haniya.Controllers.PortalAdmin
                         : DateTime.Parse(f["birth_date"])
                 );
 
+                // Entry Date
                 cmd.Parameters.AddWithValue(
                     "@entry",
                     string.IsNullOrEmpty(f["entry_date"])
@@ -423,6 +463,7 @@ namespace Haniya.Controllers.PortalAdmin
                         : DateTime.Parse(f["entry_date"])
                 );
 
+                // Graduation Date
                 cmd.Parameters.AddWithValue(
                     "@grad",
                     string.IsNullOrEmpty(f["graduation_date"])
@@ -430,10 +471,54 @@ namespace Haniya.Controllers.PortalAdmin
                         : DateTime.Parse(f["graduation_date"])
                 );
 
+                // Photo
                 if (photoPath != null)
                     cmd.Parameters.AddWithValue("@photo", photoPath);
 
                 cmd.ExecuteNonQuery();
+
+                // ===============================
+                // INSERT LOG IF LEVEL CHANGED
+                // ===============================
+                if ((oldLevel ?? "").Trim() != (newLevel ?? "").Trim())
+                {
+                    var logSql = @"
+                INSERT INTO txn_logs
+                (
+                    log_id,
+                    module,
+                    data1,
+                    data2,
+                    data3,
+                    created_by
+                )
+                VALUES
+                (
+                    @logid,
+                    'STUDENT',
+                    @sid,
+                    @old,
+                    @new,
+                    @user
+                )";
+
+                    using var logCmd = new SqlCommand(logSql, conn);
+
+                    logCmd.Parameters.AddWithValue(
+                        "@logid",
+                        "LOG" + DateTime.Now.ToString("yyyyMMddHHmmssfff")
+                    );
+
+                    logCmd.Parameters.AddWithValue("@sid", studentId);
+                    logCmd.Parameters.AddWithValue("@old", oldLevel ?? "");
+                    logCmd.Parameters.AddWithValue("@new", newLevel);
+                    logCmd.Parameters.AddWithValue(
+                        "@user",
+                        User.Identity?.Name ?? "SYSTEM"
+                    );
+
+                    logCmd.ExecuteNonQuery();
+                }
 
                 return Json(DTOResponse.ok(null, "student updated"));
             }

@@ -33,14 +33,6 @@
                     </div>
                 </div>
                 <div>
-                    <label class="text-sm font-medium text-gray-700">Academic Year</label>
-                    <div class="mt-1">
-                        <select id="filter_academic_year"
-                                class="w-full md:w-64 border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        </select>
-                    </div>
-                </div>
-                <div>
                     <label class="text-sm font-medium text-gray-700">Teacher</label>
                     <div class="mt-1">
                         <select id="filter_teacher"
@@ -64,6 +56,7 @@
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Subject</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center">Minimum Value</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Class</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Teacher</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Academic Year</th>
@@ -86,25 +79,11 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
-            $('#filter_subject').select2({
-                placeholder: "-- All Subjects --",
-                allowClear: true,
-                ajax: {
-                    url: '/Select2/Subjects',
-                    dataType: 'json',
-                    delay: 250,
-                    data: params => ({ q: params.term || '', page: params.page || 1 }),
-                    processResults: data => ({ results: data.results, pagination: data.pagination }),
-                    cache: true
-                },
-                minimumInputLength: 0
-            });
-
             $('#filter_class').select2({
                 placeholder: "-- All Classes --",
                 allowClear: true,
                 ajax: {
-                    url: '/Select2/Classes',
+                    url: '/Select2/AcademicClasses',
                     dataType: 'json',
                     delay: 250,
                     data: params => ({ q: params.term || '', page: params.page || 1 }),
@@ -114,18 +93,23 @@
                 minimumInputLength: 0
             });
 
-            $('#filter_academic_year').select2({
-                placeholder: "-- All Academic Years --",
-                allowClear: true,
-                ajax: {
-                    url: '/Select2/AcademicYears',
-                    dataType: 'json',
-                    delay: 250,
-                    data: params => ({ q: params.term || '', page: params.page || 1 }),
-                    processResults: data => ({ results: data.results, pagination: data.pagination }),
-                    cache: true
-                },
-                minimumInputLength: 0
+            $('#filter_class').on('change', function () {
+                const cid = $(this).val();
+                $('#tbody-details').empty();
+                if (cid) {
+                    $.ajax({
+                        url: `/Class/GetById?id=${cid}`,
+                        type: 'GET',
+                        dataType: 'json',
+                        success: res => {
+                            initSubject(res.data.class_level);
+                        },
+                        error: () => {
+                            $('#tbody-details').html('<tr><td colspan="4" class="px-6 py-8 text-center text-red-600">Error loading students</td></tr>');
+                        }
+                    });
+                }
+
             });
 
             $('#filter_teacher').select2({
@@ -162,8 +146,7 @@
                     type: 'GET',
                     data: function (d) {
                         d.subject_id = $('#filter_subject').val() || null;
-                        d.class_id = $('#filter_class').val() || null;
-                        d.academic_year_id = $('#filter_academic_year').val() || null;
+                        d.academic_class_id = $('#filter_class').val() || null;
                         d.teacher_id = $('#filter_teacher').val() || null;
                     }
                 },
@@ -182,9 +165,10 @@
                 },
                 columns: [
                     { data: 'subject_name', className: 'py-3 font-medium text-gray-900' },
+                    { data: 'minimum_value', className: 'py-3 text-center' },
                     { data: 'class_name', className: 'py-3 text-gray-700' },
                     { data: 'teacher_name', className: 'py-3 text-gray-700' },
-                    { data: 'academic_year', className: 'py-3 text-gray-700' },
+                    { data: 'academic_year_id', className: 'py-3 text-gray-700' },
                     {
                         data: 'meeting_count',
                         className: 'py-3 text-center',
@@ -300,6 +284,38 @@
                     }
                 },
                 error: () => alert("Error deleting RPS")
+            });
+        }
+
+        function initSubject(classLevel) {
+
+            const $subject = $('#filter_subject');
+
+            // Destroy select2 dulu kalau sudah pernah dibuat
+            if ($subject.hasClass("select2-hidden-accessible")) {
+                $subject.select2('destroy');
+            }
+
+            $subject.empty().val(null).trigger('change');
+
+            $subject.select2({
+                placeholder: "-- Select --",
+                allowClear: false,
+                ajax: {
+                    url: `/Select2/Subjects?classLevel=${classLevel}`,
+                    dataType: 'json',
+                    delay: 250,
+                    data: p => ({
+                        q: p.term || '',
+                        page: p.page || 1
+                    }),
+                    processResults: d => ({
+                        results: d.results,
+                        pagination: d.pagination
+                    }),
+                    cache: true
+                },
+                minimumInputLength: 0
             });
         }
     </script>

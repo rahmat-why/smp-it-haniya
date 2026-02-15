@@ -30,6 +30,7 @@ namespace Haniya.Controllers.PortalAdmin
             using var conn = GetConn();
             conn.Open();
 
+            // ================= TOTAL =================
             var totalSql = @"
         SELECT COUNT(*) 
         FROM txn_grades g
@@ -37,13 +38,17 @@ namespace Haniya.Controllers.PortalAdmin
           AND (@date IS NULL OR g.grade_date = @date)";
 
             int recordsTotal;
+
             using (var cmd = new SqlCommand(totalSql, conn))
             {
                 cmd.Parameters.AddWithValue("@classId", (object)academic_class_id ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@date", (object)grade_date ?? DBNull.Value);
+
                 recordsTotal = (int)cmd.ExecuteScalar();
             }
 
+
+            // ================= MAIN QUERY =================
             var sql = @"
         SELECT 
             g.grade_id,
@@ -52,33 +57,129 @@ namespace Haniya.Controllers.PortalAdmin
             s.subject_name,
             CONCAT(t.first_name,' ',t.last_name) AS teacher_name,
             COALESCE(dt.item_desc, g.grade_type) AS grade_type_desc,
-            s.minimum_value,
+            ISNULL(r.minimum_value, 0) AS minimum_value,
+
             COUNT(d.grade_detail_id) AS total_graded,
-            SUM(CASE 
-                WHEN TRY_CAST(REPLACE(d.grade_value, ',', '.') AS FLOAT) >= s.minimum_value THEN 1 
-                ELSE 0 
-            END) AS passed,
-            SUM(CASE 
-                WHEN TRY_CAST(REPLACE(d.grade_value, ',', '.') AS FLOAT) < s.minimum_value 
-                     OR TRY_CAST(REPLACE(d.grade_value, ',', '.') AS FLOAT) IS NULL THEN 1 
-                ELSE 0 
-            END) AS remedial
+
+            -- PASSED
+            SUM(
+                CASE 
+                    WHEN TRY_CAST(REPLACE(d.grade_value, ',', '.') AS FLOAT) 
+                         >= ISNULL(r.minimum_value,0)
+                    THEN 1 
+                    ELSE 0 
+                END
+            ) AS passed,
+
+            -- REMEDIAL
+            SUM(
+                CASE 
+                    WHEN TRY_CAST(REPLACE(d.grade_value, ',', '.') AS FLOAT) 
+                         < ISNULL(r.minimum_value,0)
+                         OR TRY_CAST(REPLACE(d.grade_value, ',', '.') AS FLOAT) IS NULL
+                    THEN 1 
+                    ELSE 0 
+                END
+            ) AS remedial
+
         FROM txn_grades g
-        JOIN mst_academic_classes ac ON g.academic_class_id = ac.academic_class_id
-        JOIN mst_classes c ON ac.class_id = c.class_id
-        JOIN mst_subjects s ON g.subject_id = s.subject_id
-        JOIN mst_teachers t ON g.teacher_id = t.teacher_id
-        LEFT JOIN txn_grade_details d ON d.grade_id = g.grade_id
-        LEFT JOIN mst_detail_settings dt ON g.grade_type = dt.detail_id AND dt.header_id = 'GRADE_TYPE'
+
+        JOIN mst_academic_classes ac 
+            ON g.academic_class_id = ac.academic_class_id
+
+        JOIN mst_classes c 
+            ON ac.class_id = c.class_id
+
+        JOIN mst_subjects s 
+            ON g.subject_id = s.subject_id
+
+        LEFT JOIN mst_rps r 
+            ON r.academic_class_id = ac.academic_class_id 
+           AND r.subject_id = g.subject_id
+
+        JOIN mst_teachers t 
+            ON g.teacher_id = t.teacher_id
+
+        LEFT JOIN txn_grade_details d 
+            ON d.grade_id = g.grade_id
+
+        LEFT JOIN mst_detail_settings dt 
+            ON g.grade_type = dt.detail_id 
+           AND dt.header_id = 'GRADE_TYPE'
+
         WHERE (@classId IS NULL OR g.academic_class_id = @classId)
           AND (@date IS NULL OR g.grade_date = @date)
+
         GROUP BY 
-            g.grade_id, g.grade_date, c.class_name, s.subject_name, t.first_name, t.last_name, 
-            g.grade_type, dt.item_desc, s.minimum_value
-        ORDER BY g.grade_date DESC, MAX(g.created_at) DESC
+            g.grade_id,
+            g.grade_date,
+            c.class_name,
+            s.subject_name,
+            t.first_name,
+            t.last_name,
+            g.grade_type,
+            dt.item_desc,
+            r.minimum_value
+
+        ORDER BY 
+            g.grade_date DESC,
+            MAX(g.created_at) DESC
+
         OFFSET @start ROWS FETCH NEXT @length ROWS ONLY";
 
+
+            // ================= FILTERED =================
+            var filteredSql = @"
+        SELECT COUNT(*) FROM
+        (
+            SELECT g.grade_id
+
+            FROM txn_grades g
+
+            JOIN mst_academic_classes ac 
+                ON g.academic_class_id = ac.academic_class_id
+
+            JOIN mst_classes c 
+                ON ac.class_id = c.class_id
+
+            JOIN mst_subjects s 
+                ON g.subject_id = s.subject_id
+
+            LEFT JOIN mst_rps r 
+                ON r.academic_class_id = ac.academic_class_id 
+               AND r.subject_id = g.subject_id
+
+            JOIN mst_teachers t 
+                ON g.teacher_id = t.teacher_id
+
+            LEFT JOIN txn_grade_details d 
+                ON d.grade_id = g.grade_id
+
+            LEFT JOIN mst_detail_settings dt 
+                ON g.grade_type = dt.detail_id 
+               AND dt.header_id = 'GRADE_TYPE'
+
+            WHERE (@classId IS NULL OR g.academic_class_id = @classId)
+              AND (@date IS NULL OR g.grade_date = @date)
+
+            GROUP BY g.grade_id
+        ) x";
+
+
+            int recordsFiltered;
+
+            using (var cmd = new SqlCommand(filteredSql, conn))
+            {
+                cmd.Parameters.AddWithValue("@classId", (object)academic_class_id ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@date", (object)grade_date ?? DBNull.Value);
+
+                recordsFiltered = (int)cmd.ExecuteScalar();
+            }
+
+
+            // ================= DATA =================
             var list = new List<object>();
+
             using (var cmd = new SqlCommand(sql, conn))
             {
                 cmd.Parameters.AddWithValue("@classId", (object)academic_class_id ?? DBNull.Value);
@@ -87,24 +188,38 @@ namespace Haniya.Controllers.PortalAdmin
                 cmd.Parameters.AddWithValue("@length", length);
 
                 using var r = cmd.ExecuteReader();
+
                 while (r.Read())
                 {
                     list.Add(new
                     {
                         grade_id = r["grade_id"].ToString(),
-                        grade_date = r["grade_date"] == DBNull.Value ? null : ((DateTime)r["grade_date"]).ToString("yyyy-MM-dd"),
+
+                        grade_date = r["grade_date"] == DBNull.Value
+                            ? null
+                            : ((DateTime)r["grade_date"]).ToString("yyyy-MM-dd"),
+
                         class_name = r["class_name"].ToString(),
                         subject_name = r["subject_name"].ToString(),
                         teacher_name = r["teacher_name"].ToString(),
                         grade_type = r["grade_type_desc"]?.ToString(),
-                        minimum_value = r["minimum_value"] as double?,
+
+                        minimum_value = Convert.ToDouble(r["minimum_value"]),
+
                         passed = Convert.ToInt32(r["passed"]),
                         remedial = Convert.ToInt32(r["remedial"])
                     });
                 }
             }
 
-            return Json(new { draw, recordsTotal, recordsFiltered = recordsTotal, data = list });
+
+            return Json(new
+            {
+                draw,
+                recordsTotal,
+                recordsFiltered,
+                data = list
+            });
         }
 
         private (int draw, int start, int length, string searchValue, int orderColumnIndex, string orderDir) ParseDataTablesQuery()
@@ -137,7 +252,7 @@ namespace Haniya.Controllers.PortalAdmin
                 g.subject_id,
                 g.teacher_id,
                 g.grade_type,
-                s.minimum_value,
+                r.minimum_value,
                 c.class_name,
                 s.subject_name,
                 CONCAT(t.first_name,' ',t.last_name) AS teacher_name,
@@ -146,6 +261,7 @@ namespace Haniya.Controllers.PortalAdmin
             LEFT JOIN mst_academic_classes ac ON g.academic_class_id = ac.academic_class_id
             LEFT JOIN mst_classes c ON ac.class_id = c.class_id
             LEFT JOIN mst_subjects s ON g.subject_id = s.subject_id
+            LEFT JOIN mst_rps r ON r.academic_class_id = ac.academic_class_id AND r.subject_id = s.subject_id
             LEFT JOIN mst_teachers t ON g.teacher_id = t.teacher_id
             LEFT JOIN mst_detail_settings dt ON g.grade_type = dt.detail_id AND dt.header_id = 'GRADE_TYPE'
             WHERE g.grade_id = @id";
@@ -166,7 +282,7 @@ namespace Haniya.Controllers.PortalAdmin
                             teacher_id = r["teacher_id"]?.ToString(),
                             grade_type = r["grade_type"]?.ToString(),
                             grade_type_desc = r["grade_type_desc"]?.ToString(),
-                            minimum_value = r["minimum_value"] as double?,
+                            minimum_value = r["minimum_value"].ToString(),
                             class_name = r["class_name"]?.ToString(),
                             subject_name = r["subject_name"]?.ToString(),
                             teacher_name = r["teacher_name"]?.ToString()
@@ -231,7 +347,7 @@ namespace Haniya.Controllers.PortalAdmin
         }
 
         [HttpGet]
-        public IActionResult GetSubjectMinValue(string subjectId)
+        public IActionResult GetSubjectMinValue(string academicClassId, string subjectId)
         {
             try
             {
@@ -240,8 +356,9 @@ namespace Haniya.Controllers.PortalAdmin
                 using var conn = GetConn();
                 conn.Open();
 
-                using var cmd = new SqlCommand("SELECT minimum_value FROM mst_subjects WHERE subject_id = @id", conn);
-                cmd.Parameters.AddWithValue("@id", subjectId);
+                using var cmd = new SqlCommand("SELECT minimum_value FROM mst_rps WHERE academic_class_id = @academicClassId AND subject_id = @subjectId", conn);
+                cmd.Parameters.AddWithValue("@academicClassId", academicClassId);
+                cmd.Parameters.AddWithValue("@subjectId", subjectId);
                 var val = cmd.ExecuteScalar();
 
                 double? minValue = val == DBNull.Value ? null : Convert.ToDouble(val);

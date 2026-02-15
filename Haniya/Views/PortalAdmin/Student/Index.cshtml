@@ -31,6 +31,7 @@
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 80px;">Gender</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Address</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 130px;">Entry Date</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 130px;">Level</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 70px;">Action</th>
                 </tr>
             </thead>
@@ -129,6 +130,10 @@
                         render: function (data) {
                             return formatDate(data);
                         }
+                    },
+                    {
+                        data: 'level',
+                        className: 'py-3'
                     },
                     {
                         data: null,
