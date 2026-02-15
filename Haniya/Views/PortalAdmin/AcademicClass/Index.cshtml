@@ -208,13 +208,12 @@
 
             for (let i = 0; i < info.pages; i++) {
                 paginateHtml += `
-                    <button data-page="${i}"
-                        class="px-3 py-2 text-sm border-r last:border-r-0 transition
-                        ${i === info.page
-                            ? 'bg-blue-900 text-white font-semibold'
-                            : 'bg-white text-gray-700 hover:bg-gray-50'}">
-                        ${i + 1}
-                    </button>
+                <button data-page="${i}"
+                    class="px-3 py-2 text-sm border-r border-gray-200 rounded-none last:rounded-r-lg last:border-r-0 
+                        ${i === info.page ? 'bg-blue-900 text-white font-semibold' : 'bg-white text-gray-700 hover:bg-gray-50'} 
+                        flex-shrink-0">
+                    ${i + 1}
+                </button>
                 `;
             }
 
@@ -241,24 +240,49 @@
         }
 
         function delAcademicClass(id) {
-            if (!confirm("Delete this academic class?")) return;
-
-            $.ajax({
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "You won't be able to revert this!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, delete it!',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                $.ajax({
                 url: "/AcademicClass/Delete",
-                type: "POST",
-                contentType: "application/json",
-                data: JSON.stringify({
-                    action: "delete",
-                    id: id,
-                    data: null
-                }),
-                success: res => {
-                    if (res.success) {
-                        $('#academic-class-table').DataTable().ajax.reload();
-                    } else {
-                        alert(res.message);
+                    type: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify({
+                        action: "delete",
+                        id: id,
+                        data: null
+                    }),
+                    success: res => {
+                        if (res.success) {
+                            $('#student-table').DataTable().ajax.reload(null, false);
+                            Swal.fire(
+                                'Deleted!',
+                                'Class data has been deleted.',
+                                'success'
+                            );
+                        } else {
+                            Swal.fire(
+                                'Failed!',
+                                res.message,
+                                'error'
+                            );
+                        }
+                    },
+                    error: function () {
+                        Swal.fire(
+                            'Error!',
+                            'An error occurred while deleting the class.',
+                            'error'
+                        );
                     }
-                }
+                });
             });
         }
     </script>

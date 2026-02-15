@@ -31,20 +31,32 @@ namespace Haniya.Controllers.PortalAdmin
         }
 
         [HttpGet]
-        public IActionResult GetAdminData(string startDate = null, string endDate = null, string className = null)
+        public IActionResult GetAdminData(string? academicYear)
         {
             try
             {
                 using var conn = GetConn();
                 conn.Open();
 
+                // Kalo null / kosong → ambil latest ACTIVE
+                if (string.IsNullOrEmpty(academicYear))
+                {
+                    academicYear = GetLatestActiveAcademicYear(conn);
+                }
+
+                if (string.IsNullOrEmpty(academicYear))
+                {
+                    return Json(new { success = false, message = "Academic year tidak ditemukan" });
+                }
+
                 var data = new
                 {
-                    totalClass = (int)new SqlCommand("SELECT COUNT(*) FROM mst_classes", conn).ExecuteScalar(),
-                    totalStudent = (int)new SqlCommand("SELECT COUNT(*) FROM mst_students WHERE status = 'ACTIVE'", conn).ExecuteScalar(),
-                    totalSubject = (int)new SqlCommand("SELECT COUNT(*) FROM mst_subjects WHERE status = 'ACTIVE'", conn).ExecuteScalar(),
-                    totalTeacher = (int)new SqlCommand("SELECT COUNT(*) FROM mst_teachers WHERE status = 'ACTIVE'", conn).ExecuteScalar(),
-                    payment = GetPaymentSummary(conn, startDate, endDate, className),
+                    academicYearUsed = academicYear,
+                    payment = GetPaymentSummary(conn, academicYear),
+                    studentPayment = GetDashboardSummary(conn, academicYear),
+                    academicYearList = GetAcademicYearsList(conn),
+                    teachers = GetActiveTeacherSummary(conn),
+                    students = GetStudentCountPerClass(conn, academicYear),
                     events = GetEvents(conn),
                     articles = GetArticles(conn)
                 };
@@ -57,57 +69,230 @@ namespace Haniya.Controllers.PortalAdmin
             }
         }
 
-        private object GetPaymentSummary(SqlConnection conn, string startDate, string endDate, string className)
+        private string? GetLatestActiveAcademicYear(SqlConnection conn)
         {
-            var sql = @"
-                SELECT 
-                    ISNULL(SUM(total_price), 0) AS total_tagihan,
-                    ISNULL(SUM(total_payment), 0) AS total_terbayar,
-                    ISNULL(SUM(remaining_payment), 0) AS total_sisa,
-                    COUNT(*) AS total_transaction
-                FROM txn_payments p
-                JOIN mst_student_classes sc ON p.student_class_id = sc.student_class_id
-                JOIN mst_academic_classes ac ON sc.academic_class_id = ac.academic_class_id
-                JOIN mst_classes c ON ac.class_id = c.class_id
-                WHERE 1=1";
+            string? result = null;
 
-            if (!string.IsNullOrEmpty(startDate) && !string.IsNullOrEmpty(endDate))
-            {
-                sql += " AND p.payment_date BETWEEN @startDate AND @endDate";
-            }
-            else
-            {
-                sql += " AND MONTH(p.payment_date) = MONTH(GETDATE()) AND YEAR(p.payment_date) = YEAR(GETDATE())";
-            }
-
-            if (!string.IsNullOrEmpty(className))
-            {
-                sql += " AND c.class_name = @className";
-            }
-
-            var cmd = new SqlCommand(sql, conn);
-            if (!string.IsNullOrEmpty(startDate) && !string.IsNullOrEmpty(endDate))
-            {
-                cmd.Parameters.AddWithValue("@startDate", startDate);
-                cmd.Parameters.AddWithValue("@endDate", endDate + " 23:59:59");
-            }
-            if (!string.IsNullOrEmpty(className))
-            {
-                cmd.Parameters.AddWithValue("@className", className);
-            }
+            using var cmd = new SqlCommand(@"
+                SELECT TOP 1 academic_year_id 
+                FROM mst_academic_years 
+                WHERE status = 'ACTIVE' 
+                ORDER BY academic_year_id DESC;
+            ", conn);
 
             using var rd = cmd.ExecuteReader();
             if (rd.Read())
             {
-                return new
-                {
-                    tagihan = (decimal)(rd["total_tagihan"] ?? 0),
-                    terbayar = (decimal)(rd["total_terbayar"] ?? 0),
-                    sisa = (decimal)(rd["total_sisa"] ?? 0),
-                    transaction = (int)(rd["total_transaction"] ?? 0)
-                };
+                result = rd["academic_year_id"]?.ToString();
             }
-            return new { tagihan = 0m, terbayar = 0m, sisa = 0m, transaction = 0 };
+
+            return result; // null kalo ga ada yang ACTIVE
+        }
+
+
+        private List<dynamic> GetStudentCountPerClass(SqlConnection conn, string academicYear)
+        {
+            var list = new List<dynamic>();
+
+            using var cmd = new SqlCommand(@"
+                SELECT 
+                    SUBSTRING(sc.academic_class_id, 4, 1) AS ClassNumber, 
+                    COUNT(*) AS TotalStudents
+                FROM mst_student_classes sc
+                JOIN mst_academic_classes ac 
+                    ON sc.academic_class_id = ac.academic_class_id
+                WHERE SUBSTRING(sc.academic_class_id, 4, 1) IN ('7','8','9') 
+                AND ac.academic_year_id = @academicYear
+                GROUP BY SUBSTRING(sc.academic_class_id, 4, 1)
+                ORDER BY ClassNumber;
+            ", conn);
+
+            cmd.Parameters.AddWithValue("@academicYear", academicYear);
+
+            using var rd = cmd.ExecuteReader();
+            while (rd.Read())
+            {
+                list.Add(new
+                {
+                    ClassNumber = rd["ClassNumber"],
+                    TotalStudents = rd["TotalStudents"]
+                });
+            }
+
+            return list;
+        }
+
+
+        private dynamic GetActiveTeacherSummary(SqlConnection conn)
+        {
+            using var cmd = new SqlCommand(@"
+                SELECT
+                    COUNT(*) AS Total,
+                    SUM(CASE WHEN level = 'PNS' THEN 1 ELSE 0 END) AS PNS,
+                    SUM(CASE WHEN level = 'HONORER' THEN 1 ELSE 0 END) AS Honorer
+                FROM mst_teachers
+                WHERE status = 'ACTIVE';
+            ", conn);
+
+            using var rd = cmd.ExecuteReader();
+
+            int total = 0, pns = 0, honorer = 0;
+
+            if (rd.Read())
+            {
+                total = rd["Total"] != DBNull.Value ? Convert.ToInt32(rd["Total"]) : 0;
+                pns = rd["PNS"] != DBNull.Value ? Convert.ToInt32(rd["PNS"]) : 0;
+                honorer = rd["Honorer"] != DBNull.Value ? Convert.ToInt32(rd["Honorer"]) : 0;
+            }
+
+            return new
+            {
+                Total = total,
+                PNS = pns,
+                Honorer = honorer
+            };
+        }
+
+        private object GetPaymentSummary(SqlConnection conn, string academicYearId)
+        {
+            // Total Lunas (yang status PAID)
+            decimal totalLunas = 0;
+            using (var cmd = new SqlCommand(@"
+                SELECT ISNULL(SUM(p.total_payment + p.remaining_payment), 0) AS TotalLunas
+                FROM txn_payments p
+                JOIN mst_student_classes sc ON p.student_class_id = sc.student_class_id
+                JOIN mst_academic_classes ac ON sc.academic_class_id = ac.academic_class_id
+                WHERE ac.academic_year_id = @AcademicYearId 
+                AND p.status = 'PAID'
+            ", conn))
+            {
+                cmd.Parameters.AddWithValue("@AcademicYearId", academicYearId ?? (object)DBNull.Value);
+                var result = cmd.ExecuteScalar();
+                totalLunas = result != DBNull.Value ? Convert.ToDecimal(result) : 0m;
+            }
+
+            // Total Belum Lunas (yang status PARTIAL atau UNPAID)
+            decimal totalBelumLunas = 0;
+            using (var cmd = new SqlCommand(@"
+                SELECT ISNULL(SUM(p.remaining_payment), 0) AS TotalBelumLunas
+                FROM txn_payments p
+                JOIN mst_student_classes sc ON p.student_class_id = sc.student_class_id
+                JOIN mst_academic_classes ac ON sc.academic_class_id = ac.academic_class_id
+                WHERE ac.academic_year_id = @AcademicYearId
+                AND p.status IN ('PARTIAL', 'UNPAID')
+            ", conn))
+            {
+                cmd.Parameters.AddWithValue("@AcademicYearId", academicYearId ?? (object)DBNull.Value);
+                var result = cmd.ExecuteScalar();
+                totalBelumLunas = result != DBNull.Value ? Convert.ToDecimal(result) : 0m;
+            }
+
+            // Total Pembayaran Masuk (yang sudah dibayar)
+            decimal totalPembayaranMasuk = 0;
+            using (var cmd = new SqlCommand(@"
+                SELECT ISNULL(SUM(p.total_payment), 0) AS TotalPembayaranMasuk
+                FROM txn_payments p
+                JOIN mst_student_classes sc ON p.student_class_id = sc.student_class_id
+                JOIN mst_academic_classes ac ON sc.academic_class_id = ac.academic_class_id
+                WHERE ac.academic_year_id = @AcademicYearId
+            ", conn))
+            {
+                cmd.Parameters.AddWithValue("@AcademicYearId", academicYearId ?? (object)DBNull.Value);
+                var result = cmd.ExecuteScalar();
+                totalPembayaranMasuk = result != DBNull.Value ? Convert.ToDecimal(result) : 0m;
+            }
+
+            return new
+            {
+                TotalLunas = totalLunas,
+                TotalBelumLunas = totalBelumLunas,
+                TotalPembayaranMasuk = totalPembayaranMasuk
+            };
+        }
+
+        private object GetDashboardSummary(SqlConnection conn, string academicYearId)
+        {
+            // Total Siswa
+            int totalSiswa = 0;
+            using (var cmd = new SqlCommand(@"
+                SELECT COUNT(DISTINCT p.student_class_id) AS TotalSiswa
+                FROM txn_payments p
+                JOIN mst_student_classes sc ON p.student_class_id = sc.student_class_id
+                JOIN mst_academic_classes ac ON sc.academic_class_id = ac.academic_class_id
+                WHERE ac.academic_year_id = @AcademicYearId
+            ", conn))
+            {
+                cmd.Parameters.AddWithValue("@AcademicYearId", academicYearId ?? (object)DBNull.Value);
+                var result = cmd.ExecuteScalar();
+                totalSiswa = result != DBNull.Value ? Convert.ToInt32(result) : 0;
+            }
+
+            // Total Lunas (siswa yang sudah bayar)
+            int totalLunas = 0;
+            using (var cmd = new SqlCommand(@"
+                SELECT COUNT(DISTINCT p.student_class_id) AS TotalLunas
+                FROM txn_payments p
+                JOIN mst_student_classes sc ON p.student_class_id = sc.student_class_id
+                JOIN mst_academic_classes ac ON sc.academic_class_id = ac.academic_class_id
+                WHERE ac.academic_year_id = @AcademicYearId 
+                AND p.status = 'PAID'
+            ", conn))
+            {
+                cmd.Parameters.AddWithValue("@AcademicYearId", academicYearId ?? (object)DBNull.Value);
+                var result = cmd.ExecuteScalar();
+                totalLunas = result != DBNull.Value ? Convert.ToInt32(result) : 0;
+            }
+
+            // Total Belum Lunas (siswa yang belum bayar sama sekali)
+            int totalBelumLunas = 0;
+            using (var cmd = new SqlCommand(@"
+                SELECT COUNT(*) AS TotalBelumLunas
+                FROM (
+                    SELECT p.student_class_id
+                    FROM txn_payments p
+                    JOIN mst_student_classes sc ON p.student_class_id = sc.student_class_id
+                    JOIN mst_academic_classes ac ON sc.academic_class_id = ac.academic_class_id
+                    WHERE ac.academic_year_id = @AcademicYearId
+                    GROUP BY p.student_class_id
+                    HAVING SUM(CASE WHEN p.status = 'PAID' THEN 1 ELSE 0 END) = 0
+                ) AS t
+            ", conn))
+            {
+                cmd.Parameters.AddWithValue("@AcademicYearId", academicYearId ?? (object)DBNull.Value);
+                var result = cmd.ExecuteScalar();
+                totalBelumLunas = result != DBNull.Value ? Convert.ToInt32(result) : 0;
+            }
+
+            return new
+            {
+                TotalSiswa = totalSiswa,
+                TotalLunas = totalLunas,
+                TotalBelumLunas = totalBelumLunas
+            };
+        }
+
+        private List<dynamic> GetAcademicYearsList(SqlConnection conn)
+        {
+            var list = new List<dynamic>();
+
+            using var cmd = new SqlCommand(@"
+                SELECT
+                    academic_year_id AS [Value],
+                    RIGHT(academic_year_id, LEN(academic_year_id) - CHARINDEX('/', academic_year_id)) AS [Text]
+                FROM mst_academic_years;
+            ", conn);
+
+            using var rd = cmd.ExecuteReader();
+            while (rd.Read())
+            {
+                list.Add(new
+                {
+                    Value = rd["Value"],
+                    Text = rd["Text"]
+                });
+            }
+
+            return list;
         }
 
         private List<dynamic> GetEvents(SqlConnection conn)
