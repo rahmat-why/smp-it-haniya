@@ -5,24 +5,19 @@
 
 <div class="flex justify-between items-center mb-4">
     <h2 class="text-xl font-semibold">Class</h2>
-    <a href="/Class/Create"
-       class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900"
-       data-testid="class-add-button">
+    <a href="/Class/Create" class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900" data-testid="class-add-button">
         + Add Class
     </a>
 </div>
 
 <div class="bg-white rounded-lg shadow">
-    <!-- Toolbar & search -->
     <div class="px-4 pt-4">
         <div id="class-table-toolbar" class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <!-- DataTables will inject length & search here -->
         </div>
     </div>
 
     <div class="overflow-x-auto px-4 pt-4">
-        <table id="class-table"
-               class="min-w-full text-sm text-left text-gray-700 border-collapse">
+        <table id="class-table" class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Academic Year</th>
@@ -35,9 +30,7 @@
             </thead>
             <tbody class="bg-white divide-y divide-gray-100"></tbody>
         </table>
-    </div>
-
-    <!-- Info + pagination -->
+    </div> 
     <div class="px-4 pb-4 pt-3">
         <div id="class-table-footer" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div id="table-info-container"></div>
@@ -48,12 +41,10 @@
 
 @section Scripts {
     <script>
-        let currentAcademicYearId = ''; // default: all
+        let currentAcademicYearId = ''; 
 
         $(document).ready(function () {
             initClassTable();
-
-            // Close menu when clicking outside
             $(document).on('click', function (e) {
                 if (!$(e.target).closest('.class-actions-wrapper').length) {
                     $('.class-actions-menu').addClass('hidden');
@@ -178,18 +169,14 @@
                     const wrapper = $('#class-table_wrapper');
                     const $length = wrapper.find('.dataTables_length, .dt-length');
                     const $filter = wrapper.find('.dataTables_filter, .dt-search');
-
-                    // Create custom filter container with label on top
                     const $customFilter = $('<div class="flex flex-col gap-1"></div>');
                     $customFilter.append(
                         '<label for="academic_year_filter" class="text-sm font-medium text-gray-700">Academic Year</label>' +
                         '<select id="academic_year_filter" class="w-64 border border-gray-300 rounded-md p-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></select>'
                     );
 
-                    // Insert filter **before** the search input (so it appears on the left of search)
                     $filter.prepend($customFilter);
 
-                    // Move length & search to toolbar
                     $('#class-table-toolbar').empty().append($length).append($filter);
 
                     $length.addClass('flex items-center gap-2 text-sm text-gray-600');
@@ -208,9 +195,6 @@
                         )
                         .attr('placeholder', 'Search...');
 
-                    stylePagination();
-
-                    // Initialize Select2 for Academic Year filter
                     $('#academic_year_filter').select2({
                         placeholder: "All Academic Years",
                         allowClear: true,
@@ -234,8 +218,7 @@
                         currentAcademicYearId = $(this).val() || '';
                         $('#class-table').DataTable().ajax.reload(null, false);
                     });
-
-                    // Auto-select the ACTIVE year if only one
+                    
                     $.ajax({
                         url: '/Select2/AcademicYears',
                         data: { page: 1 },
@@ -253,7 +236,6 @@
             });
         }
 
-        // Same pagination styling
         function stylePagination() {
             const wrapper = $('#class-table_wrapper');
             let $info = wrapper.find('.dataTables_info').first();
@@ -309,28 +291,53 @@
 
         function delClass(id) {
             $('.class-actions-menu').addClass('hidden');
-            if (!confirm("Delete this class and its students?")) return;
 
-            $.ajax({
-                url: "/Class/Delete",
-                type: "POST",
-                contentType: "application/json",
-                data: JSON.stringify({
-                    action: "delete",
-                    id: id,
-                    data: null
-                }),
-                success: res => {
-                    if (res.success) {
-                        $('#class-table').DataTable().ajax.reload(null, false);
-                    } else {
-                        alert(res.message || "Failed to delete class");
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "You won't be able to revert this!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, delete it!',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if(!result.isConfirmed) return;
+
+                $.ajax({
+                    url: "/Class/Delete",
+                    type: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify({
+                        action: "delete",
+                        id: id,
+                        data: null
+                    }),
+                    success: res => {
+                        if (res.success) {
+                            $('#class-table').DataTable().ajax.reload(null, false);
+                            Swal.fire(
+                                'Deleted!',
+                                'Class data has been deleted.',
+                                'success'
+                            );
+                        } else {
+                            Swal.fire(
+                                'Failed!',
+                                res.message,
+                                'error'
+                            );
+                        }
+                    },
+                    error: function () {
+                        Swal.fire(
+                            'Error!',
+                            'An error occurred while deleting the class.',
+                            'error'
+                        );
                     }
-                },
-                error: function () {
-                    alert("An error occurred while deleting the class.");
-                }
-            });
+                });
+            })
         }
     </script>
 }

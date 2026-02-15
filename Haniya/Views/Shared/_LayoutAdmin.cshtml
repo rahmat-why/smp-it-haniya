@@ -18,9 +18,9 @@
     <script src="https://cdn.datatables.net/2.0.7/js/dataTables.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        /* ===== DATATABLE STYLING ===== */
         .dataTables_wrapper .dataTables_length label,
         .dataTables_wrapper .dataTables_filter label,
         .dataTables_wrapper .dt-length label,
@@ -28,58 +28,51 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            color: #1e3a8a;
+            color: #4b5563;
             font-size: 0.875rem;
             font-weight: 500;
         }
 
         .dataTables_wrapper .dataTables_length select,
         .dataTables_wrapper .dt-length select {
-            border: 1px solid #1e3a8a;
+            border: 1px solid #d1d5db;
             border-radius: 0.375rem;
-            padding: 0.375rem 2rem 0.375rem 0.75rem;
+            padding: 0.25rem 0.5rem;
             font-size: 0.875rem;
-            color: #1e3a8a;
+            color: #374151;
             background-color: #ffffff;
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%231e3a8a' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-            background-position: right 0.5rem center;
-            background-repeat: no-repeat;
-            background-size: 1.5em 1.5em;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
         }
 
             .dataTables_wrapper .dataTables_length select:focus,
             .dataTables_wrapper .dt-length select:focus {
-                outline: 2px solid #1e40af;
+                outline: 2px solid #3b82f6;
                 outline-offset: 2px;
-                border-color: #1e40af;
+                border-color: #3b82f6;
             }
 
         .dataTables_wrapper .dataTables_filter input,
         .dataTables_wrapper .dt-search input {
-            border: 1px solid #1e3a8a;
+            border: 1px solid #d1d5db;
             border-radius: 0.375rem;
-            padding: 0.5rem 0.75rem;
+            padding: 0.375rem 0.75rem;
             font-size: 0.875rem;
-            color: #1e3a8a;
+            color: #374151;
             background-color: #ffffff;
+            width: 100%;
         }
 
             .dataTables_wrapper .dataTables_filter input:focus,
             .dataTables_wrapper .dt-search input:focus {
-                outline: 2px solid #1e40af;
+                outline: 2px solid #3b82f6;
                 outline-offset: 2px;
-                border-color: #1e40af;
+                border-color: #3b82f6;
             }
 
             .dataTables_wrapper .dataTables_filter input::placeholder,
             .dataTables_wrapper .dt-search input::placeholder {
-                color: #64748b;
+                color: #9ca3af;
             }
 
-        /* Table Header Sorting */
         table.dataTable thead th {
             position: relative;
             cursor: pointer;
@@ -102,14 +95,14 @@
                 content: "▲";
                 top: 0.5rem;
                 font-size: 0.65rem;
-                color: #1e3a8a;
+                color: #4b5563;
             }
 
             table.dataTable thead th.sorting:after {
                 content: "▼";
                 bottom: 0.5rem;
                 font-size: 0.65rem;
-                color: #1e3a8a;
+                color: #4b5563;
             }
 
             table.dataTable thead th.sorting_asc:before {
@@ -135,73 +128,82 @@
                 display: none;
             }
 
-        /* Pagination */
         .dataTables_wrapper .dataTables_info,
         .dataTables_wrapper .dt-info {
-            padding-top: 0.75rem;
-            padding-bottom: 0.75rem;
             font-size: 0.875rem;
-            color: #1e3a8a;
-            font-weight: 500;
+            color: #4b5563;
         }
 
         .dataTables_wrapper .dataTables_paginate,
         .dataTables_wrapper .dt-paging {
-            padding-top: 0.75rem;
-            padding-bottom: 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            overflow: hidden;
         }
 
-            .dataTables_wrapper .dataTables_paginate .paginate_button,
-            .dataTables_wrapper .dt-paging .dt-paging-button {
-                border-radius: 0.375rem;
-                border: 1px solid #1e3a8a;
-                padding: 0.375rem 0.75rem;
-                margin-left: 0.125rem;
-                margin-right: 0.125rem;
-                font-size: 0.875rem;
-                color: #1e3a8a;
-                background-color: #ffffff;
-                font-weight: 500;
-                transition: all 0.15s ease-in-out;
-            }
+        .dataTables_wrapper .dataTables_paginate .paginate_button,
+        .dataTables_wrapper .dataTables_paginate a,
+        .dataTables_wrapper .dataTables_paginate span,
+        .dataTables_wrapper .dt-paging .dt-paging-button,
+        .dataTables_wrapper .dt-paging a,
+        .dataTables_wrapper .dt-paging span {
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem 0.75rem !important;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-right: 1px solid #d1d5db;
+            min-width: 40px;
+            transition: all 0.15s;
+            background-color: white !important;
+            color: #374151 !important;
+            box-sizing: border-box;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            border-top: none !important;
+            border-bottom: none !important;
+            border-left: none !important;
+        }
 
-                .dataTables_wrapper .dataTables_paginate .paginate_button:hover,
-                .dataTables_wrapper .dt-paging .dt-paging-button:hover {
-                    background-color: #dbeafe;
-                    color: #1e40af;
-                    border-color: #1e40af;
-                }
+        .dataTables_wrapper .dataTables_paginate .paginate_button:last-child,
+        .dataTables_wrapper .dataTables_paginate a:last-child,
+        .dataTables_wrapper .dataTables_paginate span:last-child,
+        .dataTables_wrapper .dt-paging .dt-paging-button:last-child,
+        .dataTables_wrapper .dt-paging a:last-child,
+        .dataTables_wrapper .dt-paging span:last-child {
+            border-right: none !important;
+        }
 
-                .dataTables_wrapper .dataTables_paginate .paginate_button.current,
-                .dataTables_wrapper .dt-paging .dt-paging-button.current {
-                    background-color: #1e3a8a;
-                    color: #ffffff !important;
-                    border-color: #1e3a8a;
-                }
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current,
+        .dataTables_wrapper .dataTables_paginate .current,
+        .dataTables_wrapper .dt-paging .dt-paging-button.current,
+        .dataTables_wrapper .dt-paging .current {
+            background-color: #1e3a8a !important;
+            color: white !important;
+            cursor: default;
+        }
 
-                    .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover,
-                    .dataTables_wrapper .dt-paging .dt-paging-button.current:hover {
-                        background-color: #1e40af;
-                        border-color: #1e40af;
-                    }
+        .dataTables_wrapper .dataTables_paginate .paginate_button.disabled,
+        .dataTables_wrapper .dataTables_paginate .disabled,
+        .dataTables_wrapper .dt-paging .dt-paging-button.disabled,
+        .dataTables_wrapper .dt-paging .disabled {
+            background-color: #f9fafb !important;
+            color: #9ca3af !important;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
 
-                .dataTables_wrapper .dataTables_paginate .paginate_button.disabled,
-                .dataTables_wrapper .dt-paging .dt-paging-button.disabled {
-                    opacity: 0.4;
-                    cursor: not-allowed;
-                    background-color: #f1f5f9;
-                    border-color: #cbd5e1;
-                    color: #64748b;
-                }
+        .dataTables_wrapper .dataTables_paginate .paginate_button:not(.current):not(.disabled):hover,
+        .dataTables_wrapper .dataTables_paginate a:not(.current):not(.disabled):hover,
+        .dataTables_wrapper .dt-paging .dt-paging-button:not(.current):not(.disabled):hover,
+        .dataTables_wrapper .dt-paging a:not(.current):not(.disabled):hover {
+            background-color: #f3f4f6 !important;
+            color: #1e3a8a !important;
+        }
 
-                    .dataTables_wrapper .dataTables_paginate .paginate_button.disabled:hover,
-                    .dataTables_wrapper .dt-paging .dt-paging-button.disabled:hover {
-                        background-color: #f1f5f9;
-                        border-color: #cbd5e1;
-                        color: #64748b;
-                    }
-
-        /* ===== SELECT2 STYLING ===== */
         .select2-container--default .select2-selection--single {
             height: 2.5rem;
             border: 1px solid #d1d5db;
@@ -214,14 +216,14 @@
         }
 
             .select2-container--default .select2-selection--single .select2-selection__rendered {
-                color: #1e3a8a;
+                color: #374151;
                 padding-left: 0;
                 line-height: 1.5rem;
                 font-weight: 500;
             }
 
             .select2-container--default .select2-selection--single .select2-selection__placeholder {
-                color: #64748b;
+                color: #9ca3af;
                 font-weight: 400;
             }
 
@@ -231,32 +233,32 @@
             }
 
                 .select2-container--default .select2-selection--single .select2-selection__arrow b {
-                    border-color: #1e3a8a transparent transparent transparent;
+                    border-color: #4b5563 transparent transparent transparent;
                     border-width: 6px 5px 0 5px;
                 }
 
         .select2-container--default.select2-container--open .select2-selection--single .select2-selection__arrow b {
-            border-color: transparent transparent #1e3a8a transparent;
+            border-color: transparent transparent #4b5563 transparent;
             border-width: 0 5px 6px 5px;
         }
 
         .select2-container--default .select2-selection--single:focus,
         .select2-container--default.select2-container--focus .select2-selection--single {
-            outline: 2px solid #1e40af;
+            outline: 2px solid #3b82f6;
             outline-offset: 2px;
-            border-color: #1e40af;
+            border-color: #3b82f6;
         }
 
         .select2-dropdown {
             border-radius: 0.375rem;
             border: 1px solid #d1d5db;
-            box-shadow: 0 10px 15px -3px rgba(30, 58, 138, 0.1), 0 4px 6px -4px rgba(30, 58, 138, 0.1);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
         }
 
         .select2-container--default .select2-results__option {
             font-size: 0.875rem;
             padding: 0.5rem 0.75rem;
-            color: #1e3a8a;
+            color: #374151;
         }
 
         .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
@@ -277,14 +279,13 @@
         }
 
             .select2-container--default .select2-search--dropdown .select2-search__field:focus {
-                outline: 2px solid #1e40af;
+                outline: 2px solid #3b82f6;
                 outline-offset: 2px;
-                border-color: #1e40af;
+                border-color: #3b82f6;
             }
 
-        /* Select2 Clear Button */
         .select2-container--default .select2-selection--single .select2-selection__clear {
-            color: #1e3a8a;
+            color: #4b5563;
             font-size: 1.25rem;
             font-weight: bold;
             margin-right: 0.5rem;
@@ -292,81 +293,6 @@
 
             .select2-container--default .select2-selection--single .select2-selection__clear:hover {
                 color: #1e40af;
-            }
-
-        /* Three Dots Menu */
-        .actions-menu {
-            position: absolute;
-            right: 0;
-            top: 100%;
-            margin-top: 0.25rem;
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.375rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            z-index: 50;
-            min-width: 120px;
-        }
-
-            .actions-menu a,
-            .actions-menu button {
-                display: block;
-                width: 100%;
-                text-align: left;
-                padding: 0.5rem 0.75rem;
-                font-size: 0.875rem;
-                transition: background-color 0.15s ease-in-out;
-            }
-
-                .actions-menu a:hover,
-                .actions-menu button:hover {
-                    background-color: #f3f4f6;
-                }
-
-                .actions-menu a:first-child,
-                .actions-menu button:first-child {
-                    border-radius: 0.375rem 0.375rem 0 0;
-                }
-
-                .actions-menu a:last-child,
-                .actions-menu button:last-child {
-                    border-radius: 0 0 0.375rem 0.375rem;
-                }
-
-        /* Custom sorting icons */
-        table.dataTable thead th.sorting,
-        table.dataTable thead th.sorting_asc,
-        table.dataTable thead th.sorting_desc {
-            position: relative;
-            padding-right: 2rem !important;
-        }
-
-            table.dataTable thead th.sorting:after,
-            table.dataTable thead th.sorting_asc:after,
-            table.dataTable thead th.sorting_desc:after {
-                position: absolute;
-                right: 0.75rem;
-                top: 50%;
-                transform: translateY(-50%);
-                font-family: 'Font Awesome 5 Free';
-                font-weight: 900;
-                font-size: 0.75rem;
-                color: #1e3a8a;
-            }
-
-            table.dataTable thead th.sorting:after {
-                content: "\f0dc";
-                opacity: 0.3;
-            }
-
-            table.dataTable thead th.sorting_asc:after {
-                content: "\f0de";
-                opacity: 1;
-            }
-
-            table.dataTable thead th.sorting_desc:after {
-                content: "\f0dd";
-                opacity: 1;
             }
     </style>
 </head>
@@ -386,8 +312,6 @@
                     <p class="text-xs text-gray-500">Management System</p>
                 </div>
             </div>
-
-            <!-- Right: User Info & Logout -->
             @if (User.Identity.IsAuthenticated)
             {
                 <div class="flex items-center gap-4">
@@ -396,9 +320,7 @@
                         <!-- Profile Photo -->
                         @if (!string.IsNullOrEmpty(User.FindFirst("ProfilePhoto")?.Value))
                         {
-                            <img src="@User.FindFirst("ProfilePhoto")?.Value"
-                                 alt="Profile"
-                                 class="w-10 h-10 rounded-full object-cover border-2 border-blue-600" />
+                            <img src="@User.FindFirst("ProfilePhoto")?.Value" alt="Profile" class="w-10 h-10 rounded-full object-cover border-2 border-blue-600" />
                         }
                         else
                         {
@@ -406,17 +328,11 @@
                                 @(User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value?.Substring(0, 1).ToUpper() ?? "U")
                             </div>
                         }
-
-                        <!-- User Details -->
                         <div class="text-left">
                             <p class="text-sm font-semibold text-gray-800">@User.FindFirst("FullName")?.Value</p>
                             <p class="text-xs text-gray-500">@User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value</p>
                         </div>
-
-                        <!-- Separator -->
                         <div class="h-8 w-px bg-gray-300 mx-2"></div>
-
-                        <!-- Logout Button -->
                         <button type="button"
                                 onclick="handleLogout(event)"
                                 class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition duration-200 flex items-center gap-2 text-sm">
@@ -430,36 +346,25 @@
             }
             else
             {
-                <a href="/LoginAdmin/Index"
-                   class="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg font-medium transition">
+                <a href="/LoginAdmin/Index" class="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg font-medium transition">
                     Login
                 </a>
             }
         </div>
     </header>
-
-    <!-- Main Layout: Sidebar + Content -->
-    <div class="flex flex-1 overflow-hidden">
-        <!-- Sidebar -->
-        <aside class="w-64 bg-blue-900 text-white flex-shrink-0 flex flex-col">
-            <!-- Menu -->
+    <div class="flex flex-1 overflow-hidden"> 
+        <aside class="w-64 bg-blue-900 text-white flex-shrink-0 flex flex-col"> 
             <nav id="sidebar-menu" class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-            </nav>
-
-            <!-- Footer Info -->
+            </nav> 
             <div class="p-4 border-t border-blue-700 text-center text-xs text-blue-200">
                 <p>&copy; 2026 SMP IT HANIYA</p>
                 <p class="mt-1">Version 1.0</p>
             </div>
-        </aside>
-
-        <!-- Main Content -->
+        </aside> 
         <main class="flex-1 overflow-auto p-6">
             @RenderBody()
         </main>
-    </div>
-
-    <!-- Scripts -->
+    </div> 
     <script>
         $(document).ready(function () {
             loadMenu();
@@ -490,21 +395,15 @@
                         // '/student' dan '/student/index' dianggap sama
                         const normalizedCurrent = currentPath.replace(/\/index$/, '');
                         const normalizedMenu = menuUrl.replace(/\/index$/, '');
-
-                        // Logika aktif:
-                        // - persis sama (/student == /student)
-                        // - atau current berada di bawah menu (/student/create, /student/edit, dll.)
                         let isActive = false;
                         if (normalizedMenu) {
                             isActive =
                                 normalizedCurrent === normalizedMenu ||
                                 normalizedCurrent.startsWith(normalizedMenu + '/');
-                        }
-
+                        } 
                         const activeClass = isActive
                             ? 'bg-blue-700 border-l-4 border-white font-semibold'
                             : 'hover:bg-blue-700';
-
                         html += `
                                 <a href="${m.url}"
                                    class="flex items-center gap-3 px-4 py-2 rounded transition ${activeClass}"
@@ -516,8 +415,6 @@
                     });
 
                     $('#sidebar-menu').html(html);
-
-                    // Klik menu akan mengubah active state juga (tanpa ubah logika URL)
                     $('#sidebar-menu a').on('click', function () {
                         $('#sidebar-menu a')
                             .removeClass('bg-blue-700 border-l-4 border-white font-semibold');
