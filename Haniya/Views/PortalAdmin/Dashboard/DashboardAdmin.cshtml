@@ -9,10 +9,13 @@
         <p class="text-gray-600 mt-2">Selamat datang kembali</p>
     </div>
 
+    <div id="loading" class="text-center py-20">
+        <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-indigo-600"></div>
+        <p class="mt-4 text-gray-600">Memuat data...</p>
+    </div>
+
     <div id="content" class="space-y-10">
-        <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100" id="summaryContainer">
-            
-        </div>
+        <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100" id="summaryContainer"></div>
 
         <!-- Events & Articles dengan pagination -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -42,7 +45,7 @@
 <script>
     let allEvents = [];
     let allArticles = [];
-    const itemsPerPage = 3; // Show 3 items per page
+    const itemsPerPage = 3; 
 
     $(document).ready(function () {
         loadAdminDashboard();
@@ -166,8 +169,6 @@
                     `
                 );
 
-                console.log(d);
-
                 const $select = $('#academic_year_filter');
 
                 d.academicYearList.forEach(item => {
@@ -186,11 +187,11 @@
 
                 allEvents = d.events || [];
                 allArticles = d.articles || [];
-
-                // Render first page
+                
                 renderEvents(1);
                 renderArticles(1);
 
+                $('#loading').addClass('hidden');
                 $('#content').removeClass('hidden');
             },
             error: function () {
