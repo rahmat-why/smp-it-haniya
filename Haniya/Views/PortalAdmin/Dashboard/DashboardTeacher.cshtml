@@ -4,225 +4,332 @@
 }
 
 <div class="max-w-7xl mx-auto space-y-10 py-8 px-4" id="teacher-dashboard">
-    <div class="text-center">
-        <h1 class="text-4xl font-bold text-indigo-900">Dashboard Guru</h1>
-        <p class="text-gray-600 mt-2">Selamat datang kembali</p>
+    <div>
+        <h1 class="text-3xl font-bold text-indigo-900">Teacher Dashboard</h1>
+        <p class="text-gray-600 mt-2">Welcome back</p>
     </div>
 
     <div id="loading" class="text-center py-20">
         <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-indigo-600"></div>
-        <p class="mt-4 text-gray-600">Memuat data...</p>
+        <p class="mt-4 text-gray-600">Loading...</p>
     </div>
 
     <div id="content" class="hidden space-y-10">
-        <!-- Jadwal Kelas (mingguan dengan filter kelas khusus) -->
-        <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-            <h2 class="text-3xl font-bold text-indigo-900 mb-8">Jadwal Kelas</h2>
-            <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Pilih Kelas</label>
-                <select id="scheduleFilterClass" class="w-full max-w-md"></select>
-            </div>
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            <div class="xl:col-span-2 bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+                <h2 class="text-2xl font-bold text-indigo-900 mb-8">Class Schedule</h2>
 
-            <div class="overflow-x-auto">
-                <table class="w-full text-left">
-                    <thead class="bg-gray-50 text-gray-700 uppercase text-xs">
-                        <tr>
-                            <th class="px-6 py-4">Hari</th>
-                            <th class="px-6 py-4">Jam</th>
-                            <th class="px-6 py-4">Mata Pelajaran</th>
-                            <th class="px-6 py-4">Guru</th>
-                        </tr>
-                    </thead>
-                    <tbody id="weekly-schedule"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Nilai & Kehadiran side by side -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
-            <!-- Nilai Siswa (col-9) -->
-            <div class="lg:col-span-9 bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-                <h2 class="text-3xl font-bold text-indigo-900 mb-8">Nilai Siswa</h2>
-
-                <div class="flex flex-wrap items-end gap-4 mb-8">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Kelas</label>
-                        <select id="gradesFilterClass" class="w-full max-w-md"></select>
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2" for="">Choose Class</label>
+                    <div class="overflow-x-auto">
+                        <div id="classFilterButtons" class="flex gap-2 w-max"></div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Mata Pelajaran</label>
-                        <select id="gradesFilterSubject" class="w-full max-w-md"></select>
-                    </div>
-                    <button onclick="loadTeacherDashboard()" class="px-6 py-2 bg-indigo-900 text-white rounded-xl font-medium hover:bg-indigo-800 transition">Filter</button>
                 </div>
 
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left" id="grades-table">
+                    <table class="w-full text-left">
                         <thead class="bg-gray-50 text-gray-700 uppercase text-xs">
                             <tr>
-                                <th class="px-6 py-4">Siswa</th>
-                                <th class="px-6 py-4">Mata Pelajaran</th>
-                                <th class="px-6 py-4">Rata-rata</th>
+                                <th class="px-6 py-4">Day</th>
+                                <th class="px-6 py-4">Time</th>
+                                <th class="px-6 py-4">Subject</th>
+                                <th class="px-6 py-4">Teacher</th>
                             </tr>
                         </thead>
-                        <tbody id="grades-body"></tbody>
+                        <tbody id="weekly-schedule"></tbody>
                     </table>
                 </div>
             </div>
-
-            <!-- Kehadiran (col-3) -->
-            <div class="lg:col-span-3 bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-                <h2 class="text-3xl font-bold text-indigo-900 mb-8">Kehadiran</h2>
-
-                <div class="flex flex-col gap-4 mb-8">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Dari</label>
-                        <input type="date" id="attendanceStart" class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100 space-y-6">
+                <h3 class="text-xl font-bold text-indigo-900">Class Analythics</h3>
+                <div class="grid grid-cols-1 md:grid-cols-6 xl:grid-cols-12 gap-4">
+                    <div class="md:col-span-3 xl:col-span-4">
+                        <label class="text-xs font-medium text-gray-500" for="gradeFilterClass">Class</label>
+                        <select id="gradesFilterClass" class="mt-1 w-full rounded-xl border-gray-300 focus:ring-indigo-500 focus:border-indigo-500"></select>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Sampai</label>
-                        <input type="date" id="attendanceEnd" class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <div class="md:col-span-3 xl:col-span-4">
+                        <label class="text-xs font-medium text-gray-500" for="filterAcademicYear">School Year</label>
+                        <select id="filterAcademicYear" class="mt-1 w-full rounded-xl border-gray-300 focus:ring-indigo-500 focus:border-indigo-500"></select>
                     </div>
-                    <button onclick="loadTeacherDashboard()" class="px-6 py-2 bg-indigo-900 text-white rounded-xl font-medium hover:bg-indigo-800 transition">Filter</button>
+                    <div class="md:col-span-3 xl:col-span-4">
+                        <label class="text-xs font-medium text-gray-500" for="gradesFilterSubject">Subject</label>
+                        <select id="gradesFilterSubject" class="mt-1 w-full rounded-xl border-gray-300 focus:ring-indigo-500 focus:border-indigo-500"></select>
+                    </div>
                 </div>
 
-                <div class="flex justify-center">
-                    <canvas id="attendanceChart" width="300" height="300"></canvas>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+                        <h4 class="text-lg font-bold text-indigo-900 mb-4">Student Grades Class</h4>
+                        <canvas id="gradesBarChart" height="200"></canvas>
+                        <div class="flex flex-wrap gap-4 mt-4 text-sm">
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-indigo-500"></span> Average
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-gray-300"></span> Remaining towards 100
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+                        <h4 class="text-lg font-bold text-indigo-900 mb-4">Student Attendances</h4>
+                        <canvas id="attendanceBarChart" height="200"></canvas>
+                        <div class="flex flex-wrap gap-4 mt-4 text-sm">
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-emerald-500"></span> Present
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-yellow-500"></span> Sick
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-blue-400"></span> Excused
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-gray-400"></span> No Info
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <!-- Events & Articles dengan pagination -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <!-- Events -->
-            <div id="events-container" class="space-y-6"></div>
-
-            <!-- Articles -->
-            <div id="articles-container" class="space-y-6"></div>
-        </div>
-
     </div>
 </div>
 
+
 <script>
-    let fullData = {};
-    let allEvents = [];
-    let allArticles = [];
-    const itemsPerPage = 3;
-
-    $(document).ready(function () {
-        // Default range kehadiran: bulan ini
-        const today = new Date();
-        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
-        $('#attendanceStart').val(firstDay);
-        $('#attendanceEnd').val(lastDay);
-
-        // Init Select2 untuk semua filter kelas
-        $('#scheduleFilterClass').select2({
-            ajax: {
-                url: '/Select2/AcademicClasses',
-                dataType: 'json',
-                delay: 250,
-                data: function (params) {
-                    return { q: params.term, page: params.page || 1 };
-                },
-                processResults: function (data) {
-                    return {
-                        results: data.results,
-                        pagination: { more: data.pagination.more }
-                    };
-                }
+    let selectedClassId = null;
+    function prefetchAcademicClasses() {
+        $.ajax({
+            url: '/Select2/AcademicClasses',
+            type: 'GET',
+            dataType: 'json',
+            data: {
+                q: '',
+                page: 1
             },
-            placeholder: 'Pilih Kelas untuk Jadwal',
-            allowClear: true
+            success: function (data) {
+                renderClassButtons(data.results);
+            },
+            error: function (err) {
+                console.error('Error fetch AcademicClasses:', err);
+            }
+        });
+    }
+
+    function renderClassButtons(classes) {
+        const container = $('#classFilterButtons');
+        container.empty();
+
+        classes.forEach((cls, index) => {
+            container.append(`
+                <button 
+                    class="class-btn px-4 py-2 rounded-full border bg-white hover:bg-indigo-50 whitespace-nowrap"
+                    data-id="${cls.id}">
+                    ${cls.text}
+                </button>
+            `);
         });
 
-        $('#gradesFilterClass').select2({
-            ajax: {
-                url: '/Select2/AcademicClasses',
-                dataType: 'json',
-                delay: 250,
-                data: function (params) {
-                    return { q: params.term, page: params.page || 1 };
-                },
-                processResults: function (data) {
-                    return {
-                        results: data.results,
-                        pagination: { more: data.pagination.more }
-                    };
-                }
-            },
-            placeholder: 'Pilih Kelas untuk Nilai',
-            allowClear: true
-        });
-
-        $('#gradesFilterSubject').select2({
-            ajax: {
-                url: '/Select2/Subjects', // Sesuaikan jika route berbeda
-                dataType: 'json',
-                delay: 250,
-                data: function (params) {
-                    // Ambil text kelas yang sedang dipilih (misal "7A")
-                    var selectedClassData = $('#gradesFilterClass').select2('data')[0];
-                    var classLevel = '';
-                    if (selectedClassData && selectedClassData.text) {
-                        classLevel = selectedClassData.text.charAt(0); // split first character → "7", "8", "9"
-                    }
-
-                    return {
-                        q: params.term || '',
-                        page: params.page || 1,
-                        classLevel: classLevel
-                    };
-                },
-                processResults: function (data) {
-                    return {
-                        results: data.results,
-                        pagination: { more: data.pagination.more }
-                    };
-                }
-            },
-            placeholder: 'Pilih Mata Pelajaran',
-            allowClear: true,
-            minimumInputLength: 0 // Izinkan buka dropdown tanpa typing untuk lihat semua
-        });
-
-        $('#scheduleFilterClass, #gradesFilterClass').on('change', function () {
-            var selectedVal = $(this).val();
-            // Sync kedua dropdown kelas
-            $('#scheduleFilterClass').val(selectedVal).trigger('change.select2');
-            $('#gradesFilterClass').val(selectedVal).trigger('change.select2');
-
-            // Clear & refresh dropdown mata pelajaran (akan load ulang berdasarkan kelas baru)
-            $('#gradesFilterSubject').val(null).trigger('change');
-
-            // Auto reload data dashboard
+        const firstBtn = container.find('.class-btn').first();
+        if (firstBtn.length) {
+            firstBtn
+                .removeClass('bg-white')
+                .addClass('bg-indigo-600 text-white');
+            selectedClassId = firstBtn.data('id');
             loadTeacherDashboard();
-        });
+        }
+    }
 
-        $('#gradesFilterSubject').on('change', function () {
-            loadTeacherDashboard();
-        });
 
+    $(document).on('click', '.class-btn', function () {
+        $('.class-btn')
+            .removeClass('bg-indigo-600 text-white')
+            .addClass('bg-white');
+
+        $(this)
+            .removeClass('bg-white')
+            .addClass('bg-indigo-600 text-white');
+
+        selectedClassId = $(this).data('id');
         loadTeacherDashboard();
     });
 
-    function loadTeacherDashboard() {
-        const scheduleClassId = $('#scheduleFilterClass').val();
-        const gradesClassId = $('#gradesFilterClass').val();
-        const subjectId = $('#gradesFilterSubject').val();
-        const attendanceStart = $('#attendanceStart').val();
-        const attendanceEnd = $('#attendanceEnd').val();
 
+    function renderWeeklySchedule(schedule) {
+        let html = '';
+
+        if (!schedule || schedule.length === 0) {
+            html = `
+                <tr>
+                    <td colspan="4" class="text-center py-8 text-gray-500">
+                        Tidak ada jadwal untuk kelas ini
+                    </td>
+                </tr>`;
+        } else {
+            const today = new Date().toLocaleDateString('id-ID', { weekday: 'long' });
+
+            const grouped = {};
+            schedule.forEach(item => {
+                if (!grouped[item.day]) grouped[item.day] = [];
+                grouped[item.day].push(item);
+            });
+
+            const daysOrder = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+
+            daysOrder.forEach(day => {
+                const items = grouped[day];
+                if (!items) return;
+
+                const isToday = day === today;
+
+                items.forEach((i, index) => {
+                    html += `
+                        <tr class="
+                            ${isToday ? 'bg-amber-50 border-l-4 border-amber-400' : 'hover:bg-gray-50'}
+                            ${index === 0 ? 'border-t-2 border-gray-200' : ''}
+                        ">
+                            ${index === 0 ? `
+                                <td rowspan="${items.length}" 
+                                    class="px-6 py-4 font-medium align-middle text-center ${isToday ? 'text-amber-900' : 'text-gray-900'}">
+                                    ${day} ${isToday ? '(Hari Ini)' : ''}
+                                </td>
+                            ` : ''}
+
+                            <td class="px-6 py-4 text-indigo-900 font-medium">
+                                ${i.time}
+                            </td>
+                            <td class="px-6 py-4 font-semibold">
+                                ${i.subject}
+                            </td>
+                            <td class="px-6 py-4 text-gray-600">
+                                ${i.teacher}
+                            </td>
+                        </tr>`;
+                });
+            });
+        }
+
+        $('#weekly-schedule').html(html);
+    }
+
+    let gradesChart;
+    function renderGradesChart(data) {
+        const ctx = document.getElementById('gradesBarChart').getContext('2d');
+
+        if (gradesChart) gradesChart.destroy();
+
+        let classAvg = 0;
+
+        if (data && data.length > 0) {
+            const total = data.reduce((sum, item) => sum + parseFloat(item.avg || 0), 0);
+            classAvg = total / data.length;
+        }
+
+        const remain = 100 - classAvg;
+
+        gradesChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Average', 'Remaining towards 100'],
+                datasets: [{
+                    data: [classAvg, remain],
+                    backgroundColor: ['#6366f1', '#e5e7eb'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                cutout: '70%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => `${ctx.raw.toFixed(2)}`
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    let attendanceChart;
+    function renderAttendanceChart(data) {
+        const ctx = document.getElementById('attendanceBarChart').getContext('2d');
+
+        if (attendanceChart) attendanceChart.destroy();
+
+        const mapped = {
+            PRESENT: 0,
+            SICK: 0,
+            EXCUSED: 0,
+            NOINFO: 0
+        };
+
+        data.forEach(item => {
+            const key = item.status?.toUpperCase();
+            if (mapped.hasOwnProperty(key)) {
+                mapped[key] = item.count;
+            }
+        });
+
+        attendanceChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Attendances'],
+                datasets: [
+                    {
+                        label: 'Present',
+                        data: [mapped.PRESENT],
+                        backgroundColor: '#10b981',
+                    },
+                    {
+                        label: 'Sick',
+                        data: [mapped.SICK],
+                        backgroundColor: '#facc15',
+                    },
+                    {
+                        label: 'Excused',
+                        data: [mapped.EXCUSED],
+                        backgroundColor: '#60a5fa',
+                    },
+                    {
+                        label: 'No Info',
+                        data: [mapped.NOINFO],
+                        backgroundColor: '#9ca3af',
+                    },
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: false
+                    },
+                    y: {
+                        stacked: false,
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+
+    let currentAcademicYear = null;
+    let currentClass = null;
+    let currentSubject = null;
+    function loadTeacherDashboard() {
         $.ajax({
             url: '/Dashboard/GetTeacherData',
             type: 'GET',
             data: {
-                classId: scheduleClassId || gradesClassId,
-                subjectId: subjectId,
-                startDate: attendanceStart,
-                endDate: attendanceEnd
+                classId: selectedClassId,
+                academicYear: currentAcademicYear,
+                academicClass: currentClass,
+                subjectId: currentSubject,
             },
             success: function (res) {
                 if (!res.success) {
@@ -234,227 +341,78 @@
 
                 console.log(fullData);
 
+                const $selectYear = $("#filterAcademicYear");
+                const $selectClass = $("#gradesFilterClass");
+                const $selectSubject = $("#gradesFilterSubject");
+
+                $selectYear.empty();
+                $selectClass.empty();
+                $selectSubject.empty();
+
+                fullData.academicYearList.forEach(item => {
+                    $selectYear.append(`<option value="${item.value}">${item.text}</option>`);
+                });
+
+                if (!currentAcademicYear) {
+                    currentAcademicYear = fullData.academicYearUsed;
+                }
+                $selectYear.val(currentAcademicYear);
+
+                fullData.academicClassList.forEach(item => {
+                    $selectClass.append(`<option value="${item.value}">${item.text}</option>`);
+                });
+
+                if (!currentClass || !fullData.academicClassList.some(x => x.value === currentClass)) {
+                    currentClass = fullData.academicClassList.length > 0
+                        ? fullData.academicClassList[0].value
+                        : null;
+                }
+
+                $selectClass.val(currentClass);
+
+
+                fullData.academicSubjectList.forEach(item => {
+                    $selectSubject.append(`<option value="${item.value}">${item.text}</option>`);
+                });
+
+                if (!currentSubject && fullData.academicSubjectList.length > 0) {
+                    currentSubject = fullData.academicSubjectList[0].value;
+                }
+                $selectSubject.val(currentSubject);
+
                 renderWeeklySchedule(fullData.weeklySchedule);
-                renderAttendancePie(fullData.attendancePie);
-                renderGrades(fullData.grades);
-                renderEventsArticles(fullData.events, fullData.articles);
+                renderAttendanceChart(fullData.attendanceChart);
+                renderGradesChart(fullData.gradesChart);
 
                 $('#loading').addClass('hidden');
                 $('#content').removeClass('hidden');
             },
             error: function () {
-                alert('Gagal memuat data');
+                Swal.fire('Error!', 'Gagal memuat data.', 'error');
             }
         });
     }
 
-    function renderWeeklySchedule(schedule) {
-        const classSelected = !!$('#scheduleFilterClass').val()?.trim();
-        let html = '';
 
-        if (!classSelected) {
-            html = '<tr><td colspan="4" class="text-center py-8 text-gray-500">Pilih kelas terlebih dahulu untuk melihat jadwal</td></tr>';
-        } else if (schedule.length === 0) {
-            html = '<tr><td colspan="4" class="text-center py-8 text-gray-500">Tidak ada jadwal untuk kelas ini</td></tr>';
-        } else {
-            const today = new Date().toLocaleDateString('id-ID', { weekday: 'long' });
-            const grouped = {};
-            schedule.forEach(item => {
-                if (!grouped[item.day]) grouped[item.day] = [];
-                grouped[item.day].push(item);
-            });
+    $(document).ready(function () {
+        prefetchAcademicClasses();
 
-            const daysOrder = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-
-            daysOrder.forEach(day => {
-                const items = grouped[day] || [];
-                const isToday = day === today;
-
-                html += `
-                    <tr class="${isToday ? 'bg-gradient-to-r from-amber-50 to-amber-100 border-l-4 border-amber-400' : 'hover:bg-gray-50'}">
-                        <td class="px-6 py-4 font-medium ${isToday ? 'text-amber-900' : 'text-gray-900'}">
-                            ${day} ${isToday ? '(Hari Ini)' : ''}
-                        </td>
-                        <td colspan="3" class="px-6 py-4">
-                            <div class="space-y-3">
-                                ${items.length > 0 ? items.map(i => `
-                                    <div class="flex items-center justify-between p-4 bg-white rounded-xl shadow-sm">
-                                        <div class="flex items-center gap-4">
-                                            <p class="text-lg font-medium text-indigo-900">${i.time}</p>
-                                            <div>
-                                                <p class="font-semibold">${i.subject}</p>
-                                                <p class="text-sm text-gray-600">${i.teacher}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                `).join('') : '<p class="text-gray-500 italic">Tidak ada kelas pada hari ini</p>'}
-                            </div>
-                        </td>
-                    </tr>`;
-            });
-        }
-
-        $('#weekly-schedule').html(html);
-    }
-
-    function renderAttendancePie(pieData) {
-        const ctx = document.getElementById('attendanceChart').getContext('2d');
-        if (window.attendanceChartInstance) window.attendanceChartInstance.destroy();
-        window.attendanceChartInstance = new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: pieData.map(item => item.status),
-                datasets: [{
-                    data: pieData.map(item => item.count),
-                    backgroundColor: ['#10b981', '#f59e0b', '#f97316', '#ef4444'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: 'bottom' }
-                }
-            }
-        });
-    }
-
-    function renderGrades(grades) {
-        const classSelected = !!$('#gradesFilterClass').val()?.trim();
-
-        let html = '';
-
-        if (!classSelected) {
-            html = '<tr><td colspan="3" class="text-center py-8 text-gray-500">Pilih kelas terlebih dahulu untuk melihat nilai siswa</td></tr>';
-        } else if (grades.length === 0) {
-            html = '<tr><td colspan="3" class="text-center py-8 text-gray-500">Tidak ada data nilai untuk filter ini</td></tr>';
-        } else {
-            grades.forEach(g => {
-                html += `
-                    <tr class="border-b hover:bg-gray-50">
-                        <td class="px-6 py-4">${g.student}</td>
-                        <td class="px-6 py-4">${g.subject}</td>
-                        <td class="px-6 py-4 font-semibold text-indigo-900">${g.avg}</td>
-                    </tr>`;
-            });
-        }
-
-        $('#grades-body').html(html);
-    }
-
-    function renderEventsArticles(events, articles) {
-        allEvents = events || [];
-        allArticles = articles || [];
-
-        renderEventsPage(1);
-        renderArticlesPage(1);
-    }
-
-    function renderEventsPage(page) {
-        const startIndex = (page - 1) * itemsPerPage;
-        const endIndex = startIndex + itemsPerPage;
-        const pageEvents = allEvents.slice(startIndex, endIndex);
-        const totalPages = Math.ceil(allEvents.length / itemsPerPage);
-
-        // Render events list
-        let eventsListHtml = '';
-        pageEvents.forEach(e => {
-            let tagHtml = '';
-            (e.tags || []).forEach(tag => {
-                tagHtml += `<span class="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">${tag}</span>`;
-            });
-
-            eventsListHtml += `
-                <div class="flex gap-6 hover:bg-gray-50 p-6 rounded-2xl transition">
-                    <div class="w-24 h-24 bg-gradient-to-br from-purple-200 to-indigo-200 rounded-2xl flex-shrink-0 bg-cover bg-center"
-                        style="background-image: url('${e.photo || ''}')"></div>
-                    <div class="flex-1">
-                        <p class="text-xl font-semibold text-indigo-900">${e.name || ''}</p>
-                        <p class="text-gray-600 mt-1">${e.date || ''} • ${e.location || ''}</p>
-                        <p class="text-gray-500 mt-2">${e.desc || ''}</p>
-                        <div class="flex flex-wrap gap-2 mt-3">${tagHtml}</div>
-                    </div>
-                </div>`;
+        $("#filterAcademicYear").on('change', function () {
+            currentAcademicYear = $(this).val();
+            loadTeacherDashboard();
         });
 
-        // Render pagination
-        let paginationHtml = '';
-        for (let i = 1; i <= totalPages; i++) {
-            paginationHtml += `
-                <button onclick="renderEventsPage(${i})" 
-                    class="px-3 py-2 text-sm font-medium border-r border-gray-300 last:border-r-0 min-w-[40px] transition-colors duration-150
-                    ${i === page 
-                        ? 'bg-indigo-900 text-white cursor-default' 
-                        : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-indigo-900 cursor-pointer'}">
-                    ${i}
-                </button>`;
-        }
-
-        // Compose full HTML
-        const eventsHtml = `
-            <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-                <h2 class="text-3xl font-bold text-indigo-900 mb-8">Event Mendatang</h2>
-                <div class="space-y-6">${eventsListHtml}</div>
-                <div class="flex items-center justify-between mt-6">
-                    <span class="text-sm text-gray-600">Showing ${startIndex + 1} to ${Math.min(endIndex, allEvents.length)} of ${allEvents.length} events</span>
-                    <div class="inline-flex items-center border border-gray-300 rounded-md overflow-hidden">${paginationHtml}</div>
-                </div>
-            </div>`;
-
-        $('#events-container').html(eventsHtml);
-    }
-
-    function renderArticlesPage(page) {
-        const startIndex = (page - 1) * itemsPerPage;
-        const endIndex = startIndex + itemsPerPage;
-        const pageArticles = allArticles.slice(startIndex, endIndex);
-        const totalPages = Math.ceil(allArticles.length / itemsPerPage);
-
-        // Render articles list
-        let articlesListHtml = '';
-        pageArticles.forEach(a => {
-            let tagHtml = '';
-            (a.tags || []).forEach(tag => {
-                tagHtml += `<span class="px-3 py-1 bg-rose-100 text-rose-800 rounded-full text-xs font-medium">${tag}</span>`;
-            });
-
-            articlesListHtml += `
-                <div class="flex gap-6 hover:bg-gray-50 p-6 rounded-2xl transition">
-                    <div class="w-32 h-32 bg-gradient-to-br from-rose-200 to-pink-200 rounded-2xl flex-shrink-0 bg-cover bg-center"
-                        style="background-image: url('${a.image || ''}')"></div>
-                    <div class="flex-1">
-                        <p class="text-xl font-semibold text-indigo-900">${a.title || ''}</p>
-                        <p class="text-gray-500 mt-1">${a.date || ''}</p>
-                        <p class="text-gray-600 mt-2 line-clamp-3">${a.content || ''}</p>
-                        <div class="flex flex-wrap gap-2 mt-3">${tagHtml}</div>
-                    </div>
-                </div>`;
+        $("#gradesFilterClass").on('change', function () {
+            currentClass = $(this).val();
+            currentSubject = null; 
+            loadTeacherDashboard();
         });
 
-        // Render pagination
-        let paginationHtml = '';
-        for (let i = 1; i <= totalPages; i++) {
-            paginationHtml += `
-                <button onclick="renderArticlesPage(${i})" 
-                    class="px-3 py-2 text-sm font-medium border-r border-gray-300 last:border-r-0 min-w-[40px] transition-colors duration-150
-                    ${i === page 
-                        ? 'bg-indigo-900 text-white cursor-default' 
-                        : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-indigo-900 cursor-pointer'}">
-                    ${i}
-                </button>`;
-        }
+        $("#gradesFilterSubject").on('change', function () {
+            currentSubject = $(this).val();
+            loadTeacherDashboard();
+        });
 
-        // Compose full HTML
-        const articlesHtml = `
-            <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-                <h2 class="text-3xl font-bold text-indigo-900 mb-8">Artikel Terbaru</h2>
-                <div class="space-y-6">${articlesListHtml}</div>
-                <div class="flex items-center justify-between mt-6">
-                    <span class="text-sm text-gray-600">Showing ${startIndex + 1} to ${Math.min(endIndex, allArticles.length)} of ${allArticles.length} articles</span>
-                    <div class="inline-flex items-center border border-gray-300 rounded-md overflow-hidden">${paginationHtml}</div>
-                </div>
-            </div>`;
 
-        $('#articles-container').html(articlesHtml);
-    }
+    });
 </script>

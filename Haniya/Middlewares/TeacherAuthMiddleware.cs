@@ -56,7 +56,7 @@ namespace Haniya.Middlewares
                 }
 
                 // 3) Guru aktif, boleh lewat
-                var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userId = context.User.FindFirst("TeacherId")?.Value;
                 _logger.LogInformation("Teacher user {UserId} accessing: {Path}", userId, path);
             }
 
