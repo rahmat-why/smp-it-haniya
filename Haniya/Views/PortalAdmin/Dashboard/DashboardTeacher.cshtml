@@ -190,7 +190,7 @@
                             ${index === 0 ? `
                                 <td rowspan="${items.length}" 
                                     class="px-6 py-4 font-medium align-middle text-center ${isToday ? 'text-amber-900' : 'text-gray-900'}">
-                                    ${day} ${isToday ? '(Hari Ini)' : ''}
+                                    ${day} ${isToday ? '(Today)' : ''}
                                 </td>
                             ` : ''}
 
@@ -256,61 +256,87 @@
 
         if (attendanceChart) attendanceChart.destroy();
 
-        const mapped = {
-            PRESENT: 0,
-            SICK: 0,
-            EXCUSED: 0,
-            NOINFO: 0
-        };
+        const classMap = {};
 
         data.forEach(item => {
-            const key = item.status?.toUpperCase();
-            if (mapped.hasOwnProperty(key)) {
-                mapped[key] = item.count;
+            const cls = item.kelas || 'Unknown';
+            const status = item.status?.toUpperCase();
+
+            if (!classMap[cls]) {
+                classMap[cls] = {
+                    PRESENT: 0,
+                    SICK: 0,
+                    EXCUSED: 0,
+                    NOINFO: 0
+                };
             }
+
+            if (classMap[cls].hasOwnProperty(status)) {
+                classMap[cls][status] = item.count;
+            }
+        });
+
+        const classes = Object.keys(classMap);
+
+        const presentData = [];
+        const sickData = [];
+        const excusedData = [];
+        const noInfoData = [];
+
+        classes.forEach(cls => {
+            const mapped = classMap[cls];
+            const total = Object.values(mapped).reduce((a, b) => a + b, 0) || 1;
+
+            presentData.push((mapped.PRESENT / total) * 100);
+            sickData.push((mapped.SICK / total) * 100);
+            excusedData.push((mapped.EXCUSED / total) * 100);
+            noInfoData.push((mapped.NOINFO / total) * 100);
         });
 
         attendanceChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: ['Attendances'],
+                labels: classes,
                 datasets: [
                     {
-                        label: 'Present',
-                        data: [mapped.PRESENT],
+                        data: presentData,
                         backgroundColor: '#10b981',
+                        borderRadius: 6
                     },
                     {
-                        label: 'Sick',
-                        data: [mapped.SICK],
+                        data: sickData,
                         backgroundColor: '#facc15',
+                        borderRadius: 6
                     },
                     {
-                        label: 'Excused',
-                        data: [mapped.EXCUSED],
+                        data: excusedData,
                         backgroundColor: '#60a5fa',
+                        borderRadius: 6
                     },
                     {
-                        label: 'No Info',
-                        data: [mapped.NOINFO],
+                        data: noInfoData,
                         backgroundColor: '#9ca3af',
-                    },
+                        borderRadius: 6
+                    }
                 ]
             },
             options: {
                 responsive: true,
                 plugins: {
-                    legend: {
-                        display: false
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => `${ctx.raw.toFixed(2)}%`
+                        }
                     }
                 },
                 scales: {
-                    x: {
-                        stacked: false
-                    },
                     y: {
-                        stacked: false,
-                        beginAtZero: true
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: (val) => val + '%'
+                        }
                     }
                 }
             }

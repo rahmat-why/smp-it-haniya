@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Data.SqlClient;
 using Newtonsoft.Json;
 using System.Security.Claims;
+using System.Runtime.Intrinsics.Arm;
 
 namespace Haniya.Controllers.PortalAdmin
 {
@@ -560,12 +561,12 @@ namespace Haniya.Controllers.PortalAdmin
         {
             var list = new List<dynamic>();
             var sql = @"
-                SELECT ad.status, COUNT(*) AS count
+                SELECT SUBSTRING(ac.academic_class_id ,4,2) AS [Class], ad.status, COUNT(*) AS count
                 FROM txn_attendance_details ad
                 JOIN txn_attendances a ON ad.attendance_id = a.attendance_id
                 JOIN mst_academic_classes ac ON a.academic_class_id = ac.academic_class_id
                 WHERE ac.homeroom_teacher_id = @teacherId AND ac.academic_year_id = @academicYear
-                GROUP BY ad.status";
+                GROUP BY ad.status, ac.academic_class_id ";
 
             var cmd = new SqlCommand(sql, conn);
 
@@ -577,6 +578,7 @@ namespace Haniya.Controllers.PortalAdmin
             {
                 list.Add(new
                 {
+                    kelas = rd["class"],
                     status = rd["status"],
                     count = (int)rd["count"]
                 });
