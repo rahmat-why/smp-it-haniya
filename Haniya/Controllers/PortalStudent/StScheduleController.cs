@@ -59,7 +59,13 @@ namespace Haniya.Controllers.PortalStudent
                     FROM mst_student_classes sc
                     JOIN mst_academic_classes ac
                         ON sc.academic_class_id = ac.academic_class_id
+<<<<<<< HEAD
                     JOIN mst_schedules sch
+=======
+                    JOIN mst_academic_years ay
+                        ON ac.academic_year_id = ay.academic_year_id
+                    JOIN txn_schedules sch
+>>>>>>> 90a8f84 (21022026)
                         ON sch.academic_class_id = ac.academic_class_id
                     JOIN mst_schedule_details sd
                         ON sd.schedule_id = sch.schedule_id
@@ -70,8 +76,17 @@ namespace Haniya.Controllers.PortalStudent
                     JOIN mst_classes c
                         ON ac.class_id = c.class_id
                     WHERE sc.student_id = @studentId
+                      AND ay.status = 'ACTIVE'
+                      AND sch.day IN ('Senin','Selasa','Rabu','Kamis','Jumat')
                     ORDER BY
-                        sch.day,
+                        CASE sch.day
+                            WHEN 'Senin' THEN 1
+                            WHEN 'Selasa' THEN 2
+                            WHEN 'Rabu' THEN 3
+                            WHEN 'Kamis' THEN 4
+                            WHEN 'Jumat' THEN 5
+                            ELSE 99
+                        END,
                         sd.start_time
                     ";
 

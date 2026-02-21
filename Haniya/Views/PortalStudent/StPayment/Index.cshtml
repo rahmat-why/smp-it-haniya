@@ -63,7 +63,7 @@
             serverSide: false,
             searching: true,
             lengthChange: true,
-            dom: 't',
+            dom: 'lftip',
 
             ajax: {
                 url: '/StPayment/GetMyPayments',
@@ -125,72 +125,80 @@
             ],
 
             initComplete: function () {
-                renderPaymentControls(this.api());
+                styleStudentPaymentTable();
             },
 
             drawCallback: function () {
-                renderPaymentControls(this.api());
-            },
+                styleStudentPaymentTable();
+            }
         });
     }
 
-    function renderPaymentControls(api) {
-        $('#payment-toolbar').html(`
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 w-full">
-                <div class="flex items-center gap-2 text-sm text-gray-600">
-                    Show 
-                    <select id="dt-length" class="border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-900">
-                        <option value="10">10</option>
-                        <option value="25">25</option>
-                        <option value="50">50</option>
-                    </select> rows
-                </div>
+    function styleStudentPaymentTable() {
+        const wrapper = $('#payment-table_wrapper');
+        const $length = wrapper.find('.dataTables_length, .dt-length');
+        const $filter = wrapper.find('.dataTables_filter, .dt-search');
 
-                <div>
-                    <input id="dt-search"
-                        type="text"
-                        placeholder="Search payment..."
-                        class="border border-gray-300 rounded-lg px-3 py-2 w-full md:w-72 focus:outline-none focus:ring-2 focus:ring-blue-900"/>
-                </div>
-            </div>
-        `);
+        $('#payment-toolbar').empty().append($length).append($filter);
 
-        $('#dt-length').val(api.page.len());
+        $length.addClass('flex items-center gap-2 text-sm text-gray-600');
+        $length.find('label').addClass('flex items-center gap-2');
+        $length.find('select').addClass(
+            'border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 ' +
+            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+        );
 
-        $('#dt-length').off().on('change', function () {
-            api.page.len($(this).val()).draw();
-        });
+        $filter.addClass('flex items-center gap-2 text-sm text-gray-600 w-full md:w-auto justify-end');
+        $filter.find('label').addClass('flex items-center gap-2');
+        $filter.find('input')
+            .addClass(
+                'border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 ' +
+                'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full md:w-72'
+            )
+            .attr('placeholder', 'Search payment...');
 
-        $('#dt-search').off().on('keyup', function () {
-            api.search(this.value).draw();
-        });
+        let $info = wrapper.find('.dataTables_info').first();
+        if ($info.length === 0) $info = wrapper.find('.dt-info').first();
 
-        const info = api.page.info();
-        $('#table-info').html(`
-            <span class="text-sm text-gray-600">
-                Showing ${info.start + 1} to ${info.end} of ${info.recordsTotal} entries
-            </span>
-        `);
+        let $paginate = wrapper.find('.dataTables_paginate').first();
+        if ($paginate.length === 0) $paginate = wrapper.find('.dt-paging').first();
 
-        let paginateHtml = `<div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm">`;
-
-        for (let i = 0; i < info.pages; i++) {
-            paginateHtml += `
-                <button data-page="${i}"
-                    class="px-3 py-2 text-sm border-r last:border-r-0 transition
-                    ${i === info.page
-                        ? 'bg-blue-900 text-white font-semibold'
-                        : 'bg-white text-gray-700 hover:bg-gray-50'}">
-                    ${i + 1}
-                </button>
-            `;
+        if ($info.length > 0) {
+            $('#table-info').empty().append($info);
+            $info.removeClass().addClass('text-sm text-gray-600');
         }
 
-        paginateHtml += `</div>`;
-        $('#table-pagination').html(paginateHtml);
+        if ($paginate.length > 0) {
+            $('#table-pagination').empty().append($paginate);
+        }
 
-        $('#table-pagination button').off().on('click', function () {
-            api.page($(this).data('page')).draw('page');
+        $('#table-pagination').addClass('w-full flex justify-end overflow-x-auto whitespace-nowrap');
+        applyStudentPaginationStyle($('#table-pagination'));
+    }
+
+    function applyStudentPaginationStyle($scope) {
+        const $root = $scope && $scope.length ? $scope : $(document);
+        $root.find('.dataTables_paginate, .dt-paging').each(function () {
+            const $paginate = $(this);
+            $paginate.addClass('inline-flex items-center border border-gray-300 rounded-md overflow-hidden min-w-max');
+
+            $paginate.find('a, span, button, .paginate_button, .dt-paging-button').each(function () {
+                const $btn = $(this);
+                const isCurrent = $btn.hasClass('current') || $btn.hasClass('active') || $btn.attr('aria-current') === 'page';
+                const isDisabled = $btn.hasClass('disabled') || $btn.prop('disabled') || $btn.attr('aria-disabled') === 'true';
+                const baseClasses = 'inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 last:border-r-0 min-w-[40px] transition-colors duration-150';
+
+                $btn.addClass(baseClasses);
+                $btn.removeClass('bg-blue-900 text-white cursor-default bg-gray-50 text-gray-400 cursor-not-allowed bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900 cursor-pointer');
+
+                if (isCurrent) {
+                    $btn.addClass('bg-blue-900 text-white cursor-default');
+                } else if (isDisabled) {
+                    $btn.addClass('bg-gray-50 text-gray-400 cursor-not-allowed');
+                } else {
+                    $btn.addClass('bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900 cursor-pointer');
+                }
+            });
         });
     }
 </script>

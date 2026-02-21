@@ -1,4 +1,4 @@
-﻿@{
+@{
     Layout = "_LayoutAdmin";
     ViewData["Title"] = "Student";
 }
@@ -291,7 +291,10 @@
         const wrapper = $('#student-table_wrapper');
 
         let $info = wrapper.find('.dataTables_info').first();
+        if ($info.length === 0) $info = wrapper.find('.dt-info').first();
+
         let $paginate = wrapper.find('.dataTables_paginate').first();
+        if ($paginate.length === 0) $paginate = wrapper.find('.dt-paging').first();
 
         if ($info.length) {
             $('#student-table-info').empty().append($info);
@@ -300,30 +303,11 @@
 
         if ($paginate.length) {
             $('#student-table-pagination').empty().append($paginate);
+        }
 
-            $paginate.removeClass()
-                .addClass('inline-flex items-center border border-gray-300 rounded-md overflow-hidden');
-
-            $paginate.find('a, span').each(function () {
-                const $btn = $(this);
-                const isCurrent = $btn.hasClass('current');
-                const isDisabled = $btn.hasClass('disabled');
-
-                $btn.removeClass();
-
-                let cls = 'inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 last:border-r-0 min-w-[40px] transition-colors duration-150';
-
-                if (isCurrent) {
-                    cls += ' bg-blue-900 text-white cursor-default';
-                    $btn.addClass(cls).addClass('current');
-                } else if (isDisabled) {
-                    cls += ' bg-gray-50 text-gray-400 cursor-not-allowed';
-                    $btn.addClass(cls).addClass('disabled');
-                } else {
-                    cls += ' bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900 cursor-pointer';
-                    $btn.addClass(cls);
-                }
-            });
+        $('#student-table-pagination').addClass('w-full flex justify-end overflow-x-auto whitespace-nowrap');
+        if (typeof applyAdminPaginationStyle === 'function') {
+            applyAdminPaginationStyle($('#student-table-pagination'));
         }
     }
 
@@ -384,3 +368,4 @@
     }
 </script>
 }
+
