@@ -3,265 +3,320 @@
     ViewData["Title"] = "Student Dashboard";
 }
 
-<div class="space-y-6">
-
-    <!-- Welcome -->
-    <div class="bg-white rounded-lg shadow p-5">
-        <h2 class="text-xl font-bold text-gray-800">
-            Selamat Datang, @User.FindFirst("FullName")?.Value 👋
-        </h2>
-
-        <p class="text-sm text-gray-600 mt-1">
-            Berikut ringkasan aktivitas akademik kamu.
-        </p>
+<div class="max-w-7xl mx-auto space-y-10 py-8 px-4" id="student-dashboard">
+    <div>
+        <h1 class="text-3xl font-bold text-indigo-900">Student Dashboard</h1>
+        <p class="text-gray-600 mt-2">Welcome back, @User.FindFirst("FullName")?.Value</p>
     </div>
 
-
-    <!-- Summary Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-
-        <!-- Grade -->
-        <div class="bg-white rounded-lg shadow p-4">
-            <p class="text-sm text-gray-500">Average Grade</p>
-            <h3 class="text-2xl font-bold text-blue-900 mt-1" id="avgGrade">
-                -
-            </h3>
-        </div>
-
-        <!-- Attendance -->
-        <div class="bg-white rounded-lg shadow p-4">
-            <p class="text-sm text-gray-500">Attendance</p>
-            <h3 class="text-2xl font-bold text-green-600 mt-1" id="attendanceRate">
-                -
-            </h3>
-        </div>
-
-        <!-- Payment -->
-        <div class="bg-white rounded-lg shadow p-4">
-            <p class="text-sm text-gray-500">Outstanding Payment</p>
-            <h3 class="text-2xl font-bold text-red-600 mt-1" id="outstandingPay">
-                -
-            </h3>
-        </div>
-
-        <!-- Schedule -->
-        <div class="bg-white rounded-lg shadow p-4">
-            <p class="text-sm text-gray-500">Today Schedule</p>
-            <h3 class="text-2xl font-bold text-gray-800 mt-1" id="todaySchedule">
-                -
-            </h3>
-        </div>
-
+    <div id="loading" class="text-center py-20">
+        <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-indigo-600"></div>
+        <p class="mt-4 text-gray-600">Loading...</p>
     </div>
 
+    <div id="content" class="hidden space-y-10">
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
+            <div class="xl:col-span-7 bg-white rounded-2xl shadow-xl p-6 border border-gray-100 space-y-6">
+                <h3 class="text-xl font-bold text-indigo-900">Your Performance</h3>
+                
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+                        <h4 class="text-lg font-bold text-indigo-900 mb-4">Grades</h4>
+                        <canvas id="studentGradesChart" height="140"></canvas>
+                    </div>
+                    <div class="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+                        <h4 class="text-lg font-bold text-indigo-900 mb-4">Attendance</h4>
+                        <canvas id="studentAttendanceChart" height="140"></canvas>
+                    </div>
+                </div>
+            </div>
 
-    <!-- Charts -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="xl:col-span-5 space-y-4">
+                <div class="bg-white rounded-2xl shadow-xl p-5 border border-gray-100">
+                    <h3 class="text-lg font-bold text-indigo-900 mb-4">Today Schedule</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-gray-700 uppercase text-[11px]">
+                                <tr>
+                                    <th class="px-3 py-2">Day</th>
+                                    <th class="px-3 py-2">Time</th>
+                                    <th class="px-3 py-2">Subject</th>
+                                    <th class="px-3 py-2">Teacher</th>
+                                </tr>
+                            </thead>
+                            <tbody id="weekly-schedule"></tbody>
+                        </table>
+                    </div>
+                </div>
 
-
-        <!-- Grade Chart -->
-        <div class="bg-white rounded-lg shadow p-5">
-
-            <h3 class="font-semibold mb-3">
-                📊 Grade Performance
-            </h3>
-
-            <canvas id="gradeChart" height="200"></canvas>
-
+                <div class="bg-white rounded-2xl shadow-xl p-5 border border-gray-100">
+                    <h3 class="text-lg font-bold text-indigo-900 mb-4">Payment Bill</h3>
+                    <div id="payment-bills" class="grid grid-cols-1 gap-3"></div>
+                </div>
+            </div>
         </div>
-
-
-        <!-- Attendance Chart -->
-        <div class="bg-white rounded-lg shadow p-5">
-
-            <h3 class="font-semibold mb-3">
-                📅 Attendance Summary
-            </h3>
-
-            <canvas id="attendanceChart" height="200"></canvas>
-
-        </div>
-
-    </div>
-
-
-    <!-- Recent Schedule -->
-    <div class="bg-white rounded-lg shadow p-5">
-
-        <h3 class="font-semibold mb-3">
-            📚 Upcoming Schedule
-        </h3>
-
-        <div class="overflow-x-auto">
-
-            <table class="min-w-full text-sm text-left text-gray-700">
-
-                <thead class="bg-gray-100 border-y">
-
-                    <tr>
-                        <th class="px-3 py-2">Day</th>
-                        <th class="px-3 py-2">Time</th>
-                        <th class="px-3 py-2">Subject</th>
-                        <th class="px-3 py-2">Teacher</th>
-                    </tr>
-
-                </thead>
-
-                <tbody id="scheduleBody"></tbody>
-
-            </table>
-
-        </div>
-
     </div>
 
 </div>
 
+<script>
+    let studentGradesChart;
+    let studentAttendanceChart;
+    let dashboardData = null;
 
-@section Scripts {
+    function renderStudentGradesChart(data) {
+        const ctx = document.getElementById('studentGradesChart').getContext('2d');
+        if (studentGradesChart) studentGradesChart.destroy();
 
-    <!-- Chart JS -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        const labels = (data || []).map(x => x.kelas || '-');
+        const values = (data || []).map(x => Number(x.averageGrade || 0));
 
-    <script>
+        studentGradesChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Average Grade',
+                    data: values,
+                    backgroundColor: '#6366f1',
+                    borderRadius: 8,
+                    barThickness: 28
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            stepSize: 20
+                        }
+                    }
+                }
+            }
+        });
+    }
 
-        $(document).ready(function () {
+    function renderStudentAttendanceChart(data) {
+        const ctx = document.getElementById('studentAttendanceChart').getContext('2d');
+        if (studentAttendanceChart) studentAttendanceChart.destroy();
 
-            loadDashboardData();
+        const classMap = {};
+        (data || []).forEach(item => {
+            const kelas = item.kelas || 'Unknown';
+            const status = (item.status || '').toUpperCase().replace(/\s+/g, '').replace(/_/g, '');
+            const count = Number(item.count || 0);
 
+            if (!classMap[kelas]) {
+                classMap[kelas] = {
+                    PRESENT: 0,
+                    SICK: 0,
+                    EXCUSED: 0,
+                    NOINFO: 0
+                };
+            }
+
+            if (classMap[kelas][status] !== undefined) {
+                classMap[kelas][status] = count;
+            }
         });
 
+        const kelasLabels = Object.keys(classMap);
+        const presentData = kelasLabels.map(k => classMap[k].PRESENT);
+        const sickData = kelasLabels.map(k => classMap[k].SICK);
+        const excusedData = kelasLabels.map(k => classMap[k].EXCUSED);
+        const noInfoData = kelasLabels.map(k => classMap[k].NOINFO);
 
-        /* ===============================
-           LOAD DASHBOARD DATA
-        =============================== */
-        function loadDashboardData() {
+        studentAttendanceChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: kelasLabels,
+                datasets: [
+                    {
+                        label: 'Present',
+                        data: presentData,
+                        backgroundColor: '#10b981',
+                        borderRadius: 6,
+                        stack: 'attendance'
+                    },
+                    {
+                        label: 'Sick',
+                        data: sickData,
+                        backgroundColor: '#facc15',
+                        borderRadius: 6,
+                        stack: 'attendance'
+                    },
+                    {
+                        label: 'Excused',
+                        data: excusedData,
+                        backgroundColor: '#60a5fa',
+                        borderRadius: 6,
+                        stack: 'attendance'
+                    },
+                    {
+                        label: 'No Info',
+                        data: noInfoData,
+                        backgroundColor: '#9ca3af',
+                        borderRadius: 6,
+                        stack: 'attendance'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: true }
+                },
+                scales: {
+                    x: {
+                        stacked: true
+                    },
+                    y: {
+                        beginAtZero: true,
+                        stacked: true
+                    }
+                }
+            }
+        });
+    }
 
-            $.get('/StDashboard/GetSummary', function (res) {
+    function formatRupiah(value) {
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            maximumFractionDigits: 0
+        }).format(Number(value || 0));
+    }
 
+    function formatDateId(dateValue) {
+        const d = new Date(dateValue);
+        if (isNaN(d.getTime())) return '-';
+        return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function getEndOfMonth(dateValue) {
+        const d = new Date(dateValue);
+        if (isNaN(d.getTime())) return null;
+        return new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    }
+
+    function renderPaymentBills(items) {
+        const container = $('#payment-bills');
+        container.empty();
+
+        if (!items || items.length === 0) {
+            container.html(`
+                <div class="rounded-xl border border-gray-100 bg-gray-50 px-4 py-4 text-sm text-gray-500">
+                    Tidak ada tagihan unpaid.
+                </div>
+            `);
+            return;
+        }
+
+        items.forEach(item => {
+            const sppDate = formatDateId(item.tanggalPembayaran);
+            const deadline = getEndOfMonth(item.tanggalPembayaran);
+            const deadlineText = deadline ? formatDateId(deadline) : '-';
+            const nominal = formatRupiah(item.totalBelumLunas);
+
+            container.append(`
+                <div class="rounded-xl border border-rose-100 bg-rose-50/40 p-4">
+                    <div class="text-xs font-semibold uppercase tracking-wide text-rose-700">SPP ${sppDate}</div>
+                    <div class="mt-2 flex items-center gap-2">
+                        <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-rose-100 text-rose-700 font-bold">!</span>
+                        <div class="text-lg font-bold text-rose-800">${nominal}</div>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-600">Payment Deadline: <span class="font-semibold text-gray-800">${deadlineText}</span></div>
+                </div>
+            `);
+        });
+    }
+
+    function renderWeeklySchedule(schedule) {
+        let html = '';
+
+        if (!schedule || schedule.length === 0) {
+            html = `
+                <tr>
+                    <td colspan="4" class="text-center py-8 text-gray-500">
+                        Tidak ada jadwal untuk minggu ini
+                    </td>
+                </tr>`;
+        } else {
+            const today = new Date().toLocaleDateString('id-ID', { weekday: 'long' });
+            const isWeekend = today === 'Sabtu' || today === 'Minggu';
+            const targetDay = isWeekend ? 'Senin' : today;
+            const dayItems = schedule.filter(x => x.day === targetDay);
+
+            if (dayItems.length === 0) {
+                html = `
+                    <tr>
+                        <td colspan="4" class="text-center py-8 text-gray-500">
+                            Tidak ada jadwal untuk ${targetDay}
+                        </td>
+                    </tr>`;
+            } else {
+                dayItems.forEach((i, index) => {
+                    html += `
+                        <tr class="${isWeekend ? 'bg-blue-50 border-l-4 border-blue-400' : 'bg-amber-50 border-l-4 border-amber-400'} ${index === 0 ? 'border-t-2 border-gray-200' : ''}">
+                            ${index === 0 ? `
+                                <td rowspan="${dayItems.length}" class="px-3 py-2 font-medium align-middle text-center ${isWeekend ? 'text-blue-900' : 'text-amber-900'}">
+                                    ${targetDay} ${isWeekend ? '(Upcoming)' : '(Today)'}
+                                </td>
+                            ` : ''}
+                            <td class="px-3 py-2 text-indigo-900 font-medium whitespace-nowrap">
+                                ${i.startTime} - ${i.endTime}
+                            </td>
+                            <td class="px-3 py-2 font-semibold">
+                                ${i.subject}
+                            </td>
+                            <td class="px-3 py-2 text-gray-600">
+                                ${i.teacher}
+                            </td>
+                        </tr>`;
+                });
+            }
+        }
+
+        $('#weekly-schedule').html(html);
+    }
+
+    function loadStudentDashboard(){
+        $.ajax({
+            url: '/StDashboard/GetSummary',
+            type: 'GET',
+            success: function (res) {
                 if (!res.success) {
-                    alert(res.message);
+                    Swal.fire('Error!', res.message || 'Gagal memuat data.', 'error');
                     return;
                 }
 
-                // Cards
-                $('#avgGrade').text(res.data.avgGrade);
-                $('#attendanceRate').text(res.data.attendance + '%');
-                $('#outstandingPay').text('Rp ' + res.data.payment);
-                $('#todaySchedule').text(res.data.todaySchedule + ' Class');
+                dashboardData = res.data || {};
 
+                renderStudentGradesChart(dashboardData.gradesChart || []);
+                renderStudentAttendanceChart(dashboardData.attendanceChart || []);
+                renderWeeklySchedule(dashboardData.weeklySchedule || []);
+                renderPaymentBills(dashboardData.unpaidPayments || []);
 
-                // Charts
-                renderGradeChart(res.data.grades);
-                renderAttendanceChart(res.data.attendanceChart);
+                $('#loading').addClass('hidden');
+                $('#content').removeClass('hidden');
+            },
+            error: function () {
+                Swal.fire('Error!', 'Gagal memuat data.', 'error');
+            }
+        });
+    }
 
-
-                // Schedule
-                renderSchedule(res.data.schedules);
-
-            });
-
-        }
-
-
-        /* ===============================
-           GRADE CHART
-        =============================== */
-        function renderGradeChart(data) {
-
-            new Chart(document.getElementById('gradeChart'), {
-
-                type: 'line',
-
-                data: {
-
-                    labels: data.labels,
-
-                    datasets: [{
-
-                        label: 'Grade',
-
-                        data: data.values,
-
-                        borderWidth: 2,
-                        tension: 0.3,
-                        fill: false
-
-                    }]
-
-                }
-
-            });
-
-        }
-
-
-        /* ===============================
-           ATTENDANCE CHART
-        =============================== */
-        function renderAttendanceChart(data) {
-
-            new Chart(document.getElementById('attendanceChart'), {
-
-                type: 'doughnut',
-
-                data: {
-
-                    labels: ['Present', 'Absent', 'Late'],
-
-                    datasets: [{
-
-                        data: [
-                            data.present,
-                            data.absent,
-                            data.late
-                        ],
-
-                        borderWidth: 1
-
-                    }]
-
-                }
-
-            });
-
-        }
-
-
-        /* ===============================
-           SCHEDULE TABLE
-        =============================== */
-        function renderSchedule(data) {
-
-            let html = '';
-
-            data.forEach(x => {
-
-                html += `
-                    <tr class="border-b">
-
-                        <td class="px-3 py-2">${x.day}</td>
-
-                        <td class="px-3 py-2">
-                            ${x.start} - ${x.end}
-                        </td>
-
-                        <td class="px-3 py-2">
-                            ${x.subject}
-                        </td>
-
-                        <td class="px-3 py-2">
-                            ${x.teacher}
-                        </td>
-
-                    </tr>
-                `;
-
-            });
-
-            $('#scheduleBody').html(html);
-
-        }
-
-    </script>
-}
+    $(document).ready(function() {
+        loadStudentDashboard();
+    });
+</script>
