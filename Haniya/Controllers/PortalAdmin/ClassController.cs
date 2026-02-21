@@ -60,8 +60,6 @@ namespace Haniya.Controllers.PortalAdmin
                 var (draw, start, length, searchValue, orderColumnIndex, orderDir) = ParseDataTablesQuery();
 
                 string orderColumn = "ay.start_date"; 
-
-                if (string.IsNullOrWhiteSpace(orderDir)) orderDir = "DESC";
                 
                 if (columnMapping.TryGetValue(orderColumnIndex, out var mappedColumn))
                 {

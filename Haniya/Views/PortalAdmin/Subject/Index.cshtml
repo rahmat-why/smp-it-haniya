@@ -176,7 +176,6 @@
             });
         }
 
-        // Same pagination styling as Student & Teacher
         function stylePagination() {
             const wrapper = $('#subject-table_wrapper');
             let $info = wrapper.find('.dataTables_info').first();
@@ -187,32 +186,16 @@
 
             if ($info.length > 0) {
                 $('#table-info-container').empty().append($info);
-                $info.removeClass().addClass('text-sm');
+                $info.removeClass().addClass('text-sm text-gray-600');
             }
 
             if ($paginate.length > 0) {
                 $('#table-pagination-container').empty().append($paginate);
-                $paginate.removeClass().addClass('inline-flex items-center border border-gray-300 rounded-md overflow-hidden');
+            }
 
-                $paginate.find('a, span').each(function () {
-                    const $btn = $(this);
-                    const hasCurrentClass = $btn.hasClass('current');
-                    const hasDisabledClass = $btn.hasClass('disabled');
-                    $btn.removeClass();
-
-                    let classes = 'inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 last:border-r-0 min-w-[40px] transition-colors duration-150';
-
-                    if (hasCurrentClass) {
-                        classes += ' bg-blue-900 text-white cursor-default';
-                        $btn.addClass(classes).addClass('current');
-                    } else if (hasDisabledClass) {
-                        classes += ' bg-gray-50 text-gray-400 cursor-not-allowed';
-                        $btn.addClass(classes).addClass('disabled');
-                    } else {
-                        classes += ' bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900 cursor-pointer';
-                        $btn.addClass(classes);
-                    }
-                });
+            $('#table-pagination-container').addClass('w-full flex justify-end overflow-x-auto whitespace-nowrap');
+            if (typeof applyAdminPaginationStyle === 'function') {
+                applyAdminPaginationStyle($('#table-pagination-container'));
             }
         }
 
