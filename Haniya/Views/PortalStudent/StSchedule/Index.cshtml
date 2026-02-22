@@ -5,28 +5,38 @@
 
 <div class="flex justify-between items-center mb-4">
     <h2 class="text-xl font-semibold text-gray-900">
-        My Class Schedule
+        My Schedule List
     </h2>
 </div>
 
 <div class="bg-white rounded-lg shadow">
-    <div class="overflow-x-auto px-4 pt-4">
-        <table id="schedule-table"
-               class="min-w-full text-sm text-gray-700 border border-gray-200 rounded-lg overflow-hidden">
-            <thead class="bg-gray-50 border-b border-gray-200">
-                <tr class="text-gray-600">
-                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Day</th>
-                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Time</th>
-                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Subject</th>
-                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Teacher</th>
-                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Class</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-100"></tbody>
-        </table>
+    <!-- Toolbar -->
+    <div class="px-4 pt-4">
+        <div id="schedule-toolbar"
+             class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        </div>
     </div>
 
-    <div class="px-4 pb-4 pt-3 border-t border-gray-100 bg-white">
+    <!-- Table -->
+    <div class="px-4 pt-4">
+        <div class="overflow-x-auto border border-gray-200 rounded-xl bg-white shadow-sm">
+            <table id="schedule-table" class="w-full text-sm text-left text-gray-700 border-collapse">
+                <thead class="bg-gray-50 text-gray-600 border-b border-gray-200">
+                    <tr>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Day</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Time</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Subject</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Teacher</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Class</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="px-4 pb-4 pt-3">
         <div id="schedule-footer" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div id="table-info"></div>
             <div id="table-pagination"></div>
@@ -89,7 +99,7 @@
             if (!rows || rows.length === 0) {
                 $tbody.html(`
                     <tr>
-                        <td colspan="5" class="px-4 py-6 text-center text-gray-500">
+                        <td colspan="5" class="px-5 py-6 text-center text-gray-500">
                             No schedule available
                         </td>
                     </tr>
@@ -119,16 +129,16 @@
                         ? `${day} ${isWeekend ? '(Upcoming)' : '(Today)'}`
                         : day;
                     const dayCell = idx === 0
-                        ? `<td rowspan="${items.length}" class="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap align-middle text-center ${highlight}">${dayLabel}</td>`
+                        ? `<td rowspan="${items.length}" class="px-5 py-3 font-semibold text-gray-900 whitespace-nowrap align-middle text-center ${highlight}">${dayLabel}</td>`
                         : '';
 
                     $tbody.append(`
-                        <tr class="border-b border-gray-100 ${highlight}">
+                        <tr class="${highlight}">
                             ${dayCell}
-                            <td class="px-4 py-3 text-gray-700 whitespace-nowrap">${item.start_time || '-'} - ${item.end_time || '-'}</td>
-                            <td class="px-4 py-3 text-gray-700">${item.subject || '-'}</td>
-                            <td class="px-4 py-3 text-gray-700">${item.teacher || '-'}</td>
-                            <td class="px-4 py-3 text-gray-700 whitespace-nowrap">${item.class_name || '-'}</td>
+                            <td class="px-5 py-3 text-gray-700 whitespace-nowrap">${item.start_time || '-'} - ${item.end_time || '-'}</td>
+                            <td class="px-5 py-3 text-gray-700">${item.subject || '-'}</td>
+                            <td class="px-5 py-3 text-gray-700">${item.teacher || '-'}</td>
+                            <td class="px-5 py-3 text-gray-700 whitespace-nowrap">${item.class_name || '-'}</td>
                         </tr>
                     `);
                 });

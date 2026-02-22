@@ -4,7 +4,7 @@
 }
 
 <div class="flex justify-between items-center mb-4">
-    <h2 class="text-xl font-semibold">My Attendance</h2>
+    <h2 class="text-xl font-semibold">My Attendance List</h2>
 </div>
 
 <div class="bg-white rounded-lg shadow">
@@ -45,6 +45,12 @@
         initAttendanceTable();
     });
 
+    function formatDateId(dateValue) {
+        const d = new Date(dateValue);
+        if (isNaN(d.getTime())) return '-';
+        return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+    }
+
     function initAttendanceTable() {
 
         $('#attendance-table').DataTable({
@@ -70,7 +76,10 @@
             columns: [
                 {
                     data: 'date',
-                    className: 'px-5 py-3 font-medium text-gray-900 whitespace-nowrap'
+                    className: 'px-5 py-3text-gray-900 whitespace-nowrap',
+                    render: d => d
+                        ? formatDateId(d)
+                        : "-"
                 },
                 {
                     data: 'class_name',
@@ -82,7 +91,7 @@
                 },
                 {
                     data: 'status',
-                    className: 'px-5 py-3 text-center font-semibold',
+                    className: 'px-5 py-3 font-semibold',
                     render: function (data) {
                         if (data === 'Present')
                             return '<span class="px-2 py-1 text-xs rounded-md bg-green-50 text-green-700 border border-green-100 font-medium">Present</span>';
@@ -98,8 +107,7 @@
                 },
                 {
                     data: 'notes',
-                    className: 'px-5 py-3 text-gray-600',
-                    render: data => data || '-'
+                    className: 'px-5 py-3 text-gray-600'
                 }
             ],
 

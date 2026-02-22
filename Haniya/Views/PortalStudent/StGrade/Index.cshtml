@@ -46,6 +46,12 @@
             initStudentGradeTable();
         });
 
+        function formatDateId(dateValue) {
+            const d = new Date(dateValue);
+            if (isNaN(d.getTime())) return '-';
+            return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+        }
+
         function initStudentGradeTable() {
             const studentId = '@User.FindFirst("StudentId")?.Value';
 
@@ -72,9 +78,9 @@
                 columns: [
                     {
                         data: 'grade_date',
-                        className: 'px-5 py-3 font-medium text-gray-900 whitespace-nowrap',
+                        className: 'px-5 py-3 text-gray-900 whitespace-nowrap',
                         render: data => data
-                            ? new Date(data).toLocaleDateString('id-ID')
+                            ? formatDateId(data)
                             : '-',
                         type: 'date'
                     },
@@ -90,7 +96,7 @@
                     },
                     {
                         data: 'grade_value',
-                        className: 'px-5 py-3 text-center font-semibold text-blue-900',
+                        className: 'px-5 py-3',
                         render: data => data ?? '-',
                         type: 'num'
                     },

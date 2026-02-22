@@ -192,11 +192,11 @@
 
     <!-- Bottom Nav Mobile -->
     <nav class="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 shadow-lg z-30">
-        <div class="flex justify-around">
+        <div class="grid grid-cols-5">
             <button type="button"
                     class="student-bottom-item flex flex-col items-center justify-center py-2 w-full text-xs"
-                    data-route="/Dashboard/Student"
-                    onclick="navigateStudent('/Dashboard/Student')">
+                    data-route="/StDashboard"
+                    onclick="navigateStudent('/StDashboard')">
                 <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6" />
                 </svg>
@@ -204,8 +204,8 @@
             </button>
             <button type="button"
                     class="student-bottom-item flex flex-col items-center justify-center py-2 w-full text-xs"
-                    data-route="/Student/Grade"
-                    onclick="navigateStudent('/Student/Grade')">
+                    data-route="/StGrade"
+                    onclick="navigateStudent('/StGrade')">
                 <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0v7" />
                 </svg>
@@ -213,8 +213,8 @@
             </button>
             <button type="button"
                     class="student-bottom-item flex flex-col items-center justify-center py-2 w-full text-xs"
-                    data-route="/Student/Payment"
-                    onclick="navigateStudent('/Student/Payment')">
+                    data-route="/StPayment"
+                    onclick="navigateStudent('/StPayment')">
                 <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M5 6h14a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z" />
                 </svg>
@@ -222,12 +222,21 @@
             </button>
             <button type="button"
                     class="student-bottom-item flex flex-col items-center justify-center py-2 w-full text-xs"
-                    data-route="/Student/Schedule"
-                    onclick="navigateStudent('/Student/Schedule')">
+                    data-route="/StSchedule"
+                    onclick="navigateStudent('/StSchedule')">
                 <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 01-2 2v12a2 2 0 01-2 2z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 <span>Schedule</span>
+            </button>
+            <button type="button"
+                    class="student-bottom-item flex flex-col items-center justify-center py-2 w-full text-xs"
+                    data-route="/StAttendance"
+                    onclick="navigateStudent('/StAttendance')">
+                <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+                <span>Attend</span>
             </button>
         </div>
     </nav>
