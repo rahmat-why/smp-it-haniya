@@ -25,12 +25,12 @@
                class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Subject Name</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Subject</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 140px;">Code</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 140px;">Class Level</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 140px;">Class</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 120px;">Minimum Value</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Description</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 70px;">Action</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase !text-right" style="width: 70px;">Action</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100"></tbody>
@@ -85,7 +85,7 @@
                 columns: [
                     {
                         data: 'subject_name',
-                        className: 'py-3 font-medium text-gray-900'
+                        className: 'py-3'
                     },
                     {
                         data: 'subject_code',
@@ -97,7 +97,7 @@
                     },
                     {
                         data: 'minimum_value',
-                        className: 'py-3 text-center'
+                        className: 'py-3'
                     },
                     {
                         data: 'description',
@@ -107,12 +107,12 @@
                         data: null,
                         orderable: false,
                         searchable: false,
-                        className: 'text-center py-3',
+                        className: 'text-right py-3',
                         render: function (data, type, row) {
                             var id = row.subject_id;
                             var editUrl = '/Subject/Edit?id=' + id;
                             return `
-                                        <div class="flex justify-center subject-actions-wrapper relative">
+                                        <div class="flex justify-end subject-actions-wrapper relative">
                                             <button type="button"
                                                     onclick="toggleActionsMenu(event, '${id}')"
                                                     class="p-1.5 hover:bg-gray-100 rounded-md transition-colors duration-150"
