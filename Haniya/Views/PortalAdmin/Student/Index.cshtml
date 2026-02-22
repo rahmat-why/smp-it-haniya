@@ -67,7 +67,9 @@
             searching: true,
             lengthChange: true,
             ordering: true,
-            order:[[0, 'desc']],
+            order: [[0, 'desc']],
+
+
             ajax: {
                 url: '/Student/GetAll',
                 type: 'GET'
@@ -75,6 +77,7 @@
 
             dom: 'lftip',
 
+            // LANGUAGE (pisah, jangan nested)
             language: {
                 lengthMenu: "Show _MENU_ rows",
                 search: "",
@@ -85,173 +88,131 @@
                     next: "Next",
                     previous: "Previous"
                 },
-                dom: 'lftip',
-                language: {
-                    lengthMenu: "Show _MENU_ rows",
-                    search: "",
-                    searchPlaceholder: "Search...",
-                    paginate: {
-                        first: "First",
-                        last: "Last",
-                        next: "Next",
-                        previous: "Previous"
-                    },
-                    info: "Showing _START_ to _END_ of _TOTAL_ entries"
-                },
-                columns: [
-                    {
-                        data: null,
-                        orderable: true,
-                        name: 'full_name',
-                        className: 'py-3',
-                        render: function (data, type, row) {
-                            var src = row.profile_photo || '/image/no-image.png';
-                            var name = row.full_name || '-';
-                            var nis = row.nis || '-';
-                            return `
-                                        <div class="flex items-center gap-3">
-                                            <img src="${src}" class="w-10 h-10 rounded-full object-cover border-2 border-gray-200 flex-shrink-0" alt="Photo">
-                                            <div class="min-w-0 flex-1">
-                                                <div class="font-medium text-gray-900 truncate">${name}</div>
-                                                <div class="text-xs text-gray-500 truncate">NIS: ${nis}</div>
-                                            </div>
-                                        </div>
-                                    `;
-                        }
-                    },
-                    {
-                        data: 'birth_date',
-                        className: 'py-3',
-                        render: function (data) {
-                            return formatDate(data);
-                        }
-                    },
-                    {
-                        data: 'birth_place',
-                        className: 'py-3'
-                    },
-                    {
-                        data: 'gender',
-                        className: 'text-center py-3'
-                    },
-                    {
-                        data: 'address',
-                        className: 'py-3'
-                    },
-                    {
-                        data: 'entry_date',
-                        className: 'py-3',
-                        render: function (data) {
-                            return formatDate(data);
-                        }
-                    },
-                    {
-                        data: 'level',
-                        className: 'py-3'
-                    },
-                    {
-                        data: null,
-                        orderable: false,
-                        searchable: false,
-                        className: 'text-center py-3',
-                        render: function (data, type, row) {
-                            var id = row.student_id;
-                            var editUrl = '/Student/Edit?id=' + id;
-                            return `
-                                        <div class="flex justify-center student-actions-wrapper relative">
-                                            <button type="button"
-                                                    onclick="toggleActionsMenu(event, '${id}')"
-                                                    class="p-1.5 hover:bg-gray-100 rounded-md transition-colors duration-150"
-                                                    data-testid="student-actions-toggle-${id}">
-                                                <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                                                </svg>
-                                            </button>
-                                            <div id="actions-menu-${id}" class="actions-menu hidden">
-                                                <a href="${editUrl}"
-                                                   class="text-blue-700 hover:bg-blue-50"
-                                                   data-testid="student-edit-action-${id}">
-                                                    <svg class="w-4 h-4 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                    </svg>
-                                                    Edit
-                                                </a>
-                                                <button type="button"
-                                                        onclick="delStudent('${id}')"
-                                                        class="text-red-600 hover:bg-red-50 border-t border-gray-100"
-                                                        data-testid="student-delete-action-${id}">
-                                                    <svg class="w-4 h-4 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                    Delete
-                                                </button>
-                                            </div>
-                                        </div>`;
-                        }
+                info: "Showing _START_ to _END_ of _TOTAL_ entries"
+            },
+
+
+            // COLUMNS (harus sejajar, bukan di dalam language)
+            columns: [
+
+                // Nama + Foto
+                {
+                    data: null,
+                    orderable: true,
+                    name: 'full_name',
+                    className: 'py-3',
+                    render: function (data, type, row) {
+
+                        var src = row.profile_photo || '/image/no-image.png';
+                        var name = row.full_name || '-';
+                        var nis = row.nis || '-';
+
+                        return `
+                            <div class="flex items-center gap-3">
+                                <img src="${src}"
+                                        class="w-10 h-10 rounded-full object-cover border-2 border-gray-200 flex-shrink-0">
+
+                                <div class="min-w-0 flex-1">
+                                    <div class="font-medium text-gray-900 truncate">${name}</div>
+                                    <div class="text-xs text-gray-500 truncate">NIS: ${nis}</div>
+                                </div>
+                            </div>
+                        `;
                     }
                 },
+
+
+                // Tanggal Lahir
                 {
                     data: 'birth_date',
                     className: 'py-3',
-                    type: 'date',
-                    render: data => formatDate(data),
+                    render: function (data) {
+                        return formatDate(data);
+                    }
                 },
+
+
+                // Tempat Lahir
                 {
                     data: 'birth_place',
                     className: 'py-3'
                 },
+
+
+                // Gender
                 {
                     data: 'gender',
                     className: 'text-center py-3'
                 },
+
+
+                // Alamat
                 {
                     data: 'address',
                     className: 'py-3'
                 },
+
+
+                // Tanggal Masuk
                 {
                     data: 'entry_date',
                     className: 'py-3',
-                    type: 'date',
-                    render: data => formatDate(data),
+                    render: function (data) {
+                        return formatDate(data);
+                    }
                 },
+
+
+                // Level
+                {
+                    data: 'level',
+                    className: 'py-3'
+                },
+
+
+                // Action
                 {
                     data: null,
                     orderable: false,
                     searchable: false,
                     className: 'text-center py-3',
+
                     render: function (data, type, row) {
-                        const id = row.student_id;
-                        const editUrl = '/Student/Edit?id=' + id;
+
+                        var id = row.student_id;
+                        var editUrl = '/Student/Edit?id=' + id;
 
                         return `
                             <div class="flex justify-center student-actions-wrapper relative">
+
                                 <button type="button"
-                                        onclick="toggleStudentActionsMenu(event, '${id}')"
-                                        class="p-1.5 hover:bg-gray-100 rounded-md transition-colors duration-150">
+                                        onclick="toggleActionsMenu(event, '${id}')"
+                                        class="p-1.5 hover:bg-gray-100 rounded-md">
+
                                     <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4z
+                                                    M10 12a2 2 0 110-4 2 2 0 010 4z
+                                                    M10 18a2 2 0 110-4 2 2 0 010 4z"/>
                                     </svg>
                                 </button>
 
-                                <div id="student-actions-menu-${id}"
-                                     class="student-actions-menu hidden absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-100">
+
+                                <div id="actions-menu-${id}" class="actions-menu hidden">
+
                                     <a href="${editUrl}"
-                                       class="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">
-                                        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
+                                        class="text-blue-700 hover:bg-blue-50">
+
                                         Edit
                                     </a>
 
+
                                     <button type="button"
                                             onclick="delStudent('${id}')"
-                                            class="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100">
-                                        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
+                                            class="text-red-600 hover:bg-red-50 border-t">
+
                                         Delete
                                     </button>
+
                                 </div>
                             </div>
                         `;
@@ -259,31 +220,45 @@
                 }
             ],
 
+
+
+            // INIT
             initComplete: function () {
+
                 const wrapper = $('#student-table_wrapper');
 
                 const $length = wrapper.find('.dataTables_length, .dt-length');
                 const $filter = wrapper.find('.dataTables_filter, .dt-search');
 
                 const $controls = $('<div class="flex items-center gap-4 w-full md:w-auto"></div>');
+
                 $controls.append($length).append($filter);
 
                 $('#student-table-toolbar').append($controls);
+
+
+                // Length style
                 $length.addClass('flex items-center gap-2 text-sm text-gray-600');
+
                 $length.find('select')
-                    .addClass('border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500');
+                    .addClass('border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:ring-2 focus:ring-blue-500');
+
 
                 // Search style
                 const $search = $filter.find('input');
-                $search.addClass('border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full md:w-64')
+
+                $search
+                    .addClass('border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 w-full md:w-64')
                     .attr('placeholder', 'Search...');
 
                 styleStudentPagination();
             },
 
+
             drawCallback: function () {
                 setTimeout(styleStudentPagination, 50);
             }
+
         });
     }
 

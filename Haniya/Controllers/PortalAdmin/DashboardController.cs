@@ -492,51 +492,27 @@ namespace Haniya.Controllers.PortalAdmin
             }
 
             var sql = @"
-<<<<<<< HEAD
-        SELECT
-            s.day,
-            sd.start_time,
-            sd.end_time,
-            sub.subject_name,
-            ISNULL(t.first_name + ' ' + t.last_name, 'Tidak Ditentukan') AS teacher
-        FROM mst_schedules s
-        JOIN mst_schedule_details sd ON s.schedule_id = sd.schedule_id
-        JOIN mst_subjects sub ON sd.subject_id = sub.subject_id
-        LEFT JOIN mst_teachers t ON sd.teacher_id = t.teacher_id
-        JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
-        WHERE ac.academic_class_id = @classId
-        ORDER BY
-            CASE s.day
-                WHEN 'Senin' THEN 1
-                WHEN 'Selasa' THEN 2
-                WHEN 'Rabu' THEN 3
-                WHEN 'Kamis' THEN 4
-                WHEN 'Jumat' THEN 5
-                WHEN 'Sabtu' THEN 6
-            END, sd.start_time";
-=======
-                        SELECT
-                            s.day,
-                            sd.start_time,
-                            sd.end_time,
-                            sub.subject_name,
-                            ISNULL(t.first_name + ' ' + t.last_name, 'Tidak Ditentukan') AS teacher
-                        FROM mst_schedules s
-                        JOIN mst_schedule_details sd ON s.schedule_id = sd.schedule_id
-                        JOIN mst_subjects sub ON sd.subject_id = sub.subject_id
-                        LEFT JOIN mst_teachers t ON sd.teacher_id = t.teacher_id
-                        JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
-                        WHERE ac.academic_class_id = @classId AND t.teacher_id = @teacherId
-                        ORDER BY
-                            CASE s.day
-                                WHEN 'Senin' THEN 1
-                                WHEN 'Selasa' THEN 2
-                                WHEN 'Rabu' THEN 3
-                                WHEN 'Kamis' THEN 4
-                                WHEN 'Jumat' THEN 5
-                                WHEN 'Sabtu' THEN 6
-                            END, sd.start_time";
->>>>>>> 6477722 (17022026)
+                SELECT
+                    s.day,
+                    sd.start_time,
+                    sd.end_time,
+                    sub.subject_name,
+                    ISNULL(t.first_name + ' ' + t.last_name, 'Tidak Ditentukan') AS teacher
+                FROM mst_schedules s
+                JOIN mst_schedule_details sd ON s.schedule_id = sd.schedule_id
+                JOIN mst_subjects sub ON sd.subject_id = sub.subject_id
+                LEFT JOIN mst_teachers t ON sd.teacher_id = t.teacher_id
+                JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
+                WHERE ac.academic_class_id = @classId AND t.teacher_id = @teacherId
+                ORDER BY
+                    CASE s.day
+                        WHEN 'Senin' THEN 1
+                        WHEN 'Selasa' THEN 2
+                        WHEN 'Rabu' THEN 3
+                        WHEN 'Kamis' THEN 4
+                        WHEN 'Jumat' THEN 5
+                        WHEN 'Sabtu' THEN 6
+                    END, sd.start_time";
 
             var cmd = new SqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@classId", classId);

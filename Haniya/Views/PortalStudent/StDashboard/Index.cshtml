@@ -109,7 +109,7 @@
     function renderStudentAttendanceChart(data) {
         const ctx = document.getElementById('studentAttendanceChart').getContext('2d');
         if (studentAttendanceChart) studentAttendanceChart.destroy();
-
+        console.log(data);
         const classMap = {};
         (data || []).forEach(item => {
             const kelas = item.kelas || 'Unknown';
