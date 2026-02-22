@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="..\build\Haniya.props" />
-</Project>
