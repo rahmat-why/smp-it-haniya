@@ -61,9 +61,9 @@ namespace Haniya.Controllers.PortalStudent
                         ON sc.academic_class_id = ac.academic_class_id
                     JOIN mst_academic_years ay
                         ON ac.academic_year_id = ay.academic_year_id
-                    JOIN txn_schedules sch
+                    JOIN mst_schedules sch
                         ON sch.academic_class_id = ac.academic_class_id
-                    JOIN txn_schedule_details sd
+                    JOIN mst_schedule_details sd
                         ON sd.schedule_id = sch.schedule_id
                     JOIN mst_subjects sub
                         ON sd.subject_id = sub.subject_id

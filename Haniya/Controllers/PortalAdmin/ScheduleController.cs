@@ -38,7 +38,7 @@ namespace Haniya.Controllers.PortalAdmin
 
             var totalSql = @"
                 SELECT COUNT(*) 
-                FROM txn_schedules s
+                FROM mst_schedules s
                 WHERE (@classId IS NULL OR s.academic_class_id = @classId)
                   AND (@day IS NULL OR s.day = @day)";
 
@@ -56,10 +56,10 @@ namespace Haniya.Controllers.PortalAdmin
                     c.class_name,
                     s.day,
                     COUNT(d.schedule_detail_id) AS lesson_count
-                FROM txn_schedules s
+                FROM mst_schedules s
                 JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
                 JOIN mst_classes c ON ac.class_id = c.class_id
-                LEFT JOIN txn_schedule_details d ON d.schedule_id = s.schedule_id
+                LEFT JOIN mst_schedule_details d ON d.schedule_id = s.schedule_id
                 WHERE (@classId IS NULL OR s.academic_class_id = @classId)
                   AND (@day IS NULL OR s.day = @day)
                 GROUP BY s.schedule_id, c.class_name, s.day
@@ -119,7 +119,7 @@ namespace Haniya.Controllers.PortalAdmin
                 s.academic_class_id,
                 c.class_name,
                 COALESCE(dt.item_desc, s.day) AS day_desc
-            FROM txn_schedules s
+            FROM mst_schedules s
             JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
             JOIN mst_classes c ON ac.class_id = c.class_id
             LEFT JOIN mst_detail_settings dt ON s.day = dt.detail_id AND dt.header_id = 'DAY'
@@ -156,7 +156,7 @@ namespace Haniya.Controllers.PortalAdmin
                 CONCAT(t.first_name, ' ', t.last_name) AS teacher_name,
                 CONVERT(varchar(5), d.start_time, 108) AS start_time,
                 CONVERT(varchar(5), d.end_time, 108) AS end_time
-            FROM txn_schedule_details d
+            FROM mst_schedule_details d
             LEFT JOIN mst_subjects s ON d.subject_id = s.subject_id
             LEFT JOIN mst_teachers t ON d.teacher_id = t.teacher_id
             WHERE d.schedule_id = @id
@@ -231,12 +231,12 @@ namespace Haniya.Controllers.PortalAdmin
                 conn.Open();
                 using var trx = conn.BeginTransaction();
 
-                var seqCmd = new SqlCommand("SELECT ISNULL(MAX(schedule_id),'SCH0000') FROM txn_schedules", conn, trx);
+                var seqCmd = new SqlCommand("SELECT ISNULL(MAX(schedule_id),'SCH0000') FROM mst_schedules", conn, trx);
                 var seq = int.Parse(seqCmd.ExecuteScalar().ToString().Substring(3)) + 1;
                 var scheduleId = "SCH" + seq.ToString("D4");
 
                 var headerSql = @"
-                    INSERT INTO txn_schedules (schedule_id, academic_class_id, day, created_at)
+                    INSERT INTO mst_schedules (schedule_id, academic_class_id, day, created_at)
                     VALUES (@id, @classId, @day, GETDATE())";
 
                 using var cmd = new SqlCommand(headerSql, conn, trx);
@@ -245,7 +245,7 @@ namespace Haniya.Controllers.PortalAdmin
                 cmd.Parameters.AddWithValue("@day", day);
                 cmd.ExecuteNonQuery();
 
-                var detSeqCmd = new SqlCommand("SELECT ISNULL(MAX(schedule_detail_id),'SCD0000') FROM txn_schedule_details", conn, trx);
+                var detSeqCmd = new SqlCommand("SELECT ISNULL(MAX(schedule_detail_id),'SCD0000') FROM mst_schedule_details", conn, trx);
                 var detSeq = int.Parse(detSeqCmd.ExecuteScalar().ToString().Substring(3));
 
                 foreach (var d in details)
@@ -254,7 +254,7 @@ namespace Haniya.Controllers.PortalAdmin
                     var detId = "SCD" + detSeq.ToString("D4");
 
                     var detSql = @"
-                        INSERT INTO txn_schedule_details (schedule_detail_id, schedule_id, subject_id, teacher_id, start_time, end_time, created_at)
+                        INSERT INTO mst_schedule_details (schedule_detail_id, schedule_id, subject_id, teacher_id, start_time, end_time, created_at)
                         VALUES (@did, @sid, @subj, @tch, @start, @end, GETDATE())";
 
                     using var dcmd = new SqlCommand(detSql, conn, trx);
@@ -309,7 +309,7 @@ namespace Haniya.Controllers.PortalAdmin
                 using var trx = conn.BeginTransaction();
 
                 var headerSql = @"
-                    UPDATE txn_schedules 
+                    UPDATE mst_schedules 
                     SET academic_class_id = @classId, day = @day, updated_at = GETDATE()
                     WHERE schedule_id = @id";
 
@@ -319,12 +319,12 @@ namespace Haniya.Controllers.PortalAdmin
                 cmd.Parameters.AddWithValue("@day", day);
                 cmd.ExecuteNonQuery();
 
-                new SqlCommand("DELETE FROM txn_schedule_details WHERE schedule_id = @id", conn, trx)
+                new SqlCommand("DELETE FROM mst_schedule_details WHERE schedule_id = @id", conn, trx)
                 {
                     Parameters = { new SqlParameter("@id", scheduleId) }
                 }.ExecuteNonQuery();
 
-                var detSeqCmd = new SqlCommand("SELECT ISNULL(MAX(schedule_detail_id),'SCD0000') FROM txn_schedule_details", conn, trx);
+                var detSeqCmd = new SqlCommand("SELECT ISNULL(MAX(schedule_detail_id),'SCD0000') FROM mst_schedule_details", conn, trx);
                 var detSeq = int.Parse(detSeqCmd.ExecuteScalar().ToString().Substring(3));
 
                 foreach (var d in details)
@@ -333,7 +333,7 @@ namespace Haniya.Controllers.PortalAdmin
                     var detId = "SCD" + detSeq.ToString("D4");
 
                     var detSql = @"
-                        INSERT INTO txn_schedule_details (schedule_detail_id, schedule_id, subject_id, teacher_id, start_time, end_time, created_at)
+                        INSERT INTO mst_schedule_details (schedule_detail_id, schedule_id, subject_id, teacher_id, start_time, end_time, created_at)
                         VALUES (@did, @sid, @subj, @tch, @start, @end, GETDATE())";
 
                     using var dcmd = new SqlCommand(detSql, conn, trx);
@@ -363,12 +363,12 @@ namespace Haniya.Controllers.PortalAdmin
                 conn.Open();
                 using var trx = conn.BeginTransaction();
 
-                new SqlCommand("DELETE FROM txn_schedule_details WHERE schedule_id = @id", conn, trx)
+                new SqlCommand("DELETE FROM mst_schedule_details WHERE schedule_id = @id", conn, trx)
                 {
                     Parameters = { new SqlParameter("@id", req.id) }
                 }.ExecuteNonQuery();
 
-                new SqlCommand("DELETE FROM txn_schedules WHERE schedule_id = @id", conn, trx)
+                new SqlCommand("DELETE FROM mst_schedules WHERE schedule_id = @id", conn, trx)
                 {
                     Parameters = { new SqlParameter("@id", req.id) }
                 }.ExecuteNonQuery();

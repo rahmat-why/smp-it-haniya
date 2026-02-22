@@ -49,8 +49,8 @@ namespace Haniya.Controllers.PortalAdmin
                             m.url,
                             m.icon,
                             m.sort_order
-                        FROM mst_menu m
-                        INNER JOIN txn_menu_role mr ON m.menu_id = mr.menu_id
+                        FROM mst_menus m
+                        INNER JOIN mst_menu_roles mr ON m.menu_id = mr.menu_id
                         WHERE m.is_active = 1
                         AND mr.role_id = @roleId
                         AND mr.is_view = 1
