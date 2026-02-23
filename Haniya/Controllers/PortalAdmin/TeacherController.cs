@@ -6,9 +6,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Haniya.Controllers.PortalAdmin
 {
+    [Authorize]
     public class TeacherController : Controller
     {
         private readonly IConfiguration _config;
