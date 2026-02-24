@@ -18,9 +18,6 @@ namespace Haniya.Controllers.PortalAdmin
         {
             return new SqlConnection(_config.GetConnectionString("DefaultConnection"));
         }
-
-        /* ===================== PAGE ===================== */
-
         public IActionResult Index()
         {
             return View("~/Views/PortalAdmin/Student/Index.cshtml");
@@ -36,8 +33,6 @@ namespace Haniya.Controllers.PortalAdmin
             ViewBag.studentId = id;
             return View("~/Views/PortalAdmin/Student/Edit.cshtml");
         }
-
-        /* ===================== API ===================== */
 
         private (int draw, int start, int length, string searchValue, string orderColumn, string orderDir)
             ParseDataTablesQuery(string[] columns)
@@ -135,17 +130,20 @@ namespace Haniya.Controllers.PortalAdmin
                         s.full_name,
                         s.birth_date,
                         s.birth_place,
-                        CASE 
-                            WHEN s.gender = 'M' THEN 'Male'
-                            WHEN s.gender = 'F' THEN 'Female'
-                            ELSE s.gender
-                        END as gender,
+                        dg.item_desc AS gender,
                         s.address,
                         s.entry_date,
                         s.profile_photo,
-                        dt.item_desc as level
+                        dl.item_desc AS level
                     FROM mst_students s
-                    LEFT JOIN mst_detail_settings dt ON dt.detail_id = s.level AND dt.header_id = 'LEVEL_STUDENT' AND dt.status = 'ACTIVE'
+                    LEFT JOIN mst_detail_settings dl 
+                        ON dl.detail_id = s.level 
+                        AND dl.header_id = 'LEVEL_STUDENT' 
+                        AND dl.status = 'ACTIVE'
+                    LEFT JOIN mst_detail_settings dg 
+                        ON dg.item_code = s.gender
+                        AND dg.header_id = 'GENDER'
+                        AND dg.status = 'ACTIVE'
                     WHERE s.status = 'ACTIVE'
                         {whereSearch}
                     ORDER BY {orderColumn} {orderDir}

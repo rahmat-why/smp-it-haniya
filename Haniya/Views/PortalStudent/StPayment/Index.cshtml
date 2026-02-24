@@ -4,7 +4,7 @@
 }
 
 <div class="flex justify-between items-center mb-4">
-    <h2 class="text-xl font-semibold">My Payments</h2>
+    <h2 class="text-xl font-semibold">My Payment List</h2>
 </div>
 
 <div class="bg-white rounded-lg shadow">
@@ -19,8 +19,7 @@
     <!-- Table -->
     <div class="px-4 pt-4">
         <div class="overflow-x-auto border border-gray-200 rounded-xl bg-white shadow-sm">
-            <table id="payment-table"
-                   class="w-full text-sm text-left text-gray-700 border-collapse">
+            <table id="payment-table" class="w-full text-sm text-left text-gray-700 border-collapse">
                 <thead class="bg-gray-50 text-gray-600 border-b border-gray-200">
                     <tr>
                         <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Date</th>
@@ -56,6 +55,12 @@
         initPaymentTable();
     });
 
+    function formatDateId(dateValue) {
+        const d = new Date(dateValue);
+        if (isNaN(d.getTime())) return '-';
+        return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+    }
+
     function initPaymentTable() {
 
         const table = $('#payment-table').DataTable({
@@ -80,37 +85,37 @@
             columns: [
                 {
                     data: 'payment_date',
-                    className: 'px-5 py-3 font-medium text-gray-900 whitespace-nowrap',
+                    className: 'px-5 py-3 text-gray-900 whitespace-nowrap',
                     render: d => d
-                        ? new Date(d).toLocaleDateString('id-ID')
+                        ? formatDateId(d)
                         : '-'
                 },
                 { data: 'class_name', className: 'px-5 py-3 whitespace-nowrap' },
                 { data: 'payment_type', className: 'px-5 py-3 whitespace-nowrap' },
                 {
                     data: 'total_price',
-                    className: 'px-5 py-3 text-right font-semibold text-gray-900 whitespace-nowrap',
+                    className: 'px-5 py-3 text-gray-900 whitespace-nowrap',
                     render: d => d
                         ? 'Rp ' + Number(d).toLocaleString('id-ID')
                         : '-'
                 },
                 {
                     data: 'total_payment',
-                    className: 'px-5 py-3 text-right font-semibold text-gray-900 whitespace-nowrap',
+                    className: 'px-5 py-3 text-gray-900 whitespace-nowrap',
                     render: d => d
                         ? 'Rp ' + Number(d).toLocaleString('id-ID')
                         : '-'
                 },
                 {
                     data: 'remaining_payment',
-                    className: 'px-5 py-3 text-right font-semibold text-blue-900 whitespace-nowrap',
+                    className: 'px-5 py-3whitespace-nowrap',
                     render: d => d
                         ? 'Rp ' + Number(d).toLocaleString('id-ID')
                         : '-'
                 },
                 {
                     data: 'status',
-                    className: 'px-5 py-3 text-center',
+                    className: 'px-5 py-3',
                     render: d => {
                         if (d === 'PAID')
                             return '<span class="px-2 py-1 text-xs rounded-md bg-green-50 text-green-700 border border-green-100 font-medium">PAID</span>';

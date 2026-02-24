@@ -6,9 +6,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Haniya.Controllers.PortalAdmin
 {
+    [Authorize]
     public class TeacherController : Controller
     {
         private readonly IConfiguration _config;
@@ -134,23 +136,23 @@ namespace Haniya.Controllers.PortalAdmin
 
                 var sql = $@"
             SELECT
-                teacher_id,
-                npk,
-                first_name,
-                last_name,
-                CASE 
-                    WHEN gender = 'M' THEN 'Male'
-                    WHEN gender = 'F' THEN 'Female'
-                    ELSE gender
-                END as gender,
-                birth_place,
-                birth_date,
-                profile_photo,
-                address,
-                phone,
-                entry_date,
-                level
-            FROM mst_teachers
+                t.teacher_id,
+                t.npk,
+                t.first_name,
+                t.last_name,
+                dg.item_desc AS gender,
+                t.birth_place,
+                t.birth_date,
+                t.profile_photo,
+                t.address,
+                t.phone,
+                t.entry_date,
+                t.level
+            FROM mst_teachers t
+            LEFT JOIN mst_detail_settings dg
+                ON dg.item_code = t.gender
+                AND dg.header_id = 'GENDER'
+                AND dg.status = 'ACTIVE'
             WHERE 1=1
                 {whereSearch}
             ORDER BY {orderColumn} {orderDir}

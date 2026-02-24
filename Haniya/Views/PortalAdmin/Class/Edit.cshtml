@@ -97,12 +97,12 @@
                     </div>
                     <div class="border rounded-md max-h-72 overflow-auto bg-white flex-grow">
                         <table class="min-w-full text-sm">
-                            <thead class="bg-gray-50 sticky top-0">
+                            <thead class="bg-gray-50 sticky top-0 text-left">
                                 <tr>
-                                    <th class="p-2 w-10"></th>
-                                    <th class="p-2">Student</th>
-                                    <th class="p-2">Gender</th>
-                                    <th class="p-2">Status</th>
+                                    <th class="p-2 w-10 text-left"></th>
+                                    <th class="p-2 text-left">Student</th>
+                                    <th class="p-2 text-left">Gender</th>
+                                    <th class="p-2 text-left">Status</th>
                                 </tr>
                             </thead>
                             <tbody id="student-list-body"></tbody>
@@ -172,6 +172,12 @@
             }
             students.forEach(s => {
                 const checked = s.is_assigned ? 'checked' : '';
+                const status = (s.status || 'Active').toString();
+                const normalizedStatus = status.trim().toLowerCase();
+                const statusBadgeClass = normalizedStatus === 'active'
+                    ? 'bg-blue-100 text-blue-800'
+                    : 'bg-gray-100 text-gray-800';
+
                 body.append(`
                             <tr class="border-b last:border-0" data-student-id="${s.student_id}">
                                 <td class="p-2 text-center">
@@ -189,8 +195,10 @@
                                     </div>
                                 </td>
                                 <td class="p-2">${s.gender ?? "Unknown"}</td>
-                                <td class="p-2 text-xs text-blue-700 font-medium">
-                                    Active
+                                <td class="p-2">
+                                    <span class="inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${statusBadgeClass}">
+                                        ${status}
+                                    </span>
                                 </td>
                             </tr>
                         `);

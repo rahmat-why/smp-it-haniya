@@ -15,22 +15,32 @@
 <div class="bg-white rounded-lg shadow">
     <!-- Toolbar & filters -->
     <div class="px-4 pt-4">
-        <div id="attendance-table-toolbar" class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <!-- Custom date filter -->
-            <div class="flex flex-wrap gap-4 items-end">
+        <div id="attendance-table-toolbar"
+            class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+
+            <!-- LEFT -->
+            <div id="toolbar-left" class="flex items-center gap-4">
+                <!-- DataTables length masuk sini -->
+            </div>
+
+            <!-- RIGHT -->
+            <div id="toolbar-right" class="flex flex-wrap items-end gap-4">
+
+                <!-- Attendance Date -->
                 <div>
                     <label class="text-sm font-medium text-gray-700">Attendance Date</label>
                     <div class="flex gap-2 mt-1">
                         <input type="date" id="filter_date"
-                               class="border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                            class="border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
                         <button id="btnFilter"
-                                class="px-4 py-1.5 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
+                            class="px-4 py-1.5 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
                             Apply
                         </button>
                     </div>
                 </div>
+
+                <!-- DataTables search masuk sini -->
             </div>
-            <!-- DataTables length & search will be appended here -->
         </div>
     </div>
 
@@ -105,7 +115,7 @@
                 columns: [
                     {
                         data: 'attendance_date',
-                        className: 'py-3 font-medium text-gray-900',
+                        className: 'py-3 text-gray-900',
                         render: function (data) {
                             if (!data) return '-';
                             return new Date(data).toLocaleDateString('id-ID', {
@@ -125,7 +135,7 @@
                     },
                     {
                         data: null,
-                        className: 'py-3 text-center',
+                        className: 'py-3',
                         render: function (row) {
                             return `Hadir: ${row.present || 0} | Sakit: ${row.sick || 0} | Izin: ${row.permit || 0} | Alpa: ${row.alpha || 0}`;
                         }
@@ -174,18 +184,12 @@
                 initComplete: function () {
                     const wrapper = $('#attendance-table_wrapper');
 
-                    // Get length and filter elements
                     const $length = wrapper.find('.dataTables_length, .dt-length');
                     const $filter = wrapper.find('.dataTables_filter, .dt-search');
 
-                    // Create controls container
-                    const $controls = $('<div class="flex items-center gap-4"></div>');
-                    $controls.append($length).append($filter);
+                    $('#toolbar-left').append($length);
+                    $('#toolbar-right').append($filter);
 
-                    // Append to toolbar (on the right)
-                    $('#attendance-table-toolbar').append($controls);
-
-                    // Style length
                     $length.addClass('flex items-center gap-2 text-sm text-gray-600');
                     $length.find('label').addClass('flex items-center gap-2');
                     $length.find('select').addClass(
@@ -193,7 +197,7 @@
                         'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
                     );
 
-                    // Style search
+                    // Styling search
                     $filter.addClass('flex items-center gap-2 text-sm text-gray-600');
                     $filter.find('label').addClass('flex items-center gap-2');
                     const $searchInput = $filter.find('input');

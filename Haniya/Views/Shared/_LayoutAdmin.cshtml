@@ -5,11 +5,11 @@
     <title>@ViewData["Title"] - SMP IT Haniya</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- Prevent caching for authenticated pages -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.datatables.net/2.0.7/css/dataTables.dataTables.min.css">
 
@@ -307,6 +307,10 @@
             .select2-container--default .select2-selection--single .select2-selection__clear:hover {
                 color: #1e40af;
             }
+
+        #bottom-menu::-webkit-scrollbar {
+            display: none;
+        }
     </style>
 </head>
 <body class="h-screen flex flex-col bg-gray-100 text-gray-800 overflow-hidden">
@@ -322,38 +326,56 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-bold text-gray-800">SMP IT HANIYA</h1>
-                    <p class="text-xs text-gray-500">Management System</p>
+                    <p class="text-xs text-gray-500">Smart System</p>
                 </div>
             </div>
             @if (User.Identity.IsAuthenticated)
             {
                 <div class="flex items-center gap-4">
                     <!-- User Info -->
-                    <div class="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded-lg border border-gray-200">
-                        <!-- Profile Photo -->
-                        @if (!string.IsNullOrEmpty(User.FindFirst("ProfilePhoto")?.Value))
-                        {
-                            <img src="@User.FindFirst("ProfilePhoto")?.Value" alt="Profile" class="w-10 h-10 rounded-full object-cover border-2 border-blue-600" />
-                        }
-                        else
-                        {
-                            <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg">
-                                @(User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value?.Substring(0, 1).ToUpper() ?? "U")
+                    <div class="relative inline-block text-left">
+    <!-- Profile Trigger -->
+                        <div onclick="toggleProfileMenu()" class="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer select-none">
+
+                            @if (!string.IsNullOrEmpty(User.FindFirst("ProfilePhoto")?.Value))
+                            {
+                                <img src="@User.FindFirst("ProfilePhoto")?.Value"
+                                    class="w-10 h-10 rounded-full object-cover border-2 border-blue-600" alt=""/>
+                            }
+                            else
+                            {
+                                <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg">
+                                    @(User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value?.Substring(0, 1).ToUpper() ?? "U")
+                                </div>
+                            }
+
+                            <div class="text-left hidden sm:block">
+                                <p class="text-sm font-semibold text-gray-800">
+                                    @User.FindFirst("FullName")?.Value
+                                </p>
+                                <p class="text-xs text-gray-500">
+                                    @User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
+                                </p>
                             </div>
-                        }
-                        <div class="text-left">
-                            <p class="text-sm font-semibold text-gray-800">@User.FindFirst("FullName")?.Value</p>
-                            <p class="text-xs text-gray-500">@User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value</p>
                         </div>
-                        <div class="h-8 w-px bg-gray-300 mx-2"></div>
-                        <button type="button"
-                                onclick="handleLogout(event)"
-                                class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition duration-200 flex items-center gap-2 text-sm">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                            </svg>
-                            <span>Logout</span>
-                        </button>
+
+                        <!-- Dropdown Menu -->
+                        <div id="profileMenu" class="hidden absolute right-0 mt-3 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden transition-all duration-200">
+
+                            <button type="button"
+                                    onclick="handleLogout(event)"
+                                    class="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors duration-200">
+
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+
+                                <span>Logout</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             }
@@ -365,20 +387,33 @@
             }
         </div>
     </header>
-    <div class="flex flex-1 overflow-hidden"> 
-        <aside class="w-64 bg-blue-900 text-white flex-shrink-0 flex flex-col"> 
-            <nav id="sidebar-menu" class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-            </nav> 
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Sidebar Desktop -->
+        <aside class="hidden md:flex w-64 bg-blue-900 text-white flex-shrink-0 flex-col">
+            <nav id="sidebar-menu" class="flex-1 px-4 py-6 space-y-2 overflow-y-auto text-sm">
+            </nav>
+
             <div class="p-4 border-t border-blue-700 text-center text-xs text-blue-200">
                 <p>&copy; 2026 SMP IT HANIYA</p>
                 <p class="mt-1">Version 1.0</p>
             </div>
-        </aside> 
-        <main class="flex-1 overflow-auto p-6">
+        </aside>
+
+        <!-- Main -->
+        <main class="flex-1 overflow-auto p-4 md:p-6 pb-20 md:pb-6">
             @RenderBody()
         </main>
-    </div> 
+    </div>
+
+    <!-- Bottom Nav Mobile -->
+    <nav id="bottom-menu" class="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 shadow-lg z-30 overflow-x-auto">
+        <div id="bottom-menu-wrapper"
+            class="flex px-2">
+        </div>
+    </nav>
     <script>
+        const currentUserRole = '@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value';
+
         $(document).ready(function () {
             loadMenu();
         });
@@ -388,6 +423,21 @@
                 pagingType: 'simple_numbers'
             });
         }
+
+        function toggleProfileMenu() {
+            const menu = document.getElementById("profileMenu");
+            menu.classList.toggle("hidden");
+        }
+
+        // Close kalau klik luar
+        document.addEventListener("click", function (event) {
+            const menu = document.getElementById("profileMenu");
+            const container = event.target.closest(".relative");
+
+            if (!container) {
+                menu.classList.add("hidden");
+            }
+        });
 
         function applyAdminPaginationStyle($scope) {
             const $root = $scope && $scope.length ? $scope : $(document);
@@ -434,55 +484,71 @@
                 url: '/Menu/GetMenus',
                 type: 'GET',
                 success: function (res) {
-                    if (!res.success) {
-                        console.error(res.message);
-                        return;
-                    }
+                    if (!res.success) return;
 
-                    // Path sekarang (tanpa query string), dibuat lower-case
-                    const rawPath = window.location.pathname || '/';
-                    const currentPath = rawPath.toLowerCase();
+                    const currentPath = (window.location.pathname || '/')
+                        .toLowerCase()
+                        .replace(/\/index$/, '');
 
-                    let html = '';
+                    let sidebarHtml = '';
+                    let bottomHtml = '';
+
+                    const totalMenu = res.data.length;
 
                     res.data.forEach(m => {
-                        // URL menu dari database, bisa kapital/kecil campur ‑ kita normalkan
-                        const menuUrlRaw = m.url || '';
-                        const menuUrl = menuUrlRaw.toLowerCase();
 
-                        // Normalisasi: hilangkan '/index' di akhir supaya
-                        // '/student' dan '/student/index' dianggap sama
-                        const normalizedCurrent = currentPath.replace(/\/index$/, '');
-                        const normalizedMenu = menuUrl.replace(/\/index$/, '');
-                        let isActive = false;
-                        if (normalizedMenu) {
-                            isActive =
-                                normalizedCurrent === normalizedMenu ||
-                                normalizedCurrent.startsWith(normalizedMenu + '/');
-                        } 
-                        const activeClass = isActive
+                        const menuUrl = (m.url || '')
+                            .toLowerCase()
+                            .replace(/\/index$/, '');
+
+                        const isActive =
+                            currentPath === menuUrl ||
+                            currentPath.startsWith(menuUrl + '/');
+
+                        const activeDesktop = isActive
                             ? 'bg-blue-700 border-l-4 border-white font-semibold'
                             : 'hover:bg-blue-700';
-                        html += `
-                                <a href="${m.url}"
-                                   class="flex items-center gap-3 px-4 py-2 rounded transition ${activeClass}"
-                                   data-url="${m.url}">
-                                    ${m.icon ? `<i class="${m.icon}"></i>` : ''}
-                                    <span>${m.menu_name}</span>
-                                </a>
-                            `;
+
+                        const activeMobile = isActive
+                            ? 'text-blue-600'
+                            : 'text-gray-500';
+
+                        const iconHtml = m.icon
+                            ? `<i class="fa-solid ${m.icon} w-5 text-center"></i>`
+                            : `<span class="w-5"></span>`;
+
+                        // Desktop
+                        sidebarHtml += `
+                            <a href="${m.url}"
+                            class="flex items-center gap-3 px-4 py-2 rounded transition ${activeDesktop}">
+                                ${iconHtml}
+                                <span>${m.menu_name}</span>
+                            </a>
+                        `;
+
+                        // Mobile
+                        bottomHtml += `
+                            <a href="${m.url}"
+                            class="flex flex-col items-center justify-center py-2 ${totalMenu <= 5 ? 'flex-1' : 'px-4 min-w-[70px]'} ${activeMobile}">
+                                ${m.icon ? `<i class="fa-solid ${m.icon} text-lg"></i>` : ''}
+                                <span class="text-[11px] mt-1 whitespace-nowrap">${m.menu_name}</span>
+                            </a>
+                        `;
                     });
 
-                    $('#sidebar-menu').html(html);
-                    $('#sidebar-menu a').on('click', function () {
-                        $('#sidebar-menu a')
-                            .removeClass('bg-blue-700 border-l-4 border-white font-semibold');
-                        $(this)
-                            .addClass('bg-blue-700 border-l-4 border-white font-semibold');
-                    });
+                    $('#sidebar-menu').html(sidebarHtml);
+
+                    const wrapper = $('#bottom-menu-wrapper');
+                    wrapper.html(bottomHtml);
+
+                    if (totalMenu <= 5) {
+                        wrapper.removeClass('justify-start').addClass('justify-between');
+                    } else {
+                        wrapper.removeClass('justify-between').addClass('justify-start');
+                    }
                 },
                 error: function () {
-                    console.error('Failed load menu');
+                    console.error("Failed load menu");
                 }
             });
         }
@@ -510,7 +576,14 @@
                             <span class="ml-2">Logging out...</span>
                         `;
                     }
-                    window.location.href = '/LoginAdmin/Logout';
+
+                    if (currentUserRole === "Employee") {
+                        window.location.href = '/LoginAdmin/Logout';
+                    } else if (currentUserRole === "Teacher") {
+                        window.location.href = '/LoginTeacher/Logout';
+                    } else {
+                        window.location.href = '/';
+                    }
                 }
             });
         }

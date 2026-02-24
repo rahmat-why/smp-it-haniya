@@ -134,6 +134,7 @@
                         </label>
 
                         <select id="level"
+                                required
                                 class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 data-testid="level-select">
                         </select>
@@ -349,7 +350,7 @@
         }
 
         function clearAllValidation() {
-            const fields = ['first_name', 'nis', 'birth_date', 'birth_place', 'gender', 'address', 'entry_date', 'photo'];
+            const fields = ['first_name', 'nis', 'birth_date', 'birth_place', 'gender', 'address', 'entry_date', 'level', 'photo'];
             fields.forEach(function (id) {
                 const $input = $('#' + id);
                 const $error = $('#error-' + id);
@@ -370,6 +371,7 @@
                 { id: 'gender', label: 'Gender' },
                 { id: 'address', label: 'Address' },
                 { id: 'entry_date', label: 'Entry Date' },
+                { id: 'level', label: 'Level' },
                 { id: 'photo', label: 'Photo', type: 'file' }
             ];
 
@@ -459,7 +461,7 @@
                     cache: true
                 }
             }).on('change', function () {
-                clearError($('#level'), $('#level-gender'));
+                clearError($('#level'), $('#error-level'));
             });
         });
 
