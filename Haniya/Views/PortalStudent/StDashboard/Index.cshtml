@@ -53,6 +53,22 @@
                 </div>
             </div>
         </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Articles (2/3) -->
+            <div class="lg:col-span-2 bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+                <h2 class="text-3xl font-bold text-indigo-900 mb-8">Latest Articles</h2>
+                <div id="articles-list" class="space-y-6"></div>
+                <div class="flex items-center justify-between mt-6">
+                    <span id="articles-info" class="text-sm text-gray-600"></span>
+                    <div id="articles-pagination" class="inline-flex items-center border border-gray-300 rounded-md overflow-hidden"></div>
+                </div>
+            </div>
+            <!-- Other card (1/3) -->
+            <div class="lg:col-span-1 bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+                <h2 class="text-3xl font-bold text-indigo-900 mb-8">Calendar Haniya</h2>
+            </div>
+        </div>
     </div>
 
 </div>
@@ -309,6 +325,9 @@
                 renderWeeklySchedule(dashboardData.weeklySchedule || []);
                 renderPaymentBills(dashboardData.unpaidPayments || []);
 
+                allArticles = dashboardData.articles || [];
+                renderArticles(1);
+
                 $('#loading').addClass('hidden');
                 $('#content').removeClass('hidden');
             },
@@ -316,6 +335,49 @@
                 Swal.fire('Error!', 'Gagal memuat data.', 'error');
             }
         });
+    }
+
+    function renderArticles(page) {
+        const itemsPerPage = 6;
+        const startIndex = (page - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const pageArticles = allArticles.slice(startIndex, endIndex);
+        const totalPages = Math.ceil(allArticles.length / itemsPerPage);
+
+        let articlesHtml = '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">';
+        pageArticles.forEach(a => {
+            let tagHtml = '';
+            (a.tags || []).forEach(tag => {
+                tagHtml += `<span class="px-2 py-1 bg-rose-100 text-rose-800 rounded-full text-xs font-medium">${tag}</span>`;
+            });
+            articlesHtml += `
+                    <div class="flex flex-col hover:bg-gray-50 p-4 rounded-2xl transition border border-gray-100">
+                        <div class="w-full h-36 bg-gradient-to-br from-rose-200 to-pink-200 rounded-xl flex-shrink-0 bg-cover bg-center mb-3" style="background-image: url('${a.image || ''}')"></div>
+                        <div class="flex-1 flex flex-col">
+                            <p class="text-base font-semibold text-indigo-900 line-clamp-2">${a.title || ''}</p>
+                            <p class="text-gray-500 text-xs mt-1">${a.date || ''}</p>
+                            <p class="text-gray-600 text-sm mt-2 line-clamp-2">${a.content || ''}</p>
+                            <div class="flex flex-wrap gap-1 mt-3">${tagHtml}</div>
+                        </div>
+                    </div>`;
+        });
+        articlesHtml += '</div>';
+
+        $('#articles-list').html(articlesHtml);
+        $('#articles-info').text(`Showing ${startIndex + 1} to ${Math.min(endIndex, allArticles.length)} of ${allArticles.length} articles`);
+
+        let paginationHtml = '';
+        for (let i = 1; i <= totalPages; i++) {
+            paginationHtml += `
+                    <button onclick="renderArticles(${i})"
+                        class="px-3 py-2 text-sm font-medium border-r border-gray-300 last:border-r-0 min-w-[40px] transition-colors duration-150
+                        ${i === page
+                    ? 'bg-indigo-900 text-white cursor-default'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-indigo-900 cursor-pointer'}">
+                        ${i}
+                    </button>`;
+        }
+        $('#articles-pagination').html(paginationHtml);
     }
 
     $(document).ready(function() {

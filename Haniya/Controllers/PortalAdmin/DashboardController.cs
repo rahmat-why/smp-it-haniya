@@ -53,10 +53,8 @@ namespace Haniya.Controllers.PortalAdmin
 
                 var data = new
                 {
-                    academicYearUsed = academicYear,
                     payment = GetPaymentSummary(conn, academicYear),
                     studentPayment = GetDashboardSummary(conn, academicYear),
-                    academicYearList = GetAcademicYearsList(conn),
                     teachers = GetActiveTeacherSummary(conn),
                     students = GetStudentCountPerClass(conn, academicYear),
                     events = GetEvents(conn),
@@ -273,90 +271,6 @@ namespace Haniya.Controllers.PortalAdmin
             };
         }
 
-        private List<dynamic> GetAcademicYearsList(SqlConnection conn)
-        {
-            var list = new List<dynamic>();
-
-            using var cmd = new SqlCommand(@"
-                SELECT
-                    academic_year_id AS [Value],
-                    RIGHT(academic_year_id, LEN(academic_year_id) - CHARINDEX('/', academic_year_id)) AS [Text]
-                FROM mst_academic_years;
-            ", conn);
-
-            using var rd = cmd.ExecuteReader();
-            while (rd.Read())
-            {
-                list.Add(new
-                {
-                    Value = rd["Value"],
-                    Text = rd["Text"]
-                });
-            }
-
-            return list;
-        }
-
-        private List<dynamic> GetAcademicClassesList(SqlConnection conn, string academicYear)
-        {
-            var list = new List<dynamic>();
-
-            using var cmd = new SqlCommand(@"
-            SELECT
-                academic_class_id AS [Value],
-                SUBSTRING(academic_class_id, 4, 2) AS [Text]
-            FROM mst_academic_classes WHERE academic_year_id = @academicYear;
-            ", conn);
-
-            cmd.Parameters.AddWithValue("@academicYear", academicYear);
-
-            using var rd = cmd.ExecuteReader();
-            while (rd.Read())
-            {
-                list.Add(new
-                {
-                    Value = rd["Value"],
-                    Text = rd["Text"]
-                });
-            }
-
-            return list;
-        }
-
-        private List<dynamic> GetSubjectList(SqlConnection conn, string? academicClass)
-        {
-            var list = new List<dynamic>();
-
-            string sql = @"
-                    SELECT 
-                        subject_id AS [Value],
-                        subject_name AS [Text]
-                    FROM mst_subjects";
-
-            if (!string.IsNullOrEmpty(academicClass)) 
-                sql += " WHERE class_level = SUBSTRING(@academicClass, 4, 1)";
-
-            using var cmd = new SqlCommand(sql, conn);
-
-            if (!string.IsNullOrEmpty(academicClass))
-            {
-                cmd.Parameters.AddWithValue("@academicClass", academicClass);
-            }
-
-            using var rd = cmd.ExecuteReader();
-            while (rd.Read())
-            {
-                list.Add(new
-                {
-                    Value = rd["Value"],
-                    Text = rd["Text"]
-                });
-            }
-
-            return list;
-        }
-
-
         private List<dynamic> GetEvents(SqlConnection conn)
         {
             var list = new List<dynamic>();
@@ -445,7 +359,7 @@ namespace Haniya.Controllers.PortalAdmin
         }
 
         [HttpGet]
-        public IActionResult GetTeacherData(string? classId, string? academicYear, string? academicClass, string? subjectId)
+        public IActionResult GetTeacherData(string? academicYear, string? classLevel)
         {
             try
             {
@@ -460,17 +374,15 @@ namespace Haniya.Controllers.PortalAdmin
                 {
                     return Json(new { success = false, message = "Academic year tidak ditemukan" });
                 }
-                var teacherId = User.FindFirst("TeacherId")?.Value;
 
                 var data = new
                 {
                     academicYearUsed = academicYear,
-                    weeklySchedule = GetWeeklySchedule(conn, classId, teacherId),
-                    academicYearList = GetAcademicYearsList(conn),
-                    academicClassList = GetAcademicClassesList(conn, academicYear),
-                    academicSubjectList = GetSubjectList(conn, academicClass),
-                    gradesChart = GetGrades(conn, teacherId, academicYear, academicClass, subjectId),
-                    attendanceChart = GetAttendance(conn, teacherId, academicYear),
+                    weeklySchedule = GetWeeklySchedule(conn, academicYear, classLevel),
+                    gradesChart = GetGrades(conn, academicYear, classLevel),
+                    attendanceChart = GetAttendance(conn, academicYear, classLevel),
+                    events = GetEvents(conn),
+                    articles = GetArticles(conn)
                 };
 
                 return Json(new { success = true, data });
@@ -481,42 +393,38 @@ namespace Haniya.Controllers.PortalAdmin
             }
         }
 
-        private List<dynamic> GetWeeklySchedule(SqlConnection conn, string classId, string teacherId)
+        private List<dynamic> GetWeeklySchedule(SqlConnection conn, string academicYear, string? classLevel)
         {
             var list = new List<dynamic>();
 
-            // Jika tidak ada kelas yang dipilih, kembalikan list kosong (default empty)
-            if (string.IsNullOrEmpty(classId))
-            {
-                return list;
-            }
-
             var sql = @"
-                SELECT
-                    s.day,
-                    sd.start_time,
-                    sd.end_time,
-                    sub.subject_name,
-                    ISNULL(t.first_name + ' ' + t.last_name, 'Tidak Ditentukan') AS teacher
-                FROM mst_schedules s
-                JOIN mst_schedule_details sd ON s.schedule_id = sd.schedule_id
-                JOIN mst_subjects sub ON sd.subject_id = sub.subject_id
-                LEFT JOIN mst_teachers t ON sd.teacher_id = t.teacher_id
-                JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
-                WHERE ac.academic_class_id = @classId AND t.teacher_id = @teacherId
-                ORDER BY
-                    CASE s.day
-                        WHEN 'Senin' THEN 1
-                        WHEN 'Selasa' THEN 2
-                        WHEN 'Rabu' THEN 3
-                        WHEN 'Kamis' THEN 4
-                        WHEN 'Jumat' THEN 5
-                        WHEN 'Sabtu' THEN 6
-                    END, sd.start_time";
+        SELECT
+            s.day,
+            sd.start_time,
+            sd.end_time,
+            sub.subject_name,
+            ISNULL(t.first_name + ' ' + t.last_name, 'Tidak Ditentukan') AS teacher
+        FROM mst_schedules s
+        JOIN mst_schedule_details sd ON s.schedule_id = sd.schedule_id
+        JOIN mst_subjects sub ON sd.subject_id = sub.subject_id
+        LEFT JOIN mst_teachers t ON sd.teacher_id = t.teacher_id
+        JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
+        JOIN mst_classes cls ON ac.class_id = cls.class_id
+        WHERE ac.academic_year_id = @academicYear
+        AND (@classLevel = '' OR cls.class_level = @classLevel)
+        ORDER BY
+            CASE s.day
+                WHEN 'Senin' THEN 1
+                WHEN 'Selasa' THEN 2
+                WHEN 'Rabu' THEN 3
+                WHEN 'Kamis' THEN 4
+                WHEN 'Jumat' THEN 5
+                WHEN 'Sabtu' THEN 6
+            END, sd.start_time";
 
             var cmd = new SqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@classId", classId);
-            cmd.Parameters.AddWithValue("@teacherId", teacherId);
+            cmd.Parameters.AddWithValue("@academicYear", academicYear);
+            cmd.Parameters.AddWithValue("@classLevel", string.IsNullOrEmpty(classLevel) ? "" : classLevel);
 
             using var rd = cmd.ExecuteReader();
             while (rd.Read())
@@ -533,79 +441,88 @@ namespace Haniya.Controllers.PortalAdmin
             return list;
         }
 
-        private List<dynamic> GetAttendance(SqlConnection conn, string teacherId, string academicYear)
+        private List<dynamic> GetAttendance(SqlConnection conn, string academicYear, string? classLevel)
         {
             var list = new List<dynamic>();
             var sql = @"
-                SELECT SUBSTRING(ac.academic_class_id ,4,2) AS [Class], ad.status, COUNT(*) AS count
-                FROM txn_attendance_details ad
-                JOIN txn_attendances a ON ad.attendance_id = a.attendance_id
-                JOIN mst_academic_classes ac ON a.academic_class_id = ac.academic_class_id
-                WHERE ac.homeroom_teacher_id = @teacherId AND ac.academic_year_id = @academicYear
-                GROUP BY ad.status, ac.academic_class_id ";
+        SELECT
+            ac.academic_class_id AS class_id,
+            cls.class_name AS class_name,
+            ds.detail_id AS attendance_status,
+            ds.item_name AS attendance_status_name,
+            COUNT(ad.attendance_detail_id) AS total_attendance
+        FROM mst_academic_classes ac
+        JOIN mst_classes cls ON ac.class_id = cls.class_id
+        CROSS JOIN mst_detail_settings ds
+        LEFT JOIN txn_attendances a
+            ON a.academic_class_id = ac.academic_class_id
+        LEFT JOIN txn_attendance_details ad
+            ON ad.attendance_id = a.attendance_id
+            AND ad.status = ds.detail_id
+        WHERE ds.header_id = 'ATTENDANCE_STATUS'
+        AND ds.status = 'ACTIVE'
+        AND ac.academic_year_id = @academicYear
+        AND (@classLevel = '' OR cls.class_level = @classLevel)
+        GROUP BY ac.academic_class_id, cls.class_name, ds.detail_id, ds.item_name
+        ORDER BY cls.class_name, ds.item_name";
 
             var cmd = new SqlCommand(sql, conn);
-
-            cmd.Parameters.AddWithValue("@teacherId", teacherId);
             cmd.Parameters.AddWithValue("@academicYear", academicYear);
+            cmd.Parameters.AddWithValue("@classLevel", string.IsNullOrEmpty(classLevel) ? "" : classLevel);
 
             using var rd = cmd.ExecuteReader();
             while (rd.Read())
             {
                 list.Add(new
                 {
-                    kelas = rd["class"],
-                    status = rd["status"],
-                    count = (int)rd["count"]
+                    class_name = rd["class_name"].ToString(),
+                    attendance_status = rd["attendance_status_name"].ToString(),
+                    total_attendance = Convert.ToInt32(rd["total_attendance"])
                 });
             }
             return list;
         }
 
-        private List<dynamic> GetGrades(SqlConnection conn, string teacherId, string academicYear, string classId, string subjectId)
+        private List<dynamic> GetGrades(SqlConnection conn, string academicYear, string? classLevel)
         {
             var list = new List<dynamic>();
 
-            if (string.IsNullOrEmpty(classId))
-            {
-                return list;
-            }
-
             var sql = @"
-            SELECT
-                s.full_name AS student,
-                sub.subject_name AS subject,
-                AVG(gd.grade_value) AS avg_grade
-            FROM txn_grade_details gd
-            JOIN txn_grades g ON gd.grade_id = g.grade_id
-            JOIN mst_subjects sub ON g.subject_id = sub.subject_id
-            JOIN mst_students s ON gd.student_id = s.student_id
-            JOIN mst_academic_classes ac ON g.academic_class_id = ac.academic_class_id 
-            WHERE g.teacher_id = @teacherId 
-            AND ac.academic_year_id = @academicYear 
-            AND ac.academic_class_id = @classId
-            AND g.subject_id = @subjectId
-            GROUP BY s.full_name, sub.subject_name ORDER BY s.full_name";
-
-            if(string.IsNullOrEmpty(subjectId)) subjectId = "";
+        SELECT
+            ac.academic_class_id AS class_id,
+            cls.class_name AS class_name,
+            ds.detail_id AS grade_type,
+            ds.item_name AS grade_type_name,
+            ISNULL(AVG(gd.grade_value), 0) AS avg_grade
+        FROM mst_academic_classes ac
+        JOIN mst_classes cls ON ac.class_id = cls.class_id
+        CROSS JOIN mst_detail_settings ds
+        LEFT JOIN txn_grades g 
+            ON g.academic_class_id = ac.academic_class_id 
+            AND g.grade_type = ds.detail_id
+        LEFT JOIN txn_grade_details gd 
+            ON gd.grade_id = g.grade_id
+        WHERE ds.header_id = 'GRADE_TYPE'
+        AND ds.status = 'ACTIVE'
+        AND ac.academic_year_id = @academicYear
+        AND (@classLevel = '' OR cls.class_level = @classLevel)
+        GROUP BY ac.academic_class_id, cls.class_name, ds.detail_id, ds.item_name
+        ORDER BY cls.class_name, ds.item_name";
 
             var cmd = new SqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@teacherId", teacherId);
             cmd.Parameters.AddWithValue("@academicYear", academicYear);
-            cmd.Parameters.AddWithValue("@classId", classId);
-            cmd.Parameters.AddWithValue("@subjectId", subjectId);
+            cmd.Parameters.AddWithValue("@classLevel", string.IsNullOrEmpty(classLevel) ? "" : classLevel);
 
             using var rd = cmd.ExecuteReader();
             while (rd.Read())
             {
                 list.Add(new
                 {
-                    student = rd["student"].ToString(),
-                    subject = rd["subject"].ToString(),
+                    class_name = rd["class_name"].ToString(),
+                    grade_type = rd["grade_type_name"].ToString(),
                     avg = Math.Round(Convert.ToDecimal(rd["avg_grade"]), 2)
                 });
             }
-
             return list;
         }
     }

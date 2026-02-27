@@ -601,6 +601,22 @@
 
             return `${day} ${month} ${year}`;
         }
+
+        function toggleFilter() {
+            const dropdown = document.getElementById('filterDropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        // Only close when clicking outside BOTH the dropdown and any Select2 popup
+        document.addEventListener('click', function (e) {
+            const btn = document.getElementById('filterToggleBtn');
+            const dropdown = document.getElementById('filterDropdown');
+            const isSelect2 = $(e.target).closest('.select2-container, .select2-dropdown').length > 0;
+
+            if (!btn.contains(e.target) && !dropdown.contains(e.target) && !isSelect2) {
+                dropdown.classList.add('hidden');
+            }
+        });
     </script>
     @RenderSection("Scripts", required: false)
 </body>

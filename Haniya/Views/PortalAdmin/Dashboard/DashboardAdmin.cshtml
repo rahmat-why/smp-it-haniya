@@ -5,36 +5,82 @@
 
 <div class="max-w-7xl mx-auto space-y-10 py-8 px-4" id="admin-dashboard">
     <div>
-        <h1 class="text-3xl font-bold text-indigo-900">Admin Dashboard</h1>
-        <p class="text-gray-600 mt-2">Welcome back, @User.FindFirst("FullName")?.Value</p>
-    </div>
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-indigo-900">Admin Dashboard</h1>
+                <p class="text-gray-600 mt-2">Welcome back, @User.FindFirst("FullName")?.Value</p>
+            </div>
 
-    <div id="loading" class="text-center py-20">
-        <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-indigo-600"></div>
-        <p class="mt-4 text-gray-600">Loading...</p>
+            <div id="loading" class="text-center py-20">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-indigo-600"></div>
+                <p class="mt-4 text-gray-600">Loading...</p>
+            </div>
+
+            <!-- FILTER BUTTON -->
+            <div class="relative">
+                <button id="filterToggleBtn"
+                        onclick="toggleFilter()"
+                        class="flex items-center gap-2 bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                    </svg>
+                    Filter
+                </button>
+
+                <!-- FILTER DROPDOWN -->
+                <div id="filterDropdown"
+                     class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl border border-gray-200 shadow-xl z-50 overflow-visible">
+                    <!-- Header -->
+                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                        <h3 class="text-lg font-bold text-gray-800">Filter</h3>
+                        <button onclick="toggleFilter()"
+                                class="text-gray-400 hover:text-gray-600 transition p-1 rounded-lg hover:bg-gray-100">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="px-5 py-4 space-y-4">
+                        <div class="w-full">
+                            <label class="text-xs font-medium" for="academic_year_filter">Academic Year</label>
+                            <select id="academic_year_filter" class="w-full"></select>
+                        </div>
+                    </div>
+                    <!-- Footer Buttons -->
+                    <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
+                        <button onclick="resetFilter()"
+                                class="px-5 py-2 rounded-full text-sm font-medium text-indigo-400 bg-indigo-50 hover:bg-indigo-100 transition">
+                            Reset
+                        </button>
+                        <button onclick="applyFilter()"
+                                class="px-5 py-2 rounded-full text-sm font-medium text-white bg-indigo-500 hover:bg-indigo-600 transition">
+                            Filter
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div id="content" class="space-y-10">
         <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100" id="summaryContainer"></div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-                <h2 class="text-3xl font-bold text-indigo-900 mb-8">Upcoming Events</h2>
-                <div id="events-list" class="space-y-6"></div>
-                <div class="flex items-center justify-between mt-6">
-                    <span id="events-info" class="text-sm text-gray-600"></span>
-                    <div id="events-pagination" class="inline-flex items-center border border-gray-300 rounded-md overflow-hidden"></div>
-                </div>
-            </div>
-
-            <!-- Articles -->
-            <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Articles (2/3) -->
+            <div class="lg:col-span-2 bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
                 <h2 class="text-3xl font-bold text-indigo-900 mb-8">Latest Articles</h2>
                 <div id="articles-list" class="space-y-6"></div>
                 <div class="flex items-center justify-between mt-6">
                     <span id="articles-info" class="text-sm text-gray-600"></span>
                     <div id="articles-pagination" class="inline-flex items-center border border-gray-300 rounded-md overflow-hidden"></div>
                 </div>
+            </div>
+            <!-- Other card (1/3) -->
+            <div class="lg:col-span-1 bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+                <h2 class="text-3xl font-bold text-indigo-900 mb-8">Calendar Haniya</h2>
             </div>
         </div>
     </div>
@@ -43,9 +89,35 @@
 <script>
     let allEvents = [];
     let allArticles = [];
-    const itemsPerPage = 3; 
+    const itemsPerPage = 6;
+
+    let currentAcademicYearId = null;
 
     $(document).ready(function () {
+        $('#academic_year_filter').select2({
+            placeholder: 'Academic Year',
+            allowClear: true,
+            width: '100%',
+            ajax: {
+                url: '/Select2/AcademicYears',
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    return { q: params.term || '', page: params.page || 1 };
+                },
+                processResults: function (data) {
+                    return {
+                        results: data.results,
+                        pagination: data.pagination
+                    };
+                },
+                cache: true
+            },
+            minimumInputLength: 0
+        }).on('change', function () {
+            currentAcademicYearId = $(this).val() || '';
+        });
+
         loadAdminDashboard();
     });
 
@@ -63,17 +135,15 @@
                 const d = res.data;
 
                 $('#summaryContainer').html(
-                    `   
+                    `
                         <h2 class="text-3xl font-bold text-indigo-900 mb-8">
                             Summary
                         </h2>
                         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
                             <!-- LEFT SECTION -->
                             <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
-
                                 <!-- TOTAL BILL -->
-                                <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl p-5 sm:p-6 text-center">
+                                <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl p-5 sm:p-6 text-center sm:row-span-2 flex flex-col justify-center">
                                     <p class="text-sm sm:text-base font-medium text-indigo-700">
                                         Total Bill
                                     </p>
@@ -84,10 +154,9 @@
                                         Students: ${d.studentPayment.totalSiswa ?? '-'}
                                     </p>
                                 </div>
-
                                 <!-- LUNAS -->
                                 <div class="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-2xl p-5 sm:p-6 text-center">
-                                    <p class="text-sm sm:text-base font-medium font-medium text-cyan-700">
+                                    <p class="text-sm sm:text-base font-medium text-cyan-700">
                                         Total Payment
                                     </p>
                                     <p class="text-2xl sm:text-3xl lg:text-4xl font-bold text-cyan-900 mt-2">
@@ -97,10 +166,9 @@
                                         ${d.studentPayment.totalLunas ?? '-'}/${d.studentPayment.totalSiswa ?? '-'}
                                     </p>
                                 </div>
-
                                 <!-- BELUM LUNAS -->
-                                <div class="bg-gradient-to-br from-cyan-50 to-red-100 rounded-2xl p-5 sm:p-6 text-center sm:col-span-2">
-                                    <p class="text-sm sm:text-base font-medium font-medium text-red-700">Total Unpaid</p>
+                                <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-5 sm:p-6 text-center">
+                                    <p class="text-sm sm:text-base font-medium text-red-700">Total Unpaid</p>
                                     <p class="text-2xl sm:text-3xl lg:text-4xl font-bold text-red-900 mt-2">
                                         ${formatRupiah(d.payment.totalBelumLunas ?? 0)}
                                     </p>
@@ -108,66 +176,36 @@
                                         ${d.studentPayment.totalBelumLunas ?? '-'}/${d.studentPayment.totalSiswa ?? '-'}
                                     </p>
                                 </div>
-
                             </div>
-
                             <!-- RIGHT SECTION -->
                             <div class="space-y-6">
-
-                                <!-- FILTER -->
-                                <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
-                                    <label class="block text-sm font-medium mb-2 text-gray-700">
-                                        School Year
-                                    </label>
-                                    <select id="academic_year_filter"
-                                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
-                                    </select>
-                                </div>
-
                                 <!-- CHARTS -->
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
+                                <div class="grid grid-cols-1 sm:grid-cols-1 gap-4">
                                     <div class="bg-blue-50 rounded-2xl p-4">
                                         <h3 class="text-sm font-semibold text-blue-900 mb-2 text-center">Teachers</h3>
                                         <div class="relative h-32 sm:h-40">
                                             <canvas id="teacherChart"></canvas>
                                         </div>
                                     </div>
-
                                     <div class="bg-green-50 rounded-2xl p-4">
                                         <h3 class="text-sm font-semibold text-green-900 mb-2 text-center">Students</h3>
                                         <div class="relative h-32 sm:h-40">
                                             <canvas id="studentChart"></canvas>
                                         </div>
                                     </div>
-
                                 </div>
-
                             </div>
                         </div>
                     `
                 );
 
-                const $select = $('#academic_year_filter');
-
-                d.academicYearList.forEach(item => {
-                    $select.append(`<option value="${item.value}">${item.text}</option>`);
-                });
-
                 const usedYear = d.academicYearUsed;
-
-                $select.val(usedYear);
-
-                $select.on('change', function () {
-                    loadAdminDashboard($(this).val());
-                });
+                console.log(usedYear)
 
                 initDashboardCharts(d.students, d.teachers);
 
-                allEvents = d.events || [];
                 allArticles = d.articles || [];
                 
-                renderEvents(1);
                 renderArticles(1);
 
                 $('#loading').addClass('hidden');
@@ -230,30 +268,31 @@
         }).format(value || 0);
     }
 
-
     function renderArticles(page) {
+        const itemsPerPage = 6;
         const startIndex = (page - 1) * itemsPerPage;
         const endIndex = startIndex + itemsPerPage;
         const pageArticles = allArticles.slice(startIndex, endIndex);
         const totalPages = Math.ceil(allArticles.length / itemsPerPage);
 
-        let articlesHtml = '';
+        let articlesHtml = '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">';
         pageArticles.forEach(a => {
             let tagHtml = '';
             (a.tags || []).forEach(tag => {
-                tagHtml += `<span class="px-3 py-1 bg-rose-100 text-rose-800 rounded-full text-xs font-medium">${tag}</span>`;
+                tagHtml += `<span class="px-2 py-1 bg-rose-100 text-rose-800 rounded-full text-xs font-medium">${tag}</span>`;
             });
             articlesHtml += `
-                <div class="flex gap-6 hover:bg-gray-50 p-6 rounded-2xl transition">
-                    <div class="w-32 h-32 bg-gradient-to-br from-rose-200 to-pink-200 rounded-2xl flex-shrink-0 bg-cover bg-center" style="background-image: url('${a.image || ''}')"></div>
-                    <div class="flex-1">
-                        <p class="text-xl font-semibold text-indigo-900">${a.title || ''}</p>
-                        <p class="text-gray-500 mt-1">${a.date || ''}</p>
-                        <p class="text-gray-600 mt-2 line-clamp-3">${a.content || ''}</p>
-                        <div class="flex flex-wrap gap-2 mt-3">${tagHtml}</div>
+                <div class="flex flex-col hover:bg-gray-50 p-4 rounded-2xl transition border border-gray-100">
+                    <div class="w-full h-36 bg-gradient-to-br from-rose-200 to-pink-200 rounded-xl flex-shrink-0 bg-cover bg-center mb-3" style="background-image: url('${a.image || ''}')"></div>
+                    <div class="flex-1 flex flex-col">
+                        <p class="text-base font-semibold text-indigo-900 line-clamp-2">${a.title || ''}</p>
+                        <p class="text-gray-500 text-xs mt-1">${a.date || ''}</p>
+                        <p class="text-gray-600 text-sm mt-2 line-clamp-2">${a.content || ''}</p>
+                        <div class="flex flex-wrap gap-1 mt-3">${tagHtml}</div>
                     </div>
                 </div>`;
         });
+        articlesHtml += '</div>';
 
         $('#articles-list').html(articlesHtml);
         $('#articles-info').text(`Showing ${startIndex + 1} to ${Math.min(endIndex, allArticles.length)} of ${allArticles.length} articles`);
@@ -261,11 +300,11 @@
         let paginationHtml = '';
         for (let i = 1; i <= totalPages; i++) {
             paginationHtml += `
-                <button onclick="renderArticles(${i})" 
+                <button onclick="renderArticles(${i})"
                     class="px-3 py-2 text-sm font-medium border-r border-gray-300 last:border-r-0 min-w-[40px] transition-colors duration-150
-                    ${i === page 
-                        ? 'bg-indigo-900 text-white cursor-default' 
-                        : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-indigo-900 cursor-pointer'}">
+                    ${i === page
+                    ? 'bg-indigo-900 text-white cursor-default'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-indigo-900 cursor-pointer'}">
                     ${i}
                 </button>`;
         }
@@ -340,5 +379,11 @@
                 }
             });
         }
+    }
+
+    function applyFilter() {
+        const year = document.getElementById('academic_year_filter').value;
+        // your filter logic here
+        console.log('Filtering by year:', year);
     }
 </script>

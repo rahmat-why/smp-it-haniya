@@ -47,7 +47,9 @@ namespace Haniya.Controllers.PortalStudent
                     gradesChart = GetStudentGradesChart(conn, studentId),
                     attendanceChart = GetStudentAttendanceChart(conn, studentId),
                     weeklySchedule = GetStudentWeeklySchedule(conn, studentId),
-                    unpaidPayments = GetStudentUnpaidPayments(conn, studentId)
+                    unpaidPayments = GetStudentUnpaidPayments(conn, studentId),
+                    events = GetEvents(conn),
+                    articles = GetArticles(conn)
                 };
 
                 return Json(new { success = true, data });
@@ -241,6 +243,93 @@ namespace Haniya.Controllers.PortalStudent
             }
 
             return list;
+        }
+
+        private List<dynamic> GetEvents(SqlConnection conn)
+        {
+            var list = new List<dynamic>();
+            var cmd = new SqlCommand(@"
+                SELECT TOP 6 e.event_id, e.event_name, e.description, e.location, e.created_at, e.profile_photo
+                FROM mst_events e
+                WHERE e.status = 'ACTIVE'
+                ORDER BY e.created_at DESC", conn);
+
+            using var rd = cmd.ExecuteReader();
+            while (rd.Read())
+            {
+                var eventId = rd["event_id"].ToString();
+                list.Add(new
+                {
+                    id = eventId,
+                    name = rd["event_name"],
+                    desc = rd["description"],
+                    location = rd["location"],
+                    date = ((DateTime)rd["created_at"]).ToString("dd MMM yyyy"),
+                    photo = rd["profile_photo"] ?? "/image/default-event.jpg",
+                    tags = GetEventTags(conn, eventId)
+                });
+            }
+            return list;
+        }
+
+        private List<string> GetEventTags(SqlConnection conn, string eventId)
+        {
+            var tags = new List<string>();
+            var tagCmd = new SqlCommand(@"
+                SELECT d.item_desc
+                FROM mst_tag_events t
+                JOIN mst_detail_settings d ON t.tag_code = d.item_code AND d.header_id = 'TAG_EVENT'
+                WHERE t.event_id = @eventId", conn);
+            tagCmd.Parameters.AddWithValue("@eventId", eventId);
+            using var tagRd = tagCmd.ExecuteReader();
+            while (tagRd.Read())
+            {
+                tags.Add(tagRd["item_desc"].ToString());
+            }
+            return tags;
+        }
+
+        private List<dynamic> GetArticles(SqlConnection conn)
+        {
+            var list = new List<dynamic>();
+            var cmd = new SqlCommand(@"
+                SELECT TOP 6 a.article_id, a.title, a.content, a.image, a.created_at
+                FROM mst_articles a
+                WHERE a.status = 'PUBLISHED'
+                ORDER BY a.created_at DESC", conn);
+
+            using var rd = cmd.ExecuteReader();
+            while (rd.Read())
+            {
+                var articleId = rd["article_id"].ToString();
+                list.Add(new
+                {
+                    id = articleId,
+                    title = rd["title"],
+                    content = rd["content"].ToString().Length > 150 ? rd["content"].ToString().Substring(0, 150) + "..." : rd["content"],
+                    image = rd["image"] ?? "/image/default-article.jpg",
+                    date = ((DateTime)rd["created_at"]).ToString("dd MMM yyyy"),
+                    tags = GetArticleTags(conn, articleId)
+                });
+            }
+            return list;
+        }
+
+        private List<string> GetArticleTags(SqlConnection conn, string articleId)
+        {
+            var tags = new List<string>();
+            var tagCmd = new SqlCommand(@"
+                SELECT d.item_desc
+                FROM mst_tag_articles t
+                JOIN mst_detail_settings d ON t.tag_code = d.item_code AND d.header_id = 'TAG_ARTICLE'
+                WHERE t.article_id = @articleId", conn);
+            tagCmd.Parameters.AddWithValue("@articleId", articleId);
+            using var tagRd = tagCmd.ExecuteReader();
+            while (tagRd.Read())
+            {
+                tags.Add(tagRd["item_desc"].ToString());
+            }
+            return tags;
         }
     }
 }
