@@ -1,0 +1,217 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - PENABUR Intercultural School</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="https://www.penabur-inter.sch.id/wp-content/uploads/2024/01/cropped-PIS-Logo-2-32x32.png" />
+</head>
+<body class="font-sans bg-gray-50 text-gray-800">
+
+    <!-- Header / Navbar -->
+    <header class="bg-white shadow-md fixed w-full z-50">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+
+            <a href="/" class="text-2xl font-bold text-blue-700">HANIYA</a>
+
+            @{
+                var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+                var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+            }
+
+
+            <nav class="hidden md:flex space-x-6 font-medium text-gray-700">
+
+                <a asp-controller="LandingPage"
+                   asp-action="HomeLP"
+                   class="hover:text-blue-600 @(currentController == "LandingPage" && currentAction == "HomeLP" ? "border-b-2 border-blue-600 pb-1 text-blue-600" : "")">
+                    Home
+                </a>
+
+                <a asp-controller="LandingPage"
+                   asp-action="AboutUsLP"
+                   class="hover:text-blue-600 @(currentController == "LandingPage" && currentAction == "AboutUsLP" ? "border-b-2 border-blue-600 pb-1 text-blue-600" : "")">
+                    About Us
+                </a>
+
+                <a asp-controller="LandingPage"
+                   asp-action="AcademicLP"
+                   class="hover:text-blue-600 @(currentController == "LandingPage" && currentAction == "AcademicLP" ? "border-b-2 border-blue-600 pb-1 text-blue-600" : "")">
+                    Academic
+                </a>
+
+                <a asp-controller="LandingPage"
+                   asp-action="ContactLP"
+                   class="hover:text-blue-600 @(currentController == "LandingPage" && currentAction == "ContactLP" ? "border-b-2 border-blue-600 pb-1 text-blue-600" : "")">
+                    Contact Us
+                </a>
+
+                <a asp-controller="LandingPage"
+                   asp-action="EventLP"
+                   class="hover:text-blue-600 @(currentController == "LandingPage" && currentAction == "EventLP" ? "border-b-2 border-blue-600 pb-1 text-blue-600" : "")">
+                    Event
+                </a>
+
+                <a asp-controller="LandingPage"
+                   asp-action="ArticleLP"
+                   class="hover:text-blue-600 @(currentController == "LandingPage" && currentAction == "ArticleLP" ? "border-b-2 border-blue-600 pb-1 text-blue-600" : "")">
+                    Article
+                </a>
+
+            </nav>
+
+
+        </div>
+    </header>
+
+    <!-- Content -->
+    <main>
+        @RenderBody()
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-blue-800 text-white py-10">
+        <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-8 text-sm">
+
+            <div>
+                <div class="flex items-center gap-4 opacity-90">
+                    <!-- Icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                         class="w-8 h-8 flex-shrink-0"
+                         fill="currentColor"
+                         viewBox="0 0 24 24">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1112 6a2.5 2.5 0 010 5.5z" />
+                    </svg>
+                    <!-- Text Wrapper -->
+                    <div>
+                        <h5 id="contactLayout3Name" class="font-bold mb-2"></h5>
+                        <p id="contactLayout3Desc" ></p>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="flex items-center gap-4 opacity-90">
+                    <!-- Icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                         class="w-8 h-8 flex-shrink-0"
+                         fill="currentColor"
+                         viewBox="0 0 24 24">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1112 6a2.5 2.5 0 010 5.5z" />
+                    </svg>
+                    <div>
+                        <h5 id="contactLayout4Name" class="font-bold mb-2"></h5>
+                        <p id="contactLayout4Desc" ></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="opacity-90">
+                <!-- Main Title -->
+                <h5 id="contact1Desc" class="font-bold mb-4"></h5>
+                <!-- Phone Section -->
+                <div class="flex items-start gap-4">
+                    <!-- Phone Icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                         class="w-8 h-8 mt-1 text-green-500"
+                         fill="currentColor"
+                         viewBox="0 0 24 24">
+                        <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011-.24c1.12.37 2.33.57 3.59.57a1 1 0 011 1v3.5a1 1 0 01-1 1C10.07 21 3 13.93 3 5a1 1 0 011-1H7.5a1 1 0 011 1c0 1.26.2 2.47.57 3.59a1 1 0 01-.24 1l-2.21 2.2z" />
+                    </svg>
+                    <!-- Text -->
+                    <div>
+                        <h5 id="contactLayout2Name" class="font-bold mb-1"></h5>
+                        <p id="contactLayout2Desc"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="opacity-90">
+                <h5 class="font-bold mb-4">Follow Us</h5>
+
+                <div class="flex items-center gap-6">
+
+                    <!-- Instagram -->
+                    <a id="instagramLink" target="_blank">
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                             class="w-8 h-8 hover:scale-110 transition"
+                             fill="currentColor"
+                             viewBox="0 0 24 24">
+                            <path d="M7 2C4.24 2 2 4.24 2 7v10c0 2.76 2.24 5 5 5h10c2.76
+                                0 5-2.24 5-5V7c0-2.76-2.24-5-5-5H7zm10 2a1 1 0
+                                110 2 1 1 0 010-2zM12 7a5 5 0 110 10 5 5 0
+                                010-10zm0 2a3 3 0 100 6 3 3 0 000-6z" />
+                        </svg>
+                    </a>
+
+                    <!-- TikTok -->
+                    <a id="tiktokLink" target="_blank">
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                             class="w-8 h-8 hover:scale-110 transition"
+                             fill="currentColor"
+                             viewBox="0 0 24 24">
+                            <path d="M12.5 2v12.25a2.75 2.75 0 11-2.75-2.75c.25
+                                0 .5.03.75.1V9.5a5.75 5.75 0 105.75 5.75V7.25c1.1
+                                1.05 2.5 1.75 4 1.75V6.5c-1.5 0-3-.75-4-2V2h-3.75z" />
+                        </svg>
+                    </a>
+
+                </div>
+            </div>
+
+
+        </div>
+
+        <div class="text-center mt-8 text-xs opacity-90">
+            © 2026 PENABUR Intercultural School. All rights reserved.
+        </div>
+    </footer>
+
+</body>
+</html>
+<script>
+    fetch('/Layout/GetLayoutData')
+        .then(response => response.json())
+        .then(data => {
+
+            // About
+            //document.getElementById("contact1Name").innerText = data["CONTACT_BANNER1_NAME"] || "";
+            document.getElementById("contact1Desc").innerText = data["CONTACT_BANNER1_DESC"] || "";
+
+            document.getElementById("contactLayout2Name").innerText = data["CONTACT_PHONE1_NAME"] || "";
+            document.getElementById("contactLayout2Desc").innerText = data["CONTACT_PHONE1_DESC"] || "";
+
+            document.getElementById("contactLayout3Name").innerText = data["CONTACT_LOCATION1_NAME"] || "";
+            document.getElementById("contactLayout3Desc").innerText = data["CONTACT_LOCATION1_DESC"] || "";
+
+            document.getElementById("contactLayout4Name").innerText = data["CONTACT_LOCATION2_NAME"] || "";
+            document.getElementById("contactLayout4Desc").innerText = data["CONTACT_LOCATION2_DESC"] || "";
+
+            console.log(data);
+
+        });
+
+    document.addEventListener("DOMContentLoaded", function () {
+
+        fetch('/Layout/GetLayoutData')
+            .then(response => response.json())
+            .then(data => {
+
+                const igLink = document.getElementById("instagramLink");
+                const ttLink = document.getElementById("tiktokLink");
+
+                if (igLink && data["CONTACT_SOCIAL1_DESC"]) {
+                    igLink.href = data["CONTACT_SOCIAL1_DESC"];
+                }
+
+                if (ttLink && data["CONTACT_SOCIAL2_DESC"]) {
+                    ttLink.href = data["CONTACT_SOCIAL2_DESC"];
+                }
+
+            });
+
+    });
+
+</script>
+

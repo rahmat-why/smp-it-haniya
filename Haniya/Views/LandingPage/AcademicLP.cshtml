@@ -1,0 +1,104 @@
+﻿@{
+    Layout = "~/Views/Shared/_LayoutLandingPage.cshtml";
+}
+
+<section id="academicImage"
+         class="relative h-[60vh] flex items-center justify-center bg-cover bg-center">
+    <div class="absolute inset-0 bg-black/60"></div>
+
+    <div class="relative text-center text-white px-6">
+        <h1 id="academic1Name" class="text-4xl md:text-5xl font-bold mb-4"></h1>
+        <p id="academic1Desc" class="text-lg opacity-90 max-w-2xl mx-auto"></p>
+    </div>
+</section>
+
+<section class="py-20 bg-gray-100">
+    <div class="max-w-6xl mx-auto px-6">
+
+        <div class="grid md:grid-cols-3 gap-12">
+            <div class="bg-white rounded-2xl shadow-xl p-10">
+                <h3 class="text-xl font-bold text-blue-900 mb-8 uppercase tracking-wide">
+                    SD IT HANIYA
+                </h3>
+                <ul class="space-y-4 text-blue-800 text-base font-medium list-disc pl-6 marker:text-blue-600">
+                    <li id="academic2Desc"></li>
+                    <li id="academic3Desc"></li>
+                    <li id="academic4Desc"></li>
+                    <li id="academic5Desc"></li>
+                    <li id="academic6Desc"></li>
+
+                </ul>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-xl p-10">
+                <h3 class="text-xl font-bold text-blue-900 mb-8 uppercase tracking-wide">
+                    SMP IT HANIYA
+                </h3>
+                <ul class="space-y-4 text-blue-800 text-base font-medium list-disc pl-6 marker:text-blue-600">
+                    <li id="academic7Desc"></li>
+                    <li id="academic8Desc"></li>
+                    <li id="academic9Desc"></li>
+                    <li id="academic10Desc"></li>
+                    <li id="academic11Desc"></li>
+                </ul>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-xl p-10">
+                <h3 class="text-xl font-bold text-blue-900 mb-8 uppercase tracking-wide">
+                    EXTRACURRICULAR
+                </h3>
+                <ul class="space-y-4 text-blue-800 text-base font-medium list-disc pl-6 marker:text-blue-600">
+                    <li id="academic12Desc"></li>
+                    <li id="academic13Desc"></li>
+                    <li id="academic14Desc"></li>
+                    <li id="academic15Desc"></li>
+                    <li id="academic16Desc"></li>
+                    <li id="academic17Desc"></li>
+                    <li id="academic18Desc"></li>
+                </ul>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+
+
+<script>
+    fetch('/LandingPage/GetAcademicData')
+        .then(response => response.json())
+        .then(data => {
+
+            const hero = document.getElementById("academicImage");
+            const imageName = data["ACADEMIC_BANNER2_DESC"];
+
+            if (imageName) {
+                hero.style.backgroundImage =
+                    `url('/image/landingpage/${imageName}')`;
+            }
+
+            document.getElementById("academic1Name").innerText = data["ACADEMIC_BANNER1_NAME"] || "";
+            document.getElementById("academic1Desc").innerText = data["ACADEMIC_BANNER1_DESC"] || "";
+
+            document.getElementById("academic2Desc").innerText = data["ACADEMIC_CURRIC_SD1_DESC"] || "";
+            document.getElementById("academic3Desc").innerText = data["ACADEMIC_CURRIC_SD2_DESC"] || "";
+            document.getElementById("academic4Desc").innerText = data["ACADEMIC_CURRIC_SD3_DESC"] || "";
+            document.getElementById("academic5Desc").innerText = data["ACADEMIC_CURRIC_SD4_DESC"] || "";
+            document.getElementById("academic6Desc").innerText = data["ACADEMIC_CURRIC_SD5_DESC"] || "";
+
+            document.getElementById("academic7Desc").innerText = data["ACADEMIC_CURRIC_SMP1_DESC"] || "";
+            document.getElementById("academic8Desc").innerText = data["ACADEMIC_CURRIC_SMP2_DESC"] || "";
+            document.getElementById("academic9Desc").innerText = data["ACADEMIC_CURRIC_SMP3_DESC"] || "";
+            document.getElementById("academic10Desc").innerText = data["ACADEMIC_CURRIC_SMP4_DESC"] || "";
+            document.getElementById("academic11Desc").innerText = data["ACADEMIC_CURRIC_SMP5_DESC"] || "";
+
+            document.getElementById("academic12Desc").innerText = data["ACADEMIC_EXTRAC1_DESC"] || "";
+            document.getElementById("academic13Desc").innerText = data["ACADEMIC_EXTRAC2_DESC"] || "";
+            document.getElementById("academic14Desc").innerText = data["ACADEMIC_EXTRAC3_DESC"] || "";
+            document.getElementById("academic15Desc").innerText = data["ACADEMIC_EXTRAC4_DESC"] || "";
+            document.getElementById("academic16Desc").innerText = data["ACADEMIC_EXTRAC5_DESC"] || "";
+            document.getElementById("academic17Desc").innerText = data["ACADEMIC_EXTRAC6_DESC"] || "";
+            document.getElementById("academic18Desc").innerText = data["ACADEMIC_EXTRAC7_DESC"] || "";
+
+        });
+</script>

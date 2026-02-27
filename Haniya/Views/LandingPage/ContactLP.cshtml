@@ -1,0 +1,182 @@
+﻿@{
+    Layout = "~/Views/Shared/_LayoutLandingPage.cshtml";
+}
+
+<section id="contactImage"
+         class="relative h-[60vh] flex items-center justify-center bg-cover bg-center">
+    <div class="absolute inset-0 bg-black/60"></div>
+
+    <div class="relative text-center text-white px-6">
+        <h1 id="contact1Name" class="text-lg opacity-90 max-w-2xl mx-auto"></h1>
+        <h1 id="contact1Desc" class="text-4xl md:text-5xl font-bold mb-4"></h1>
+    </div>
+</section>
+
+<section class="py-24 bg-white">
+    <div class="max-w-5xl mx-auto px-6">
+
+        <!-- HEADER -->
+        <div class="text-center mb-16">
+            <h2 class="text-4xl font-bold text-blue-900 mb-4">
+                FAQ
+            </h2>
+            <h3 class="text-xl font-semibold text-gray-700 mb-6">
+                Frequently Asked Questions
+            </h3>
+            <p class="text-gray-600 leading-relaxed max-w-3xl mx-auto">
+                For your convenience, we have put together this list of frequently asked questions.
+                If you don’t find the answer to your question, please feel free to contact us.
+                Every family is unique and we will respond to your concerns to the best of our ability.
+                If it matters to you, it matters to us.
+            </p>
+        </div>
+
+        <div class="space-y-6">
+            <div class="border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+                <button id="contact2Name"
+                        class="w-full flex justify-between items-center p-6 text-left font-semibold text-blue-900 faq-toggle group">
+
+                    <span class="flex-1"></span>
+
+                    <!-- Arrow -->
+                    <svg class="w-5 h-5 transition-all duration-300 faq-icon text-blue-700 group-hover:text-blue-900"
+                         fill="none"
+                         stroke="currentColor"
+                         viewBox="0 0 24 24">
+                        <path stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M19 9l-7 7-7-7" />
+                    </svg>
+
+                </button>
+
+                <div class="px-6 pb-6 text-gray-600 leading-relaxed hidden faq-content">
+                    <p id="contact2Desc" class="mb-4"></p>
+                </div>
+            </div>
+
+            <div class="border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+                <button id="contact3Name"
+                        class="w-full flex justify-between items-center p-6 text-left font-semibold text-blue-900 faq-toggle">
+                    <span></span>
+                    <svg class="w-5 h-5 transition-transform duration-300 faq-icon"
+                         fill="none"
+                         stroke="currentColor"
+                         viewBox="0 0 24 24">
+                        <path stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+
+                <div class="px-6 pb-6 text-gray-600 leading-relaxed hidden faq-content">
+                    <p id="contact3Desc" class="mb-4"></p>
+                </div>
+            </div>
+
+            <div class="border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+                <button id="contact4Name"
+                        class="w-full flex justify-between items-center p-6 text-left font-semibold text-blue-900 faq-toggle">
+                    <span></span>
+                    <svg class="w-5 h-5 transition-transform duration-300 faq-icon"
+                         fill="none"
+                         stroke="currentColor"
+                         viewBox="0 0 24 24">
+                        <path stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+
+                <div class="px-6 pb-6 text-gray-600 leading-relaxed hidden faq-content">
+                    <p id="contact4Desc" class="mb-4"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-24 bg-blue-50">
+    <div class="max-w-5xl mx-auto px-6 text-center">
+        <h2 id="contact5Name" class="text-3xl font-bold text-blue-900 mb-2"></h2>
+        <div id="contactFormContainer" class="overflow-hidden rounded-2xl"></div>
+    </div>
+</section>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+
+        // ================= FETCH DATA =================
+        fetch('/LandingPage/GetContactData')
+            .then(response => response.json())
+            .then(data => {
+
+                const hero = document.getElementById("contactImage");
+                const imageName = data["CONTACT_BANNER2_DESC"];
+
+                if (imageName) {
+                    hero.style.backgroundImage =
+                        `url('/image/landingpage/${imageName}')`;
+                }
+
+                document.getElementById("contact1Name").innerText = data["CONTACT_BANNER1_NAME"] || "";
+                document.getElementById("contact1Desc").innerText = data["CONTACT_BANNER1_DESC"] || "";
+
+                document.getElementById("contact2Name").querySelector("span").innerText = data["CONTACT_FAQ1_NAME"] || "";
+                document.getElementById("contact2Desc").innerText = data["CONTACT_FAQ1_DESC"] || "";
+
+                document.getElementById("contact3Name").querySelector("span").innerText = data["CONTACT_FAQ2_NAME"] || "";
+                document.getElementById("contact3Desc").innerText = data["CONTACT_FAQ2_DESC"] || "";
+
+                document.getElementById("contact4Name").querySelector("span").innerText = data["CONTACT_FAQ3_NAME"] || "";
+                document.getElementById("contact4Desc").innerText = data["CONTACT_FAQ3_DESC"] || "";
+
+                document.getElementById("contact5Name").innerText = data["CONTACT_FORM1_NAME"] || "";
+                const formUrl = data["CONTACT_FORM1_DESC"];
+
+                if (formUrl) {
+                    document.getElementById("contactFormContainer").innerHTML =
+                        `<iframe
+                            src="${formUrl}"
+                            width="100%"
+                            height="900"
+                            frameborder="0"
+                            marginheight="0"
+                            marginwidth="0"
+                            class="rounded-2xl shadow-lg border border-gray-200 bg-white">
+                        </iframe>`;
+                }
+
+            });
+
+
+        // ================= FAQ TOGGLE =================
+        document.querySelectorAll(".faq-toggle").forEach(button => {
+
+            button.addEventListener("click", function () {
+
+                const content = this.parentElement.querySelector(".faq-content");
+                const icon = this.querySelector(".faq-icon");
+
+                const isOpen = !content.classList.contains("hidden");
+
+                // Tutup semua dulu
+                document.querySelectorAll(".faq-content").forEach(c => c.classList.add("hidden"));
+                document.querySelectorAll(".faq-icon").forEach(i => i.classList.remove("rotate-180"));
+
+                if (!isOpen) {
+                    content.classList.remove("hidden");
+                    icon.classList.add("rotate-180");
+                }
+
+            });
+
+        });
+
+        
+
+    });
+</script>

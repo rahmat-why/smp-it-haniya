@@ -1,0 +1,241 @@
+﻿@{
+    Layout = "~/Views/Shared/_LayoutLandingPage.cshtml";
+}
+
+<!-- HERO -->
+<section class="relative min-h-screen overflow-hidden flex items-center justify-center text-white text-center bg-gradient-to-br from-blue-700 to-blue-500">
+    <div class="absolute inset-0">
+        <img id="banner2Image" class="w-full h-full object-cover opacity-80">
+    </div>
+    <div class="relative z-10 px-6">
+        <h1 id="banner1Desc" class="text-4xl md:text-6xl font-bold mb-3 drop-shadow-lg"></h1>
+        <p id="banner1Name" class="text-lg md:text-2xl drop-shadow-md"></p>
+        <a asp-controller="LandingPage"
+           asp-action="AboutUsLP"
+           class="mt-8 inline-block bg-white text-blue-700 px-6 py-3 rounded-lg font-semibold shadow hover:bg-gray-100 transition">
+            Learn More
+        </a>
+
+    </div>
+</section>
+
+<!-- SCHOOL STATS -->
+<section class="bg-blue-700 text-white py-16">
+    <div class="max-w-6xl mx-auto px-6">
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-10 text-center">
+
+            <!-- Students -->
+            <div>
+                <h2 id="summary1Desc" class="text-4xl md:text-5xl font-bold mb-2"></h2>
+                <p id="summary1Name" class="uppercase tracking-widest text-sm opacity-90"></p>
+            </div>
+
+            <!-- Teacher -->
+            <div>
+                <h2 id="summary2Desc" class="text-4xl md:text-5xl font-bold mb-2"></h2>
+                <p id="summary2Name" class="uppercase tracking-widest text-sm opacity-90"></p>
+            </div>
+
+            <!-- Extracurricular -->
+            <div>
+                <h2 id="summary3Desc" class="text-4xl md:text-5xl font-bold mb-2"></h2>
+                <p id="summary3Name" class="uppercase tracking-widest text-sm opacity-90"></p>
+            </div>
+
+        </div>
+
+    </div>
+</section>
+
+
+<!-- WELCOME -->
+<section class="py-16">
+    <div class="max-w-4xl mx-auto text-center px-6">
+        <h2 id="welcomeName" class="text-3xl font-bold text-blue-700 mb-4"></h2>
+        <p id="welcomeDesc" class="text-gray-700 leading-relaxed"></p>
+    </div>
+</section>
+
+<!-- SCHOOL -->
+<section class="py-16 bg-gray-100">
+    <div class="max-w-6xl mx-auto px-6">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+            <!-- Card 1 -->
+            <div class="relative rounded-xl overflow-hidden shadow-lg group">
+                <img id="school1Image"
+                     class="w-full h-64 object-cover group-hover:scale-105 transition duration-500">
+
+                <!-- Gradient Overlay -->
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+
+                <!-- Text Kiri Bawah -->
+                <div class="absolute bottom-0 left-0 p-6 text-white">
+                    <h3 id="school1Name" class="text-2xl font-bold mb-2"></h3>
+                    <p id="school1Desc" class="text-sm md:text-base max-w-sm"></p>
+                </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="relative rounded-xl overflow-hidden shadow-lg group">
+                <img id="school2Image"
+                     class="w-full h-64 object-cover group-hover:scale-105 transition duration-500">
+
+                <!-- Gradient Overlay -->
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+
+                <!-- Text Kiri Bawah -->
+                <div class="absolute bottom-0 left-0 p-6 text-white">
+                    <h3 id="school2Name" class="text-2xl font-bold mb-2"></h3>
+                    <p id="school2Desc" class="text-sm md:text-base max-w-sm"></p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+
+
+<section class="py-20 bg-white">
+    <div class="max-w-6xl mx-auto px-6 relative">
+
+        <!-- Slider Container -->
+        <div class="overflow-hidden">
+            <div id="slider" class="flex transition-transform duration-500">
+
+                <!-- Slide 1 -->
+                <div class="min-w-full grid md:grid-cols-2 gap-12 items-center">
+                    <div class="overflow-hidden rounded-2xl shadow-lg">
+                        <img id="test1Image" class="w-full h-full object-cover">
+                    </div>
+
+                    <div>
+                        <h2 id="test1Name" class="text-3xl md:text-4xl font-bold text-blue-700 mb-4"></h2>
+                        @* <h3 class="text-xl font-semibold text-gray-800 mb-4">
+                            A Beacon of Light in Education and Faith
+                        </h3> *@
+                        <p id="test1Desc" class="text-gray-600 leading-relaxed mb-6"></p>
+                        @* <a href="#"
+                           class="inline-block bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-800 transition">
+                            Read →
+                        </a> *@
+                    </div>
+                </div>
+
+                <!-- Slide 2 -->
+                <div class="min-w-full grid md:grid-cols-2 gap-12 items-center">
+                    <div class="overflow-hidden rounded-2xl shadow-lg">
+                        <img id="test2Image" class="w-full h-full object-cover">
+                    </div>
+
+                    <div>
+                        <h2 id="test2Name" class="text-3xl md:text-4xl font-bold text-blue-700 mb-4"></h2>
+                        @* <h3 class="text-xl font-semibold text-gray-800 mb-4">
+                            Building Future Leaders
+                        </h3> *@
+                        <p id ="test2Desc" class="text-gray-600 leading-relaxed mb-6"></p>
+                        @* <a href="#"
+                           class="inline-block bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-800 transition">
+                            Read →
+                        </a> *@
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="flex justify-center mt-8 gap-4">
+            <button onclick="prevSlide()"
+                    class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">
+                ←
+            </button>
+            <button onclick="nextSlide()"
+                    class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">
+                →
+            </button>
+        </div>
+
+    </div>
+</section>
+
+<script>
+    let currentIndex = 0;
+    const slider = document.getElementById("slider");
+    const totalSlides = 2;
+
+    function updateSlider() {
+        slider.style.transform = `translateX(-${currentIndex * 100}%)`;
+    }
+
+    function nextSlide() {
+        currentIndex = (currentIndex + 1) % totalSlides;
+        updateSlider();
+    }
+
+    function prevSlide() {
+        currentIndex = (currentIndex - 1 + totalSlides) % totalSlides;
+        updateSlider();
+    }
+</script>
+
+<script>
+    fetch('/LandingPage/GetHomeData')
+        .then(response => response.json())
+        .then(data => {
+
+            // Banner 1
+            document.getElementById("banner1Name").innerText = data["HOME_BANNER1_NAME"] || "";
+            document.getElementById("banner1Desc").innerText = data["HOME_BANNER1_DESC"] || "";
+
+            // Banner 2 Image
+            document.getElementById("banner2Image").src =
+                "/image/landingpage/" + (data["HOME_BANNER2_DESC"] || "");
+
+            // Summary
+            document.getElementById("summary1Name").innerText = data["HOME_SUMMARY1_NAME"] || "";
+            document.getElementById("summary1Desc").innerText = data["HOME_SUMMARY1_DESC"] || "";
+
+            document.getElementById("summary2Name").innerText = data["HOME_SUMMARY2_NAME"] || "";
+            document.getElementById("summary2Desc").innerText = data["HOME_SUMMARY2_DESC"] || "";
+
+            document.getElementById("summary3Name").innerText = data["HOME_SUMMARY3_NAME"] || "";
+            document.getElementById("summary3Desc").innerText = data["HOME_SUMMARY3_DESC"] || "";
+
+            // Welcome
+            document.getElementById("welcomeName").innerText = data["HOME_WELCOME1_NAME"] || "";
+            document.getElementById("welcomeDesc").innerText = data["HOME_WELCOME1_DESC"] || "";
+
+            // School Image + title
+            document.getElementById("school1Image").src =
+                "/image/landingpage/" + (data["HOME_SCHOOL_IMAGE1_DESC"] || "");
+
+            document.getElementById("school1Name").innerText = data["HOME_SCHOOL_TITLE1_NAME"] || "";
+            document.getElementById("school1Desc").innerText = data["HOME_SCHOOL_TITLE1_DESC"] || "";
+
+            document.getElementById("school2Image").src =
+                "/image/landingpage/" + (data["HOME_SCHOOL_IMAGE2_DESC"] || "");
+
+            document.getElementById("school2Name").innerText = data["HOME_SCHOOL_TITLE2_NAME"] || "";
+            document.getElementById("school2Desc").innerText = data["HOME_SCHOOL_TITLE2_DESC"] || "";
+
+            // Test Image + title
+            document.getElementById("test1Image").src =
+                "/image/landingpage/" + (data["HOME_TESTI_IMAGE1_DESC"] || "");
+
+            document.getElementById("test1Name").innerText = data["HOME_TESTIMONI1_NAME"] || "";
+            document.getElementById("test1Desc").innerText = data["HOME_TESTIMONI1_DESC"] || "";
+
+            document.getElementById("test2Image").src =
+                "/image/landingpage/" + (data["HOME_TESTI_IMAGE2_DESC"] || "");
+
+
+            document.getElementById("test2Name").innerText = data["HOME_TESTIMONI2_NAME"] || "";
+            document.getElementById("test2Desc").innerText = data["HOME_TESTIMONI2_DESC"] || "";
+
+
+        });
+</script>

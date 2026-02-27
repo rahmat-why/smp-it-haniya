@@ -1,0 +1,136 @@
+﻿@{
+    Layout = "~/Views/Shared/_LayoutLandingPage.cshtml";
+}
+
+<div id="eventContainer"
+     class="grid grid-cols-1 md:grid-cols-3 gap-8 p-6 pt-28">
+</div>
+
+<div class="flex justify-center gap-4 mb-10">
+    <button onclick="prevPage()" class="px-4 py-2 bg-gray-300 rounded">Prev</button>
+    <button onclick="nextPage()" class="px-4 py-2 bg-blue-600 text-white rounded">Next</button>
+</div>
+
+<div id="eventModal"
+     onclick="outsideClick(event)"
+     class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50">
+
+    <div class="bg-white w-11/12 md:w-2/3 rounded-2xl p-6 relative">
+
+        <button onclick="closeModal()"
+                class="absolute top-3 right-3 text-gray-500 text-xl">
+            ✕
+        </button>
+
+        <img id="modalImage"
+             class="w-full h-64 object-cover rounded-xl mb-4">
+
+        <h2 id="modalTitle" class="text-2xl font-bold mb-2"></h2>
+        <p id="modalDate" class="text-sm text-gray-500 mb-2"></p>
+        <p id="modalStatus" class="text-sm text-blue-600 mb-4"></p>
+        <p id="modalDescription" class="text-gray-700"></p>
+
+    </div>
+</div>
+
+
+<script>
+    let currentPage = 1;
+
+    document.addEventListener("DOMContentLoaded", function () {
+        loadEvents(currentPage);
+    });
+
+    function loadEvents(page) {
+        fetch(`/LandingPage/GetArticleData?page=${page}`)
+            .then(res => res.json())
+            .then(data => {
+
+                let container = document.getElementById("eventContainer");
+                container.innerHTML = "";
+
+                if (data.length === 0) {
+                    container.innerHTML = "<p class='col-span-3 text-center'>No data available</p>";
+                    return;
+                }
+
+                data.forEach(item => {
+                    
+                    let card = `
+                    <div onclick="openModal('${item.id}')"
+                        class="relative rounded-2xl overflow-hidden shadow-lg group cursor-pointer">
+
+                        <img src="${item.image
+                        ? '/image/landingpage/' + item.image
+                        : '/image/landingpage/default.jpg'}"
+                        class="w-full h-[420px] object-cover group-hover:scale-105 transition duration-500">
+
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+
+                        <div class="absolute bottom-0 p-6 text-white">
+                            <h3 class="text-xl font-semibold leading-snug">
+                                ${item.name}
+                            </h3>
+                            <p class="mt-2 text-sm opacity-80">
+                                ${item.date}
+                            </p>
+                        </div>
+
+                    </div>
+                    `;
+
+                    container.innerHTML += card;
+                });
+
+            });
+    }
+
+    function nextPage() {
+        currentPage++;
+        loadEvents(currentPage);
+    }
+
+    function prevPage() {
+        if (currentPage > 1) {
+            currentPage--;
+            loadEvents(currentPage);
+        }
+    }
+
+    function openModal(id) {
+        fetch(`/LandingPage/GetArticleDetail?id=${id}`)
+            .then(res => res.json())
+            .then(data => {
+
+                if (!data) return;
+
+                document.getElementById("modalTitle").innerText = data.name;
+                document.getElementById("modalDate").innerText = data.date;
+                document.getElementById("modalStatus").innerText = "Status: " + data.status;
+                document.getElementById("modalDescription").innerText = data.description;
+
+                document.getElementById("modalImage").src =
+                    data.image
+                    ? '/image/landingpage/' + data.image
+                    : '/image/landingpage/default.jpg';
+
+                document.getElementById("eventModal").classList.remove("hidden");
+                document.getElementById("eventModal").classList.add("flex");
+            });
+    }
+
+    function closeModal() {
+        document.getElementById("eventModal").classList.add("hidden");
+    }
+
+    function outsideClick(e) {
+        const modal = document.getElementById("eventModal");
+
+        // Kalau yang diklik itu backdrop, bukan isi modal
+        if (e.target === modal) {
+            closeModal();
+        }
+    }
+
+
+</script>

@@ -1,7 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Haniya.Models;
+using Microsoft.AspNetCore.Mvc;
 using System.Data.SqlClient;
-using Haniya.Models;
-using Newtonsoft.Json.Linq;
 
 namespace Haniya.Controllers.PortalAdmin
 {

@@ -1,0 +1,220 @@
+﻿@{
+    Layout = "_LayoutAdmin";
+    ViewData["Title"] = "E-Raport";
+}
+<div class="flex justify-between items-center mb-4">
+    <h2 class="text-xl font-semibold">E - Raport</h2>
+</div>
+<div class="bg-white rounded-lg shadow">
+    <!-- Toolbar -->
+    <div class="px-4 pt-4">
+        <div id="eraport-table-toolbar"
+             class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto px-4 pt-4">
+        <table id="eraport-table"
+               class="min-w-full text-sm text-left text-gray-700 border-collapse">
+            <thead class="bg-gray-100 border-y border-gray-200">
+                <tr>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 250px;">Student</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 130px;">Class</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 130px;">Summary Attendance</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Grade Attendance</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase !text-right" style="width: 70px;">Action</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100"></tbody>
+        </table>
+    </div>
+
+    <!-- Footer -->
+    <div class="px-4 pb-4 pt-3">
+        <div id="eraport-table-footer"
+             class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div id="eraport-table-info"></div>
+            <div id="eraport-table-pagination"></div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    $(document).ready(function () {
+        initEraportTable();
+        $(document).on('click', function (e) {
+            if (!$(e.target).closest('.eraport-actions-wrapper').length) {
+                $('.eraport-actions-menu').addClass('hidden');
+            }
+        });
+    });
+
+    function initEraportTable() {
+        $('#eraport-table').DataTable({
+            processing: true,
+            serverSide: true,
+            searching: true,
+            lengthChange: true,
+            ordering: true,
+            order: [[0, 'asc']],
+
+
+            ajax: {
+                url: '/Eraport/GetAll',
+                type: 'GET'
+            },
+
+            dom: 'lftip',
+
+            // LANGUAGE (pisah, jangan nested)
+            language: {
+                lengthMenu: "Show _MENU_ rows",
+                search: "",
+                searchPlaceholder: "Search...",
+                paginate: {
+                    first: "First",
+                    last: "Last",
+                    next: "Next",
+                    previous: "Previous"
+                },
+                info: "Showing _START_ to _END_ of _TOTAL_ entries"
+            },
+
+
+            // COLUMNS (harus sejajar, bukan di dalam language)
+            columns: [
+
+                // Nama + Foto
+                {
+                    data: null,
+                    orderable: true,
+                    name: 'full_name',
+                    className: 'py-3',
+                    render: function (data, type, row) {
+
+                        var src = row.profile_photo || '/image/no-image.png';
+                        var name = row.full_name || '-';
+                        var nis = row.nis || '-';
+
+                        return `
+                            <div class="flex items-center gap-3">
+                                <img src="${src}"
+                                        class="w-10 h-10 rounded-full object-cover border-2 border-gray-200 flex-shrink-0">
+
+                                <div class="min-w-0 flex-1">
+                                    <div class="font-medium text-gray-900 truncate">${name}</div>
+                                    <div class="text-xs text-gray-500 truncate">NIS: ${nis}</div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                },
+
+                // Class
+                {
+                    data: 'class_name',
+                    orderable: true,
+                    name: 'class_name',
+                    className: 'px-4 py-3',
+                    render: function (data) {
+                        return data ? data : '-';
+                    }
+                },
+
+                // Summary Attendance
+                {
+                    data: null,
+                    orderable: false,
+                    defaultContent: '-'
+                },
+
+                // Grade Attendance
+                {
+                    data: null,
+                    orderable: false,
+                    defaultContent: '-'
+                },
+
+                // Action
+                {
+                    data: null,
+                    orderable: false,
+                    className: 'text-right',
+                    defaultContent: '<button class="text-blue-600">View</button>'
+                }
+            ],
+
+            // INIT
+            initComplete: function () {
+
+                const wrapper = $('#eraport-table_wrapper');
+
+                const $length = wrapper.find('.dataTables_length, .dt-length');
+                const $filter = wrapper.find('.dataTables_filter, .dt-search');
+
+                $('#eraport-table-toolbar').empty().append($length).append($filter);
+
+
+                // Length style
+                $length.addClass('flex items-center gap-2 text-sm text-gray-600');
+
+                $length.find('select')
+                    .addClass('border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:ring-2 focus:ring-blue-500');
+
+
+                // Search style
+                const $search = $filter.find('input');
+
+                $filter.addClass('flex items-center gap-2 text-sm text-gray-600 w-full md:w-auto justify-end');
+                $filter.find('label').addClass('flex items-center gap-2 w-full md:w-auto');
+
+                $search
+                    .addClass('border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 w-full md:w-64')
+                    .attr('placeholder', 'Search...');
+
+                styleEraportPagination();
+            },
+
+
+            drawCallback: function () {
+                    setTimeout(styleEraportPagination, 50);
+            }
+
+        });
+    }
+
+        function styleEraportPagination() {
+        const wrapper = $('#eraport-table_wrapper');
+
+        let $info = wrapper.find('.dataTables_info').first();
+        if ($info.length === 0) $info = wrapper.find('.dt-info').first();
+
+        let $paginate = wrapper.find('.dataTables_paginate').first();
+        if ($paginate.length === 0) $paginate = wrapper.find('.dt-paging').first();
+
+        if ($info.length) {
+            $('#eraport-table-info').empty().append($info);
+            $info.removeClass().addClass('text-sm text-gray-600');
+        }
+
+        if ($paginate.length) {
+            $('#eraport-table-pagination').empty().append($paginate);
+        }
+
+        $('#eraport-table-pagination').addClass('w-full flex justify-end overflow-x-auto whitespace-nowrap');
+        if (typeof applyAdminPaginationStyle === 'function') {
+            applyAdminPaginationStyle($('#eraport-table-pagination'));
+        }
+    }
+
+    function toggleActionsMenu(event, id) {
+        event.stopPropagation();
+        $('.eraport-actions-menu').addClass('hidden');
+        $('#actions-menu-' + id).toggleClass('hidden');
+    }
+
+    
+</script>
+}
