@@ -51,12 +51,8 @@
                     </div>
                     <!-- Footer Buttons -->
                     <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
-                        <button onclick="resetFilter()"
-                                class="px-5 py-2 rounded-full text-sm font-medium text-indigo-400 bg-indigo-50 hover:bg-indigo-100 transition">
-                            Reset
-                        </button>
                         <button onclick="applyFilter()"
-                                class="px-5 py-2 rounded-full text-sm font-medium text-white bg-indigo-500 hover:bg-indigo-600 transition">
+                                class="px-5 py-2 rounded-full text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 text-white transition">
                             Filter
                         </button>
                     </div>
@@ -116,6 +112,21 @@
             minimumInputLength: 0
         }).on('change', function () {
             currentAcademicYearId = $(this).val() || '';
+        });
+
+        $.ajax({
+            url: '/Select2Default/ActiveAcademicYear',
+            type: 'GET',
+            success: function (data) {
+                if (data && data.id) {
+                    var option = new Option(data.text, data.id, true, true);
+                    $('#academic_year_filter').append(option).trigger('change');
+                    currentAcademicYearId = data.id;
+                }
+            },
+            error: function (err) {
+                console.error('Failed to fetch default academic year:', err);
+            }
         });
 
         loadAdminDashboard();
