@@ -13,31 +13,7 @@
 
 <div class="bg-white rounded-lg shadow">
     <div class="px-4 pt-4">
-        <div id="grade-table-toolbar" class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <div class="flex flex-wrap gap-4 items-end">
-                <div>
-                    <label class="text-sm font-medium text-gray-700" for="">Class</label>
-                    <div class="mt-1">
-                        <select id="filter_class"
-                                class="w-full md:w-64 border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        </select>
-                    </div>
-                </div>
-                <div>
-                    <label class="text-sm font-medium text-gray-700" for="">Grade Date</label>
-                    <div class="mt-1">
-                        <input type="date" id="filter_date"
-                               class="border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-                    </div>
-                </div>
-                <div>
-                    <button id="btnFilter"
-                            class="px-4 py-1.5 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
-                        Apply
-                    </button>
-                </div>
-            </div>
-        </div>
+        <div id="grade-table-toolbar" class="flex flex-col md:flex-row md:items-center md:justify-between gap-3"></div>
     </div>
 
     <div class="overflow-x-auto px-4 pt-4">
@@ -68,21 +44,11 @@
 
 @section Scripts {
     <script>
-        $(document).ready(function () {
-            $('#filter_class').select2({
-                placeholder: "-- All Class --",
-                allowClear: true,
-                ajax: {
-                    url: '/Select2/AcademicClasses',
-                    dataType: 'json',
-                    delay: 250,
-                    data: params => ({ q: params.term || '', page: params.page || 1 }),
-                    processResults: data => ({ results: data.results, pagination: data.pagination }),
-                    cache: true
-                },
-                minimumInputLength: 0
-            });
+        let gradeTable = null;
+        let currentAcademicClassId = '';
+        let currentGradeDate = '';
 
+        $(document).ready(function () {
             initGradeTable();
 
             $(document).on('click', function (e) {
@@ -93,7 +59,7 @@
         });
 
         function initGradeTable() {
-            const table = $('#grade-table').DataTable({
+            gradeTable = $('#grade-table').DataTable({
                 processing: true,
                 serverSide: true,
                 searching: true,
@@ -102,8 +68,8 @@
                     url: '/Grade/GetAll',
                     type: 'GET',
                     data: function (d) {
-                        d.academic_class_id = $('#filter_class').val() || null;
-                        d.grade_date = $('#filter_date').val() || null;
+                        d.academic_class_id = currentAcademicClassId || null;
+                        d.grade_date = currentGradeDate || null;
                     }
                 },
                 dom: 'lftip',
@@ -172,19 +138,88 @@
                     const wrapper = $('#grade-table_wrapper');
                     const $length = wrapper.find('.dataTables_length, .dt-length');
                     const $filter = wrapper.find('.dataTables_filter, .dt-search');
-                    const $controls = $('<div class="flex items-center gap-4"></div>');
-                    $controls.append($length).append($filter);
-                    $('#grade-table-toolbar').append($controls);
+                    const initialSearch = (gradeTable.search() || '').replace(/"/g, '&quot;');
+
+                    $filter.hide();
+
+                    const $toggleFilter = $(`
+                        <div class="relative">
+                            <button id="filterToggleBtn"
+                                    onclick="toggleFilter()"
+                                    class="flex items-center gap-2 bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                                </svg>
+                                Filter
+                            </button>
+
+                            <div id="filterDropdown"
+                                    class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl border border-gray-200 shadow-xl z-50 overflow-visible">
+                                <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                                    <h3 class="text-lg font-bold text-gray-800">Filter</h3>
+                                    <button type="button"
+                                            onclick="toggleFilter()"
+                                            class="text-gray-400 hover:text-gray-600 transition p-1 rounded-lg hover:bg-gray-100">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="18" y1="6" x2="6" y2="18" />
+                                            <line x1="6" y1="6" x2="18" y2="18" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="px-5 py-4 space-y-4">
+                                    <div class="w-full">
+                                        <label class="block text-xs font-medium mb-1" for="filter_class">Class</label>
+                                        <select id="filter_class" class="w-full"></select>
+                                    </div>
+                                    <div class="w-full">
+                                        <label class="block text-xs font-medium mb-1" for="filter_date">Grade Date</label>
+                                        <input type="date" id="filter_date"
+                                                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                                    </div>
+                                    <div class="w-full">
+                                        <label class="block text-xs font-medium mb-1" for="grade_search_filter">Search</label>
+                                        <input id="grade_search_filter"
+                                                type="text"
+                                                value="${initialSearch}"
+                                                class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                placeholder="Search..." />
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
+                                    <button type="button"
+                                            onclick="applyGradeFilter()"
+                                            class="px-5 py-2 rounded-full text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 transition">
+                                        Filter
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+
+                    $('#grade-table-toolbar').empty().append($length).append($toggleFilter);
 
                     $length.addClass('flex items-center gap-2 text-sm text-gray-600');
                     $length.find('label').addClass('flex items-center gap-2');
                     $length.find('select').addClass('border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500');
 
-                    $filter.addClass('flex items-center gap-2 text-sm text-gray-600');
-                    $filter.find('label').addClass('flex items-center gap-2');
-                    const $searchInput = $filter.find('input');
-                    $searchInput.addClass('border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full md:w-64')
-                        .attr('placeholder', 'Search...');
+                    $('#grade-table-toolbar').addClass('flex flex-col md:flex-row md:items-center md:justify-between gap-4');
+
+                    $('#filter_class').select2({
+                        placeholder: "-- All Class --",
+                        allowClear: true,
+                        width: '100%',
+                        ajax: {
+                            url: '/Select2/AcademicClasses',
+                            dataType: 'json',
+                            delay: 250,
+                            data: params => ({ q: params.term || '', page: params.page || 1 }),
+                            processResults: data => ({ results: data.results, pagination: data.pagination }),
+                            cache: true
+                        },
+                        minimumInputLength: 0
+                    });
 
                     stylePagination();
                 },
@@ -192,10 +227,15 @@
                     setTimeout(stylePagination, 50);
                 }
             });
+        }
 
-            $('#btnFilter').on('click', function () {
-                table.ajax.reload();
-            });
+        function applyGradeFilter() {
+            currentAcademicClassId = $('#filter_class').val() || '';
+            currentGradeDate = $('#filter_date').val() || '';
+            const searchKeyword = ($('#grade_search_filter').val() || '').trim();
+            gradeTable.search(searchKeyword);
+            gradeTable.ajax.reload(null, true);
+            toggleFilter();
         }
 
         function stylePagination() {

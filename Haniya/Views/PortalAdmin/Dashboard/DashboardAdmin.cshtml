@@ -166,7 +166,7 @@
                                     </p>
                                 </div>
                                 <!-- LUNAS -->
-                                <div class="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-2xl p-5 sm:p-6 text-center">
+                                <div class="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-2xl p-5 sm:p-6 flex flex-col items-center justify-center text-center">
                                     <p class="text-sm sm:text-base font-medium text-cyan-700">
                                         Total Payment
                                     </p>
@@ -177,8 +177,9 @@
                                         ${d.studentPayment.totalLunas ?? '-'}/${d.studentPayment.totalSiswa ?? '-'}
                                     </p>
                                 </div>
+
                                 <!-- BELUM LUNAS -->
-                                <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-5 sm:p-6 text-center">
+                                <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-5 sm:p-6 flex flex-col items-center justify-center text-center">
                                     <p class="text-sm sm:text-base font-medium text-red-700">Total Unpaid</p>
                                     <p class="text-2xl sm:text-3xl lg:text-4xl font-bold text-red-900 mt-2">
                                         ${formatRupiah(d.payment.totalBelumLunas ?? 0)}
@@ -393,8 +394,9 @@
     }
 
     function applyFilter() {
-        const year = document.getElementById('academic_year_filter').value;
-        // your filter logic here
-        console.log('Filtering by year:', year);
+        const year = $('#academic_year_filter').val() || '';
+        currentAcademicYearId = year;
+        loadAdminDashboard(year);
+        toggleFilter();
     }
 </script>
