@@ -57,6 +57,8 @@ namespace Haniya.Controllers.PortalAdmin
                     studentPayment = GetDashboardSummary(conn, academicYear),
                     teachers = GetActiveTeacherSummary(conn),
                     students = GetStudentCountPerClass(conn, academicYear),
+                    calendarDays = GetAcademicCalendar(conn, academicYear),
+                    calendarEvents = GetEventPinPoints(conn, academicYear),
                     events = GetEvents(conn),
                     articles = GetArticles(conn)
                 };
@@ -363,6 +365,15 @@ namespace Haniya.Controllers.PortalAdmin
         {
             try
             {
+                var teacherId = User.FindFirst("TeacherId")?.Value;
+                if (string.IsNullOrEmpty(teacherId))
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        message = "Invalid teacher session"
+                    });
+                }
                 using var conn = GetConn();
                 conn.Open();
                 if (string.IsNullOrEmpty(academicYear))
@@ -378,9 +389,11 @@ namespace Haniya.Controllers.PortalAdmin
                 var data = new
                 {
                     academicYearUsed = academicYear,
-                    weeklySchedule = GetWeeklySchedule(conn, academicYear, classLevel),
+                    weeklySchedule = GetWeeklySchedule(conn, academicYear, classLevel, teacherId),
                     gradesChart = GetGrades(conn, academicYear, classLevel),
                     attendanceChart = GetAttendance(conn, academicYear, classLevel),
+                    calendarDays = GetAcademicCalendar(conn, academicYear),
+                    calendarEvents = GetEventPinPoints(conn, academicYear),
                     events = GetEvents(conn),
                     articles = GetArticles(conn)
                 };
@@ -393,7 +406,7 @@ namespace Haniya.Controllers.PortalAdmin
             }
         }
 
-        private List<dynamic> GetWeeklySchedule(SqlConnection conn, string academicYear, string? classLevel)
+        private List<dynamic> GetWeeklySchedule(SqlConnection conn, string academicYear, string? classLevel, string teacherid)
         {
             var list = new List<dynamic>();
 
@@ -412,6 +425,7 @@ namespace Haniya.Controllers.PortalAdmin
         JOIN mst_classes cls ON ac.class_id = cls.class_id
         WHERE ac.academic_year_id = @academicYear
         AND (@classLevel = '' OR cls.class_level = @classLevel)
+        AND sd.teacher_id = @teacherId
         ORDER BY
             CASE s.day
                 WHEN 'Senin' THEN 1
@@ -425,6 +439,7 @@ namespace Haniya.Controllers.PortalAdmin
             var cmd = new SqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@academicYear", academicYear);
             cmd.Parameters.AddWithValue("@classLevel", string.IsNullOrEmpty(classLevel) ? "" : classLevel);
+            cmd.Parameters.AddWithValue("@teacherId",teacherid);
 
             using var rd = cmd.ExecuteReader();
             while (rd.Read())
@@ -523,6 +538,76 @@ namespace Haniya.Controllers.PortalAdmin
                     avg = Math.Round(Convert.ToDecimal(rd["avg_grade"]), 2)
                 });
             }
+            return list;
+        }
+
+        private List<dynamic> GetAcademicCalendar(SqlConnection conn, string academicYear)
+        {
+            var list = new List<dynamic>();
+            var sql = @"
+        SELECT 
+            REPLACE(academic_year_id, 'ACY/', '') AS academic_year,
+            [date] AS calendar_date,
+            [day] AS calendar_day,
+            is_weekend
+        FROM mst_calendars
+        WHERE academic_year_id = @academicYear
+        ORDER BY [date]";
+
+            var cmd = new SqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@academicYear", academicYear);
+
+            using var rd = cmd.ExecuteReader();
+            while (rd.Read())
+            {
+                list.Add(new
+                {
+                    academic_year = rd["academic_year"]?.ToString(),
+                    calendar_date = rd["calendar_date"] != DBNull.Value ? Convert.ToDateTime(rd["calendar_date"]) : (DateTime?)null,
+                    calendar_day = rd["calendar_day"]?.ToString(),
+                    is_weekend = rd["is_weekend"] != DBNull.Value && Convert.ToInt32(rd["is_weekend"]) == 1
+                });
+            }
+
+            return list;
+        }
+
+        private List<dynamic> GetEventPinPoints(SqlConnection conn, string academicYear)
+        {
+            var list = new List<dynamic>();
+            var sql = @"
+        SELECT 
+            me.event_name AS event_name,
+            mec.class_level AS class_level,
+            me.start_date AS start_date,
+            me.end_date AS end_date,
+            mec.is_holiday AS is_holiday
+        FROM mst_event_classes mec
+        JOIN mst_events me ON mec.event_id = me.event_id
+        WHERE EXISTS (
+              SELECT 1
+              FROM mst_calendars c
+              WHERE c.academic_year_id = @academicYear
+                AND c.[date] BETWEEN me.start_date AND me.end_date
+          )
+        ORDER BY me.start_date, me.event_name";
+
+            var cmd = new SqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@academicYear", academicYear);
+
+            using var rd = cmd.ExecuteReader();
+            while (rd.Read())
+            {
+                list.Add(new
+                {
+                    event_name = rd["event_name"]?.ToString(),
+                    class_level = rd["class_level"]?.ToString(),
+                    start_date = rd["start_date"] != DBNull.Value ? Convert.ToDateTime(rd["start_date"]) : (DateTime?)null,
+                    end_date = rd["end_date"] != DBNull.Value ? Convert.ToDateTime(rd["end_date"]) : (DateTime?)null,
+                    is_holiday = rd["is_holiday"] != DBNull.Value && Convert.ToInt32(rd["is_holiday"]) == 1
+                });
+            }
+
             return list;
         }
     }
