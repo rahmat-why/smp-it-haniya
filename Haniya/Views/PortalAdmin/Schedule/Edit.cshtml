@@ -14,7 +14,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                    Academic Class <span class="text-red-600">*</span>
+                    Class <span class="text-red-600">*</span>
                 </label>
                 <div id="class_display" class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">-- Loading --</div>
             </div>
@@ -31,10 +31,10 @@
 
         <div class="space-y-4">
             <div class="flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-gray-800">Schedule Details</h3>
+                <h3 class="text-lg font-semibold text-gray-800">Schedule Detail</h3>
                 <button type="button" onclick="addDetailRow()"
                         class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md">
-                    + Add Row
+                    + Add Subject
                 </button>
             </div>
 
@@ -56,8 +56,18 @@
         </div>
 
         <div class="flex justify-end gap-4 pt-6 border-t border-gray-200">
-            <button type="button" onclick="goBackSchedule()" class="px-6 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-lg font-medium transition">Back</button>
-            <button type="button" onclick="updateSchedule()" class="px-6 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-medium transition">Update</button>
+            <button type="button" onclick="goBackSchedule()" class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+                Back
+            </button>
+            <button type="button" onclick="updateSchedule()" class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
+                Update
+                <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            </button>
         </div>
     </form>
 </div>
@@ -82,7 +92,11 @@
                                 <input type="time" class="end-time w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" value="${prefill.end_time || ''}" />
                             </td>
                             <td class="px-4 py-3 text-right">
-                                <button type="button" onclick="removeRow(this)" class="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md">Remove</button>
+                                <button type="button" onclick="removeRow(this)" class="inline-flex items-center justify-center p-2 bg-red-600 hover:bg-red-700 text-white rounded-md" aria-label="Remove row" title="Remove row">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" />
+                                    </svg>
+                                </button>
                             </td>
                         </tr>`;
             $('#tbody-details').append(row);

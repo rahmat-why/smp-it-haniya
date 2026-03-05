@@ -29,10 +29,10 @@
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Event Name</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Location</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 120px;">Status</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Description Preview</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Tags</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Description</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Tag</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 160px;">Created</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 70px;">Action</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right" style="width: 70px;">Action</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100"></tbody>
@@ -99,7 +99,7 @@
                     },
                     {
                         data: 'event_name',
-                        className: 'py-3 font-medium text-gray-900'
+                        className: 'py-3 text-gray-900'
                     },
                     {
                         data: 'location',
@@ -107,7 +107,7 @@
                     },
                     {
                         data: 'status',
-                        className: 'py-3 text-center',
+                        className: 'py-3',
                         render: function (data) {
                             var badgeClass = data === 'Published' ? 'bg-green-100 text-green-800' :
                                 data === 'Draft' ? 'bg-yellow-100 text-yellow-800' :

@@ -41,18 +41,17 @@
     </div>
 
     <div class="overflow-x-auto px-4 pt-4">
-        <table id="grade-table"
-               class="min-w-full text-sm text-left text-gray-700 border-collapse">
+        <table id="grade-table" class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 140px;">Grade Date</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 140px;">Date</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Class</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Subject</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Teacher</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Grade Type</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 120px;">Min Value</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 180px;">Summary</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 70px;">Action</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 180px;">Summary</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right" style="width: 70px;">Action</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100"></tbody>
@@ -123,7 +122,7 @@
                 columns: [
                     {
                         data: 'grade_date',
-                        className: 'py-3 font-medium text-gray-900',
+                        className: 'py-3 text-gray-900',
                         render: data => data ? new Date(data).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }) : '-'
                     },
                     { data: 'class_name', className: 'py-3 text-gray-700' },
@@ -137,7 +136,7 @@
                     },
                     {
                         data: null,
-                        className: 'py-3 text-center',
+                        className: 'py-3',
                         render: row => `Pass: ${row.passed || 0} | Remedial: ${row.remedial || 0}`
                     },
                     {

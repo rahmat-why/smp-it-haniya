@@ -174,7 +174,7 @@ namespace Haniya.Controllers.LandingPage
         }
 
         [HttpGet]
-        [Route("event")]
+        [Route("news-event")]
         public IActionResult EventLP()
         {
             return View();
@@ -272,7 +272,7 @@ namespace Haniya.Controllers.LandingPage
 
 
         [HttpGet]
-        [Route("article")]
+        [Route("news-article")]
         public IActionResult ArticleLP()
         {
             return View();

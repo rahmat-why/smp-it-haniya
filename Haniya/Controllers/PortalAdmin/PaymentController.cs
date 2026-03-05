@@ -62,8 +62,7 @@ namespace Haniya.Controllers.PortalAdmin
             s.profile_photo,
             c.class_name,
             COALESCE(pt.item_desc, p.payment_type) AS payment_type_desc,
-            COALESCE(pm.item_desc, p.payment_method) AS payment_method_desc,
-            COUNT(i.instalment_id) AS instalment_count
+            COALESCE(pm.item_desc, p.payment_method) AS payment_method_desc
         FROM txn_payments p
         LEFT JOIN mst_student_classes sc ON p.student_class_id = sc.student_class_id
         LEFT JOIN mst_students s ON sc.student_id = s.student_id
@@ -109,8 +108,7 @@ namespace Haniya.Controllers.PortalAdmin
                         student_name = r["student_name"]?.ToString(),
                         nis = r["nis"]?.ToString(),
                         profile_photo = r["profile_photo"]?.ToString() ?? "/image/no-image.png",
-                        class_name = r["class_name"]?.ToString(),
-                        instalment_count = Convert.ToInt32(r["instalment_count"])
+                        class_name = r["class_name"]?.ToString()
                     });
                 }
             }

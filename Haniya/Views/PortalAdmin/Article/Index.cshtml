@@ -29,10 +29,10 @@
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Title</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Slug</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 120px;">Status</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Content Preview</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Tags</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 160px;">Created</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 70px;">Action</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Content</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Tag</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 160px;">Created Date</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right" style="width: 70px;">Action</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100"></tbody>
@@ -99,7 +99,7 @@
                     },
                     {
                         data: 'title',
-                        className: 'py-3 font-medium text-gray-900'
+                        className: 'py-3 text-gray-900'
                     },
                     {
                         data: 'slug',
@@ -107,7 +107,7 @@
                     },
                     {
                         data: 'status',
-                        className: 'py-3 text-center',
+                        className: 'py-3',
                         render: function (data) {
                             var badgeClass = data === 'Published' ? 'bg-green-100 text-green-800' :
                                 data === 'Draft' ? 'bg-yellow-100 text-yellow-800' :

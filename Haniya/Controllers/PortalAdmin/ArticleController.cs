@@ -68,6 +68,18 @@ namespace Haniya.Controllers.PortalAdmin
             return slug;
         }
 
+        private int ExtractTrailingNumber(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return 0;
+
+            var match = Regex.Match(value, @"(\d+)$");
+            if (!match.Success)
+                return 0;
+
+            return int.TryParse(match.Groups[1].Value, out var n) ? n : 0;
+        }
+
         // ================== PAGE ==================
 
         public IActionResult Index()
@@ -171,7 +183,7 @@ namespace Haniya.Controllers.PortalAdmin
                 a.created_at,
                 STRING_AGG(t.tag_code, ', ') AS tags
             FROM mst_articles a
-            LEFT JOIN mst_tag_events t ON t.event_id = a.article_id
+            LEFT JOIN mst_tag_articles t ON t.article_id = a.article_id
             {whereSearch}
             GROUP BY 
                 a.article_id,
@@ -296,7 +308,7 @@ namespace Haniya.Controllers.PortalAdmin
 
                 var title = f["title"].ToString();
                 var content = f["content"].ToString();
-                var rawTags = f["tags"].ToString();
+                var rawTags = string.Join(",", f["tags"].ToArray());
 
                 if (string.IsNullOrWhiteSpace(title))
                     return Json(DTOResponse.fail("title is required", 400));
@@ -323,7 +335,7 @@ namespace Haniya.Controllers.PortalAdmin
                     conn
                 );
                 var lastId = lastCmd.ExecuteScalar()?.ToString() ?? "ART0000";
-                var next = int.Parse(lastId.Substring(3)) + 1;
+                var next = ExtractTrailingNumber(lastId) + 1;
                 var articleId = "ART" + next.ToString("D4");
 
                 // generate unique slug
@@ -383,7 +395,7 @@ namespace Haniya.Controllers.PortalAdmin
                     conn
                 );
                 var lastTagId = lastTagCmd.ExecuteScalar()?.ToString() ?? "TGA0000";
-                var currentTag = int.Parse(lastTagId.Substring(3));
+                var currentTag = ExtractTrailingNumber(lastTagId);
 
                 foreach (var code in tagCodes)
                 {
@@ -433,7 +445,7 @@ namespace Haniya.Controllers.PortalAdmin
 
                 var title = f["title"].ToString();
                 var content = f["content"].ToString();
-                var rawTags = f["tags"].ToString();
+                var rawTags = string.Join(",", f["tags"].ToArray());
 
                 if (string.IsNullOrWhiteSpace(title))
                     return Json(DTOResponse.fail("title is required", 400));
@@ -510,7 +522,7 @@ namespace Haniya.Controllers.PortalAdmin
                     conn
                 );
                 var lastTagId = lastTagCmd.ExecuteScalar()?.ToString() ?? "TGA0000";
-                var currentTag = int.Parse(lastTagId.Substring(3));
+                var currentTag = ExtractTrailingNumber(lastTagId);
 
                 foreach (var code in tagCodes)
                 {

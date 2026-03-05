@@ -268,7 +268,11 @@
             const fd = new FormData();
             $('#frm').find('input,textarea,select').each(function () {
                 if (this.type !== "file") {
-                    fd.append(this.id, $(this).val());
+                    if (this.id === 'tags') {
+                        fd.append(this.id, ($(this).val() || []).join(','));
+                    } else {
+                        fd.append(this.id, $(this).val());
+                    }
                 }
             });
 

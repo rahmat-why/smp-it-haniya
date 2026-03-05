@@ -49,8 +49,8 @@
                 <tr>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Class</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Day</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center">Lessons</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 70px;">Action</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center">Total Subject</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right" style="width: 70px;">Action</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100"></tbody>
@@ -133,7 +133,7 @@
                 info: "Showing _START_ to _END_ of _TOTAL_ entries"
             },
             columns: [
-                { data: 'class_name', className: 'py-3 font-medium text-gray-900' },
+                { data: 'class_name', className: 'py-3 text-gray-900' },
                 {
                     data: 'day',
                     className: 'py-3 text-gray-700',
@@ -141,7 +141,7 @@
                 },
                 {
                     data: 'lesson_count',
-                    className: 'py-3 text-center',
+                    className: 'py-3',
                     render: data => data || 0
                 },
                 {

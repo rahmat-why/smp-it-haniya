@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Haniya.Models;
 
 namespace Haniya.Controllers.PortalAdmin
@@ -20,6 +21,18 @@ namespace Haniya.Controllers.PortalAdmin
         private SqlConnection GetConn()
         {
             return new SqlConnection(_config.GetConnectionString("DefaultConnection"));
+        }
+
+        private int ExtractTrailingNumber(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return 0;
+
+            var match = Regex.Match(value, @"(\d+)$");
+            if (!match.Success)
+                return 0;
+
+            return int.TryParse(match.Groups[1].Value, out var n) ? n : 0;
         }
 
         /* ===================== PAGE ===================== */
@@ -247,7 +260,7 @@ namespace Haniya.Controllers.PortalAdmin
                 var eventName = f["event_name"].ToString();
                 var location = f["location"].ToString();
                 var description = f["description"].ToString();
-                var rawTags = f["tags"].ToString();
+                var rawTags = string.Join(",", f["tags"].ToArray());
 
                 if (string.IsNullOrWhiteSpace(eventName))
                     return Json(DTOResponse.fail("event name is required", 400));
@@ -275,7 +288,7 @@ namespace Haniya.Controllers.PortalAdmin
                     conn
                 );
                 var lastId = lastCmd.ExecuteScalar()?.ToString() ?? "EVT0000";
-                var next = int.Parse(lastId.Substring(3)) + 1;
+                var next = ExtractTrailingNumber(lastId) + 1;
                 var eventId = "EVT" + next.ToString("D4");
 
                 // ===== upload photo =====
@@ -337,7 +350,7 @@ namespace Haniya.Controllers.PortalAdmin
                         conn
                     );
                     var lastTagId = lastTagCmd.ExecuteScalar()?.ToString() ?? "TGE0000";
-                    var currentTag = int.Parse(lastTagId.Substring(3));
+                    var currentTag = ExtractTrailingNumber(lastTagId);
 
                     foreach (var code in tagCodes)
                     {
@@ -389,7 +402,7 @@ namespace Haniya.Controllers.PortalAdmin
                 var eventName = f["event_name"].ToString();
                 var location = f["location"].ToString();
                 var description = f["description"].ToString();
-                var rawTags = f["tags"].ToString();
+                var rawTags = string.Join(",", f["tags"].ToArray());
 
                 if (string.IsNullOrWhiteSpace(eventName))
                     return Json(DTOResponse.fail("event name is required", 400));
@@ -467,7 +480,7 @@ namespace Haniya.Controllers.PortalAdmin
                         conn
                     );
                     var lastTagId = lastTagCmd.ExecuteScalar()?.ToString() ?? "TGE0000";
-                    var currentTag = int.Parse(lastTagId.Substring(3));
+                    var currentTag = ExtractTrailingNumber(lastTagId);
 
                     foreach (var code in tagCodes)
                     {

@@ -53,11 +53,10 @@
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 250px;">Student</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 120px;">Class</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Type</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right" style="width: 130px;">Total Price</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right" style="width: 130px;">Bill</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right" style="width: 130px;">Paid</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right" style="width: 130px;">Remaining</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 100px;">Status</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 100px;">Instalments</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 70px;">Action</th>
                 </tr>
             </thead>
@@ -191,7 +190,6 @@
                         return `<span class="inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${badge}">${data || 'UNKNOWN'}</span>`;
                     }
                 },
-                { data: 'instalment_count', className: 'py-3 text-center text-gray-700' },
                 {
                     data: null,
                     orderable: false,

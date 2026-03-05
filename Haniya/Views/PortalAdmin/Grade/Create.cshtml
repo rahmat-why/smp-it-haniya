@@ -55,15 +55,15 @@
         </div>
 
         <div class="space-y-4">
-            <h3 class="text-lg font-semibold text-gray-800">Grade Details</h3>
+            <h3 class="text-lg font-semibold text-gray-800">Grade Detail</h3>
             <div class="overflow-x-auto border border-gray-200 rounded-lg max-h-[500px] shadow-inner">
                 <table class="min-w-full divide-y divide-gray-200 table-fixed">
                     <thead class="bg-gray-100 sticky top-0 z-10">
                         <tr>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-5/12">Student</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-2/12">Min Passing</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-2/12">Grade Value</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-3/12">Notes</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-5/12 uppercase">Student</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-2/12 uppercase">Min Value</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-2/12 uppercase">Grade Value</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-3/12 uppercase">Notes</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-details"></tbody>
@@ -73,8 +73,18 @@
         </div>
 
         <div class="flex justify-end gap-4 pt-6 border-t border-gray-200">
-            <button type="button" onclick="goBackGrade()" class="px-6 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-lg font-medium transition">Back</button>
-            <button type="button" onclick="saveGrade()" class="px-6 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-medium transition">Save</button>
+            <button type="button" onclick="goBackGrade()" class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+                Back
+            </button>
+            <button type="button" onclick="saveGrade()" class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
+                Save
+                <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            </button>
         </div>
     </form>
 </div>
