@@ -62,21 +62,11 @@
     </div>
 
     <div id="content" class="space-y-10">
-        <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100" id="summaryContainer"></div>
-
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Articles (2/3) -->
-            <div class="lg:col-span-2 bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-                <h2 class="text-3xl font-bold text-indigo-900 mb-8">Latest Articles</h2>
-                <div id="articles-list" class="space-y-6"></div>
-                <div class="flex items-center justify-between mt-6">
-                    <span id="articles-info" class="text-sm text-gray-600"></span>
-                    <div id="articles-pagination" class="inline-flex items-center border border-gray-300 rounded-md overflow-hidden"></div>
-                </div>
-            </div>
-            <!-- Other card (1/3) -->
+            <div class="lg:col-span-2 bg-white rounded-2xl shadow-xl p-8 border border-gray-100" id="summaryContainer"></div>
+
             <div class="lg:col-span-1 bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-                <h2 class="text-3xl font-bold text-indigo-900 mb-8">Calendar Haniya</h2>
+                <h2 class="text-lg font-bold text-indigo-900 mb-8">Calendar Haniya</h2>
                 <div class="space-y-4">
                     <div class="flex items-center justify-between">
                         <button id="calendarPrevBtn" type="button"
@@ -108,6 +98,15 @@
                         <div id="academicCalendarGrid" class="grid grid-cols-7 gap-1"></div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+            <h2 class="text-lg font-bold text-indigo-900 mb-8">Latest Articles</h2>
+            <div id="articles-list" class="space-y-6"></div>
+            <div class="flex items-center justify-between mt-6">
+                <span id="articles-info" class="text-sm text-gray-600"></span>
+                <div id="articles-pagination" class="inline-flex items-center border border-gray-300 rounded-md overflow-hidden"></div>
             </div>
         </div>
     </div>
@@ -186,18 +185,18 @@
 
                 $('#summaryContainer').html(
                     `
-                        <h2 class="text-3xl font-bold text-indigo-900 mb-8">
+                        <h2 class="text-lg font-bold text-indigo-900 mb-8">
                             Summary
                         </h2>
                         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             <!-- LEFT SECTION -->
-                            <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div class="lg:col-span-2 grid grid-cols-1 gap-6">
                                 <!-- TOTAL BILL -->
-                                <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl p-5 sm:p-6 text-center sm:row-span-2 flex flex-col justify-center">
+                                <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl p-5 sm:p-6 text-center flex flex-col justify-center">
                                     <p class="text-sm sm:text-base font-medium text-indigo-700">
                                         Total Bill
                                     </p>
-                                    <p class="text-2xl sm:text-3xl lg:text-4xl font-bold text-indigo-900 mt-2">
+                                    <p class="text-xl sm:text-2xl lg:text-3xl font-bold text-indigo-900 mt-2 break-words">
                                         ${formatRupiah(d.payment.totalPembayaranMasuk ?? 0)}
                                     </p>
                                     <p class="text-xs sm:text-sm text-indigo-700 mt-2">
@@ -209,7 +208,7 @@
                                     <p class="text-sm sm:text-base font-medium text-cyan-700">
                                         Total Payment
                                     </p>
-                                    <p class="text-2xl sm:text-3xl lg:text-4xl font-bold text-cyan-900 mt-2">
+                                    <p class="text-xl sm:text-2xl lg:text-3xl font-bold text-cyan-900 mt-2 break-words">
                                         ${formatRupiah(d.payment.totalLunas ?? 0)}
                                     </p>
                                     <p class="text-xs sm:text-sm text-cyan-700 mt-2">
@@ -220,7 +219,7 @@
                                 <!-- BELUM LUNAS -->
                                 <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-5 sm:p-6 flex flex-col items-center justify-center text-center">
                                     <p class="text-sm sm:text-base font-medium text-red-700">Total Unpaid</p>
-                                    <p class="text-2xl sm:text-3xl lg:text-4xl font-bold text-red-900 mt-2">
+                                    <p class="text-xl sm:text-2xl lg:text-3xl font-bold text-red-900 mt-2 break-words">
                                         ${formatRupiah(d.payment.totalBelumLunas ?? 0)}
                                     </p>
                                     <p class="text-xs sm:text-sm text-red-700 mt-2">

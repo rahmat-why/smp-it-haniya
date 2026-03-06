@@ -50,6 +50,47 @@
                            class="mt-1 text-xs text-red-600 hidden validation-error-message"
                            data-testid="error-location"></p>
                     </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">
+                                Start Date <span class="text-red-500">*</span>
+                            </label>
+                            <input id="start_date"
+                                   type="date"
+                                   class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                            <p id="error-start_date"
+                               class="mt-1 text-xs text-red-600 hidden validation-error-message"></p>
+                        </div>
+                        <div>
+                            <label for="end_date" class="block text-sm font-medium text-gray-700 mb-1">
+                                End Date <span class="text-red-500">*</span>
+                            </label>
+                            <input id="end_date"
+                                   type="date"
+                                   class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                            <p id="error-end_date"
+                               class="mt-1 text-xs text-red-600 hidden validation-error-message"></p>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Class Holiday
+                        </label>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <label class="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-md">
+                                <input type="checkbox" id="holiday_7" value="7" class="rounded border-gray-300 text-blue-900 focus:ring-blue-500">
+                                <span class="text-sm text-gray-700">Class 7 Holiday</span>
+                            </label>
+                            <label class="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-md">
+                                <input type="checkbox" id="holiday_8" value="8" class="rounded border-gray-300 text-blue-900 focus:ring-blue-500">
+                                <span class="text-sm text-gray-700">Class 8 Holiday</span>
+                            </label>
+                            <label class="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-md">
+                                <input type="checkbox" id="holiday_9" value="9" class="rounded border-gray-300 text-blue-900 focus:ring-blue-500">
+                                <span class="text-sm text-gray-700">Class 9 Holiday</span>
+                            </label>
+                        </div>
+                    </div>
                     <!-- Photo -->
                     <div>
                         <label for="photo" class="block text-sm font-medium text-gray-700 mb-1">
@@ -225,6 +266,8 @@
         function clearAllValidation() {
             clearError($('#event_name'), $('#error-event_name'));
             clearError($('#location'), $('#error-location'));
+            clearError($('#start_date'), $('#error-start_date'));
+            clearError($('#end_date'), $('#error-end_date'));
             clearError($('#description'), $('#error-description'));
             clearError($('#photo'), $('#error-photo'));
             clearError($('#tags'), $('#error-tags'));
@@ -236,6 +279,8 @@
 
             const eventName = ($('#event_name').val() || '').trim();
             const location = ($('#location').val() || '').trim();
+            const startDate = ($('#start_date').val() || '').trim();
+            const endDate = ($('#end_date').val() || '').trim();
             const description = ($('#description').val() || '').trim();
             const tags = $('#tags').val() || [];
             const photoInput = document.getElementById('photo');
@@ -248,6 +293,30 @@
             if (!location) {
                 isValid = false;
                 showError($('#location'), $('#error-location'), 'Location is required.');
+            }
+            if (!startDate) {
+                isValid = false;
+                showError($('#start_date'), $('#error-start_date'), 'Start date is required.');
+            }
+            if (!endDate) {
+                isValid = false;
+                showError($('#end_date'), $('#error-end_date'), 'End date is required.');
+            }
+            if (startDate && endDate) {
+                const s = new Date(startDate);
+                const e = new Date(endDate);
+                if (isNaN(s.getTime())) {
+                    isValid = false;
+                    showError($('#start_date'), $('#error-start_date'), 'Start date is invalid.');
+                }
+                if (isNaN(e.getTime())) {
+                    isValid = false;
+                    showError($('#end_date'), $('#error-end_date'), 'End date is invalid.');
+                }
+                if (!isNaN(s.getTime()) && !isNaN(e.getTime()) && e < s) {
+                    isValid = false;
+                    showError($('#end_date'), $('#error-end_date'), 'End date cannot be before start date.');
+                }
             }
             if (!description) {
                 isValid = false;
@@ -283,7 +352,7 @@
 
             const fd = new FormData();
             $('#frm').find('input,textarea,select').each(function () {
-                if (this.type !== "file") {
+                if (this.type !== "file" && this.type !== "checkbox") {
                     if (this.id === 'tags') {
                         fd.append(this.id, ($(this).val() || []).join(','));
                     } else {
@@ -296,6 +365,8 @@
             if (photoInput && photoInput.files && photoInput.files[0]) {
                 fd.append("profile_photo", photoInput.files[0]);
             }
+            const holidayClasses = ['7', '8', '9'].filter(lvl => $('#holiday_' + lvl).is(':checked'));
+            fd.append("class_holidays", holidayClasses.join(','));
 
             $.ajax({
                 url: "/Event/Create",
@@ -344,6 +415,13 @@
                 minimumInputLength: 0
             }).on('change', function () {
                 clearError($('#tags'), $('#error-tags'));
+            });
+
+            $('#start_date').on('change', function () {
+                clearError($('#start_date'), $('#error-start_date'));
+            });
+            $('#end_date').on('change', function () {
+                clearError($('#end_date'), $('#error-end_date'));
             });
         });
     </script>

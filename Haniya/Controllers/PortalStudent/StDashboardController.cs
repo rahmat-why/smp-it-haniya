@@ -40,14 +40,27 @@ namespace Haniya.Controllers.PortalStudent
                 }
                 using var conn = GetConn();
                 conn.Open();
+                var academicYear = GetLatestActiveAcademicYear(conn);
+
+                if (string.IsNullOrEmpty(academicYear))
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        message = "Academic year tidak ditemukan"
+                    });
+                }
 
                 var data = new
                 {
+                    academicYearUsed = academicYear,
                     attendance = GetTotalAttendance(conn, studentId),
                     gradesChart = GetStudentGradesChart(conn, studentId),
                     attendanceChart = GetStudentAttendanceChart(conn, studentId),
                     weeklySchedule = GetStudentWeeklySchedule(conn, studentId),
                     unpaidPayments = GetStudentUnpaidPayments(conn, studentId),
+                    calendarDays = GetAcademicCalendar(conn, academicYear),
+                    calendarEvents = GetEventPinPoints(conn, academicYear, studentId),
                     events = GetEvents(conn),
                     articles = GetArticles(conn)
                 };
@@ -62,6 +75,26 @@ namespace Haniya.Controllers.PortalStudent
                     message = ex.Message
                 });
             }
+        }
+
+        private string? GetLatestActiveAcademicYear(SqlConnection conn)
+        {
+            string? result = null;
+
+            using var cmd = new SqlCommand(@"
+                SELECT TOP 1 academic_year_id
+                FROM mst_academic_years
+                WHERE status = 'ACTIVE'
+                ORDER BY academic_year_id DESC;
+            ", conn);
+
+            using var rd = cmd.ExecuteReader();
+            if (rd.Read())
+            {
+                result = rd["academic_year_id"]?.ToString();
+            }
+
+            return result;
         }
 
         private dynamic GetTotalAttendance(SqlConnection conn, string studentId)
@@ -239,6 +272,84 @@ namespace Haniya.Controllers.PortalStudent
                     tanggalPembayaran = rd["TanggalPembayaran"] != DBNull.Value
                         ? Convert.ToDateTime(rd["TanggalPembayaran"]).ToString("yyyy-MM-dd")
                         : string.Empty
+                });
+            }
+
+            return list;
+        }
+
+        private List<dynamic> GetAcademicCalendar(SqlConnection conn, string academicYear)
+        {
+            var list = new List<dynamic>();
+            var sql = @"
+                SELECT
+                    REPLACE(academic_year_id, 'ACY/', '') AS academic_year,
+                    [date] AS calendar_date,
+                    [day] AS calendar_day,
+                    is_weekend
+                FROM mst_calendars
+                WHERE academic_year_id = @academicYear
+                ORDER BY [date]";
+
+            using var cmd = new SqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@academicYear", academicYear);
+
+            using var rd = cmd.ExecuteReader();
+            while (rd.Read())
+            {
+                list.Add(new
+                {
+                    academic_year = rd["academic_year"]?.ToString(),
+                    calendar_date = rd["calendar_date"] != DBNull.Value ? Convert.ToDateTime(rd["calendar_date"]) : (DateTime?)null,
+                    calendar_day = rd["calendar_day"]?.ToString(),
+                    is_weekend = rd["is_weekend"] != DBNull.Value && Convert.ToInt32(rd["is_weekend"]) == 1
+                });
+            }
+
+            return list;
+        }
+
+        private List<dynamic> GetEventPinPoints(SqlConnection conn, string academicYear, string studentId)
+        {
+            var list = new List<dynamic>();
+            var sql = @"
+                SELECT
+                    me.event_name AS event_name,
+                    mec.class_level AS class_level,
+                    me.start_date AS start_date,
+                    me.end_date AS end_date,
+                    mec.is_holiday AS is_holiday
+                FROM mst_event_classes mec
+                JOIN mst_events me ON mec.event_id = me.event_id
+                WHERE mec.class_level = (
+                    SELECT TOP 1 SUBSTRING(mac.academic_class_id, 4, 1)
+                    FROM mst_student_classes msc
+                    JOIN mst_academic_classes mac ON msc.academic_class_id = mac.academic_class_id
+                    WHERE msc.student_id = @studentId
+                    ORDER BY mac.academic_class_id DESC
+                )
+                AND EXISTS (
+                    SELECT 1
+                    FROM mst_calendars c
+                    WHERE c.academic_year_id = @academicYear
+                    AND c.[date] BETWEEN me.start_date AND me.end_date
+                )
+                ORDER BY me.start_date, me.event_name";
+
+            using var cmd = new SqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@academicYear", academicYear);
+            cmd.Parameters.AddWithValue("@studentId", studentId);
+
+            using var rd = cmd.ExecuteReader();
+            while (rd.Read())
+            {
+                list.Add(new
+                {
+                    event_name = rd["event_name"]?.ToString(),
+                    class_level = rd["class_level"]?.ToString(),
+                    start_date = rd["start_date"] != DBNull.Value ? Convert.ToDateTime(rd["start_date"]) : (DateTime?)null,
+                    end_date = rd["end_date"] != DBNull.Value ? Convert.ToDateTime(rd["end_date"]) : (DateTime?)null,
+                    is_holiday = rd["is_holiday"] != DBNull.Value && Convert.ToInt32(rd["is_holiday"]) == 1
                 });
             }
 

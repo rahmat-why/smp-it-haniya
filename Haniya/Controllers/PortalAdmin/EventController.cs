@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -33,6 +34,33 @@ namespace Haniya.Controllers.PortalAdmin
                 return 0;
 
             return int.TryParse(match.Groups[1].Value, out var n) ? n : 0;
+        }
+
+        private bool TryParseIsoDate(string value, out DateTime date)
+        {
+            return DateTime.TryParseExact(
+                value,
+                "yyyy-MM-dd",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out date
+            );
+        }
+
+        private HashSet<int> ParseHolidayClasses(string raw)
+        {
+            var result = new HashSet<int>();
+            if (string.IsNullOrWhiteSpace(raw)) return result;
+
+            foreach (var part in raw.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (int.TryParse(part.Trim(), out var level) && (level == 7 || level == 8 || level == 9))
+                {
+                    result.Add(level);
+                }
+            }
+
+            return result;
         }
 
         /* ===================== PAGE ===================== */
@@ -212,7 +240,9 @@ namespace Haniya.Controllers.PortalAdmin
                     description = rd["description"]?.ToString(),
                     location = rd["location"]?.ToString(),
                     profile_photo = rd["profile_photo"]?.ToString(),
-                    status = rd["status"]?.ToString()
+                    status = rd["status"]?.ToString(),
+                    start_date = rd["start_date"] == DBNull.Value ? null : Convert.ToDateTime(rd["start_date"]).ToString("yyyy-MM-dd"),
+                    end_date = rd["end_date"] == DBNull.Value ? null : Convert.ToDateTime(rd["end_date"]).ToString("yyyy-MM-dd")
                 };
 
                 rd.Close();
@@ -230,15 +260,33 @@ namespace Haniya.Controllers.PortalAdmin
                         tags.Add(code);
                 }
 
+                var holidayClasses = new List<string>();
+                var classSql = "SELECT class_level, is_holiday FROM mst_event_classes WHERE event_id = @id";
+                using var classCmd = new SqlCommand(classSql, conn);
+                classCmd.Parameters.AddWithValue("@id", id);
+                using var classRd = classCmd.ExecuteReader();
+                while (classRd.Read())
+                {
+                    var classLevel = classRd["class_level"] != DBNull.Value ? Convert.ToInt32(classRd["class_level"]) : 0;
+                    var isHoliday = classRd["is_holiday"] != DBNull.Value && Convert.ToInt32(classRd["is_holiday"]) == 1;
+                    if (isHoliday && (classLevel == 7 || classLevel == 8 || classLevel == 9))
+                    {
+                        holidayClasses.Add(classLevel.ToString());
+                    }
+                }
+
                 return Json(DTOResponse.ok(new
                 {
                     evt.event_id,
                     evt.event_name,
                     evt.description,
                     evt.location,
+                    evt.start_date,
+                    evt.end_date,
                     evt.profile_photo,
                     evt.status,
-                    tags = tags
+                    tags = tags,
+                    holiday_classes = holidayClasses
                 }));
             }
             catch (Exception ex)
@@ -259,11 +307,26 @@ namespace Haniya.Controllers.PortalAdmin
 
                 var eventName = f["event_name"].ToString();
                 var location = f["location"].ToString();
+                var startDateRaw = f["start_date"].ToString();
+                var endDateRaw = f["end_date"].ToString();
+                var holidayRaw = f["class_holidays"].ToString();
                 var description = f["description"].ToString();
                 var rawTags = string.Join(",", f["tags"].ToArray());
 
                 if (string.IsNullOrWhiteSpace(eventName))
                     return Json(DTOResponse.fail("event name is required", 400));
+                if (string.IsNullOrWhiteSpace(startDateRaw))
+                    return Json(DTOResponse.fail("start date is required", 400));
+                if (string.IsNullOrWhiteSpace(endDateRaw))
+                    return Json(DTOResponse.fail("end date is required", 400));
+                if (!TryParseIsoDate(startDateRaw, out var startDate))
+                    return Json(DTOResponse.fail("invalid start date format", 400));
+                if (!TryParseIsoDate(endDateRaw, out var endDate))
+                    return Json(DTOResponse.fail("invalid end date format", 400));
+                if (endDate.Date < startDate.Date)
+                    return Json(DTOResponse.fail("end date cannot be before start date", 400));
+
+                var holidayClasses = ParseHolidayClasses(holidayRaw);
 
                 // Parse tags
                 var tagCodes = rawTags
@@ -281,11 +344,13 @@ namespace Haniya.Controllers.PortalAdmin
 
                 using var conn = GetConn();
                 conn.Open();
+                using var tx = conn.BeginTransaction();
 
                 // ===== generate event_id =====
                 var lastCmd = new SqlCommand(
                     "SELECT ISNULL(MAX(event_id),'EVT0000') FROM mst_events",
-                    conn
+                    conn,
+                    tx
                 );
                 var lastId = lastCmd.ExecuteScalar()?.ToString() ?? "EVT0000";
                 var next = ExtractTrailingNumber(lastId) + 1;
@@ -319,6 +384,8 @@ namespace Haniya.Controllers.PortalAdmin
                         event_name,
                         description,
                         location,
+                        start_date,
+                        end_date,
                         status,
                         profile_photo,
                         created_at
@@ -327,27 +394,53 @@ namespace Haniya.Controllers.PortalAdmin
                         @name,
                         @desc,
                         @loc,
+                        @startDate,
+                        @endDate,
                         @status,
                         @photo,
                         GETDATE()
                     )";
 
                 using var cmd = new SqlCommand(sql, conn);
+                cmd.Transaction = tx;
                 cmd.Parameters.AddWithValue("@id", eventId);
                 cmd.Parameters.AddWithValue("@name", eventName);
                 cmd.Parameters.AddWithValue("@desc", (object?)description ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@loc", (object?)location ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@status", status);
                 cmd.Parameters.AddWithValue("@photo", (object?)photoPath ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@startDate", startDate.Date);
+                cmd.Parameters.AddWithValue("@endDate", endDate.Date);
 
                 cmd.ExecuteNonQuery();
+
+                for (var level = 7; level <= 9; level++)
+                {
+                    var classSql = @"
+                        INSERT INTO mst_event_classes (
+                            event_id,
+                            class_level,
+                            is_holiday
+                        ) VALUES (
+                            @eid,
+                            @level,
+                            @holiday
+                        )";
+
+                    using var classCmd = new SqlCommand(classSql, conn, tx);
+                    classCmd.Parameters.AddWithValue("@eid", eventId);
+                    classCmd.Parameters.AddWithValue("@level", level);
+                    classCmd.Parameters.AddWithValue("@holiday", holidayClasses.Contains(level) ? 1 : 0);
+                    classCmd.ExecuteNonQuery();
+                }
 
                 // ===== insert tags =====
                 if (tagCodes.Count > 0)
                 {
                     var lastTagCmd = new SqlCommand(
                         "SELECT ISNULL(MAX(tag_id),'TGE0000') FROM mst_tag_events",
-                        conn
+                        conn,
+                        tx
                     );
                     var lastTagId = lastTagCmd.ExecuteScalar()?.ToString() ?? "TGE0000";
                     var currentTag = ExtractTrailingNumber(lastTagId);
@@ -370,7 +463,7 @@ namespace Haniya.Controllers.PortalAdmin
                                 GETDATE()
                             )";
 
-                        using var tagCmd = new SqlCommand(tagSql, conn);
+                        using var tagCmd = new SqlCommand(tagSql, conn, tx);
                         tagCmd.Parameters.AddWithValue("@tid", tagId);
                         tagCmd.Parameters.AddWithValue("@eid", eventId);
                         tagCmd.Parameters.AddWithValue("@code", code);
@@ -378,6 +471,8 @@ namespace Haniya.Controllers.PortalAdmin
                         tagCmd.ExecuteNonQuery();
                     }
                 }
+
+                tx.Commit();
 
                 return Json(DTOResponse.ok(null, "event created"));
             }
@@ -401,11 +496,26 @@ namespace Haniya.Controllers.PortalAdmin
 
                 var eventName = f["event_name"].ToString();
                 var location = f["location"].ToString();
+                var startDateRaw = f["start_date"].ToString();
+                var endDateRaw = f["end_date"].ToString();
+                var holidayRaw = f["class_holidays"].ToString();
                 var description = f["description"].ToString();
                 var rawTags = string.Join(",", f["tags"].ToArray());
 
                 if (string.IsNullOrWhiteSpace(eventName))
                     return Json(DTOResponse.fail("event name is required", 400));
+                if (string.IsNullOrWhiteSpace(startDateRaw))
+                    return Json(DTOResponse.fail("start date is required", 400));
+                if (string.IsNullOrWhiteSpace(endDateRaw))
+                    return Json(DTOResponse.fail("end date is required", 400));
+                if (!TryParseIsoDate(startDateRaw, out var startDate))
+                    return Json(DTOResponse.fail("invalid start date format", 400));
+                if (!TryParseIsoDate(endDateRaw, out var endDate))
+                    return Json(DTOResponse.fail("invalid end date format", 400));
+                if (endDate.Date < startDate.Date)
+                    return Json(DTOResponse.fail("end date cannot be before start date", 400));
+
+                var holidayClasses = ParseHolidayClasses(holidayRaw);
 
                 // Parse tags
                 var tagCodes = rawTags
@@ -420,6 +530,7 @@ namespace Haniya.Controllers.PortalAdmin
 
                 using var conn = GetConn();
                 conn.Open();
+                using var tx = conn.BeginTransaction();
 
                 // ===== upload photo (optional) =====
                 string photoSql = "";
@@ -450,25 +561,59 @@ namespace Haniya.Controllers.PortalAdmin
                         event_name = @name,
                         description = @desc,
                         location = @loc,
+                        start_date = @startDate,
+                        end_date = @endDate,
                         updated_at = GETDATE()
                         {photoSql}
                     WHERE event_id = @id";
 
                 using var cmd = new SqlCommand(sql, conn);
+                cmd.Transaction = tx;
                 cmd.Parameters.AddWithValue("@id", eventId);
                 cmd.Parameters.AddWithValue("@name", eventName);
                 cmd.Parameters.AddWithValue("@desc", (object?)description ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@loc", (object?)location ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@startDate", startDate.Date);
+                cmd.Parameters.AddWithValue("@endDate", endDate.Date);
 
                 if (photoPath != null)
                     cmd.Parameters.AddWithValue("@photo", photoPath);
 
                 cmd.ExecuteNonQuery();
 
+                var delClassCmd = new SqlCommand(
+                    "DELETE FROM mst_event_classes WHERE event_id=@id",
+                    conn,
+                    tx
+                );
+                delClassCmd.Parameters.AddWithValue("@id", eventId);
+                delClassCmd.ExecuteNonQuery();
+
+                for (var level = 7; level <= 9; level++)
+                {
+                    var classSql = @"
+                        INSERT INTO mst_event_classes (
+                            event_id,
+                            class_level,
+                            is_holiday
+                        ) VALUES (
+                            @eid,
+                            @level,
+                            @holiday
+                        )";
+
+                    using var classCmd = new SqlCommand(classSql, conn, tx);
+                    classCmd.Parameters.AddWithValue("@eid", eventId);
+                    classCmd.Parameters.AddWithValue("@level", level);
+                    classCmd.Parameters.AddWithValue("@holiday", holidayClasses.Contains(level) ? 1 : 0);
+                    classCmd.ExecuteNonQuery();
+                }
+
                 // ===== update tags: delete then re-insert =====
                 var delTagCmd = new SqlCommand(
                     "DELETE FROM mst_tag_events WHERE event_id=@id",
-                    conn
+                    conn,
+                    tx
                 );
                 delTagCmd.Parameters.AddWithValue("@id", eventId);
                 delTagCmd.ExecuteNonQuery();
@@ -477,7 +622,8 @@ namespace Haniya.Controllers.PortalAdmin
                 {
                     var lastTagCmd = new SqlCommand(
                         "SELECT ISNULL(MAX(tag_id),'TGE0000') FROM mst_tag_events",
-                        conn
+                        conn,
+                        tx
                     );
                     var lastTagId = lastTagCmd.ExecuteScalar()?.ToString() ?? "TGE0000";
                     var currentTag = ExtractTrailingNumber(lastTagId);
@@ -500,7 +646,7 @@ namespace Haniya.Controllers.PortalAdmin
                                 GETDATE()
                             )";
 
-                        using var tagCmd = new SqlCommand(tagSql, conn);
+                        using var tagCmd = new SqlCommand(tagSql, conn, tx);
                         tagCmd.Parameters.AddWithValue("@tid", tagId);
                         tagCmd.Parameters.AddWithValue("@eid", eventId);
                         tagCmd.Parameters.AddWithValue("@code", code);
@@ -508,6 +654,8 @@ namespace Haniya.Controllers.PortalAdmin
                         tagCmd.ExecuteNonQuery();
                     }
                 }
+
+                tx.Commit();
 
                 return Json(DTOResponse.ok(null, "event updated"));
             }
@@ -527,14 +675,33 @@ namespace Haniya.Controllers.PortalAdmin
 
                 using var conn = GetConn();
                 conn.Open();
+                using var tx = conn.BeginTransaction();
+
+                var delClass = new SqlCommand(
+                    "DELETE FROM mst_event_classes WHERE event_id=@id",
+                    conn,
+                    tx
+                );
+                delClass.Parameters.AddWithValue("@id", req.id);
+                delClass.ExecuteNonQuery();
+
+                var delTag = new SqlCommand(
+                    "DELETE FROM mst_tag_events WHERE event_id=@id",
+                    conn,
+                    tx
+                );
+                delTag.Parameters.AddWithValue("@id", req.id);
+                delTag.ExecuteNonQuery();
 
                 var cmd = new SqlCommand(
                     "DELETE FROM mst_events WHERE event_id=@id",
-                    conn
+                    conn,
+                    tx
                 );
                 cmd.Parameters.AddWithValue("@id", req.id);
 
                 cmd.ExecuteNonQuery();
+                tx.Commit();
 
                 return Json(DTOResponse.ok(null, "event deleted"));
             }
