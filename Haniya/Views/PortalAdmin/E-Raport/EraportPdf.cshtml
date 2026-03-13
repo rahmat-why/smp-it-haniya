@@ -1,0 +1,490 @@
+﻿@using System.Globalization
+@using System.Data
+
+@{
+    int no = 1;
+
+    var data = (Dictionary<string, object>)Model;
+    var report = (System.Data.DataTable)data["report"];
+
+    var startYear = "";
+    var endYear = "";
+
+    if (data["start_date"] != null && data["end_date"] != null)
+    {
+        startYear = Convert.ToDateTime(data["start_date"]).Year.ToString();
+        endYear = Convert.ToDateTime(data["end_date"]).Year.ToString();
+    }
+}
+
+@functions {
+    public string TerbilangSemester(string semester)
+    {
+        switch (semester)
+        {
+            case "1": return "satu";
+            case "2": return "dua";
+            default: return "";
+        }
+    }
+}
+
+<style>
+
+    body {
+        font-family: "Times New Roman";
+        font-size: 14px;
+        background: #e5e7eb;
+    }
+
+    table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    td, th {
+        border: 1px solid black;
+        padding: 6px;
+    }
+
+    .no-border td {
+        border: none;
+    }
+
+    .center {
+        text-align: center;
+    }
+
+    .bold {
+        font-weight: bold;
+    }
+
+    .page-break {
+        page-break-after: always;
+    }
+
+    .signature td {
+        border: none;
+        height: 80px;
+    }
+
+    /* KERTAS A4 */
+    .paper {
+        width: 210mm;
+        min-height: 297mm;
+        background: white;
+        margin: 20px auto;
+        padding: 20mm;
+        box-shadow: 0 0 10px rgba(0,0,0,0.15);
+    }
+
+    /* PRINT MODE */
+    @@media print {
+
+        body {
+            background: white;
+        }
+
+        .paper {
+            box-shadow: none;
+            margin: 0;
+            width: 210mm;
+            min-height: 297mm;
+        }
+
+        button {
+            display:none;
+        }
+    }
+
+    [contenteditable="true"] {
+        background: #fffbe6;
+        cursor: text;
+    }
+
+    [contenteditable="true"]:focus {
+        outline: 2px solid #3b82f6;
+    }
+
+    @@page {
+        size: A4;
+        margin: 0;
+    }
+
+</style>
+
+<!-- ========================= -->
+<!-- HALAMAN 1 -->
+<!-- ========================= -->
+<button onclick="downloadPdf()">Download PDF</button>
+
+<div class="paper">
+    <table class="no-border">
+    <tr>
+        <td width="15%">Nama</td>
+        <td width="35%">: @data["full_name"]</td>
+
+        <td width="15%">Kelas</td>
+        <td width="35%">: @data["class_name"]</td>
+    </tr>
+
+    <tr>
+        <td>NISN / NIS</td>
+        <td>: @data["nis"]</td>
+
+        <td>Fase</td>
+        <td>: D</td>
+    </tr>
+
+    <tr>
+        <td>Nama Sekolah</td>
+        <td>: SMP IT HANIYA</td>
+
+        <td>Semester</td>
+        <td>: @data["semester"] ( @TerbilangSemester(data["semester"].ToString()) )</td>
+    </tr>
+
+    <tr>
+        <td>Alamat</td>
+        <td>: @data["address"]</td>
+
+        <td>Tahun Pelajaran</td>
+        <td>: @startYear/@endYear</td>
+    </tr>
+</table>
+
+<br>
+
+<h3 class="center">LAPORAN HASIL BELAJAR</h3>
+
+<table>
+
+    <tr class="bold center">
+        <th width="5%">NO</th>
+        <th width="30%">MATA PELAJARAN</th>
+        <th width="15%">NILAI AKHIR</th>
+        <th>CAPAIAN KOMPETENSI</th>
+    </tr>
+
+    @foreach (DataRow row in report.Rows)
+    {
+        <tr>
+            <td class="center">@no</td>
+            <td>@row["subject_name"]</td>
+            <td class="center">@Math.Round(Convert.ToDecimal(row["final_score"]), 0)</td>
+            <td>
+                @data["full_name"] membutuhkan bimbingan dalam pembelajaran @row["subject_name"].
+            </td>
+        </tr>
+
+        no++;
+    }
+
+</table>
+
+<br>
+
+<table>
+    <tr class="bold center">
+        <th width="100%">KOKURIKULER</th>
+    </tr>
+    <tr>
+        <td contenteditable="true">
+            Ananda @data["full_name"] sudah sangat menghargai sesama teman berdasarkan yang terlihat dari beberapa proyek pembelajaran interdisipliner. Ananda mulai terlihat memelihara kesadaran akan kesehatan.
+        </td>
+    </tr>
+</table>
+
+<br>
+
+<h4>EKSTRAKURIKULER</h4>
+
+<table>
+
+    <tr class="bold center">
+        <th width="5%">NO</th>
+        <th>KEGIATAN</th>
+        <th width="15%">PREDIKAT</th>
+        <th>KETERANGAN</th>
+    </tr>
+
+    <tr>
+        <td class="center">1</td>
+        <td>Pramuka</td>
+        <td class="center">0</td>
+        <td></td>
+    </tr>
+
+    <tr>
+        <td class="center">2</td>
+        <td>-</td>
+        <td class="center">-</td>
+        <td></td>
+    </tr>
+
+    <tr>
+        <td class="center">3</td>
+        <td>-</td>
+        <td class="center">-</td>
+        <td></td>
+    </tr>
+
+</table>
+
+</div>
+
+<div class="page-break"></div>
+
+<!-- ========================= -->
+<!-- HALAMAN 2 -->
+<!-- ========================= -->
+
+<div class="paper">
+    <table width="100%" style="border:none;border-collapse:collapse;">
+
+    <tr>
+
+        <!-- KETIDAKHADIRAN -->
+        <td width="50%" valign="top" style="border:none;">
+            <table width="100%">
+                <tr class="bold center">
+                    <th width="10%">NO</th>
+                    <th>KETIDAKHADIRAN</th>
+                    <th width="20%">JUMLAH</th>
+                </tr>
+
+                <tr>
+                    <td class="center">1</td>
+                    <td>Sakit</td>
+                    <td class="center">@data["sick"] hari</td>
+                </tr>
+
+                <tr>
+                    <td class="center">2</td>
+                    <td>Izin</td>
+                    <td class="center">@data["permit"] hari</td>
+                </tr>
+
+                <tr>
+                    <td class="center">3</td>
+                    <td>Tanpa Keterangan</td>
+                    <td class="center">@data["alpha"] hari</td>
+                </tr>
+            </table>
+        </td>
+
+        <!-- CATATAN WALI -->
+        <td width="50%" valign="top" style="border:none;">
+            <table width="100%">
+                <tr>
+                    <td class="bold center">CATATAN WALI KELAS</td>
+                </tr>
+
+                <tr>
+                    <td style="height:120px;text-align:center;">
+                        Prestasinya sangat baik, perlu dipertahankan.
+                    </td>
+                </tr>
+            </table>
+        </td>
+
+    </tr>
+
+</table>
+
+
+<br>
+
+<table>
+    <tr>
+        <td class="bold center">TANGGAPAN ORANG TUA / WALI MURID</td>
+    </tr>
+
+    <tr>
+        <td style="height:120px"></td>
+    </tr>
+</table>
+
+<br>
+<br>
+
+<table class="signature">
+
+    <tr>
+        <td class="center">
+            Mengetahui,<br>
+            Orang Tua/Wali
+        </td>
+
+        <td></td>
+
+        <td class="center">
+            Bekasi, @DateTime.Now.ToString("dd MMMM yyyy", new CultureInfo("id-ID"))<br>
+            Wali Kelas
+        </td>
+    </tr>
+
+    <tr>
+        <td class="center"><br><br>(.......................)</td>
+        <td></td>
+        <td class="center"><br><br><b>@data["teacher_name"]</b></td>
+    </tr>
+
+</table>
+
+<br>
+<br>
+
+<table class="signature">
+    <tr>
+        <td class="center">
+            Mengetahui,<br>
+            Kepala SMP IT Haniya
+            <br><br><br><br><br>
+            <b>Cholil Saputra, S.Pd.I</b>
+        </td>
+    </tr>
+</table>
+
+</div>
+
+<div class="page-break"></div>
+
+<!-- ========================= -->
+<!-- HALAMAN 3 -->
+<!-- ========================= -->
+
+<div class="paper">
+    <table class="no-border">
+    <tr>
+        <td width="15%">Nama</td>
+        <td width="35%">: @data["full_name"]</td>
+
+        <td width="15%">Kelas</td>
+        <td width="35%">: @data["class_name"]</td>
+    </tr>
+
+    <tr>
+        <td>NISN / NIS</td>
+        <td>: @data["nis"]</td>
+
+        <td>Fase</td>
+        <td>: D</td>
+    </tr>
+
+    <tr>
+        <td>Nama Sekolah</td>
+        <td>: SMP IT HANIYA</td>
+
+        <td>Semester</td>
+        <td>: @data["semester"] ( @TerbilangSemester(data["semester"].ToString()) )</td>
+    </tr>
+
+    <tr>
+        <td>Alamat</td>
+        <td>: @data["address"]</td>
+
+        <td>Tahun Pelajaran</td>
+        <td>: @startYear/@endYear</td>
+    </tr>
+</table>
+
+<br>
+
+<h3 class="center">LAPORAN HASIL BELAJAR</h3>
+
+<table>
+
+    <tr class="bold center">
+        <th width="5%">NO</th>
+        <th>MATA PELAJARAN</th>
+        <th width="15%">NILAI AKHIR</th>
+        <th>CAPAIAN KOMPETENSI</th>
+    </tr>
+
+    <tr>
+        <td class="center">1</td>
+        <td>Bahasa Arab</td>
+        <td class="center">0</td>
+        <td>@data["full_name"] membutuhkan bimbingan dalam pembelajaran Bahasa Arab</td>
+    </tr>
+
+    <tr>
+        <td class="center">2</td>
+        <td>Tahsin</td>
+        <td class="center">0</td>
+        <td>@data["full_name"] membutuhkan bimbingan dalam pembelajaran Tahsin</td>
+    </tr>
+
+    <tr>
+        <td class="center">3</td>
+        <td>Tahfidz</td>
+        <td class="center">0</td>
+        <td>@data["full_name"] membutuhkan bimbingan dalam pembelajaran Tahfidz</td>
+    </tr>
+
+</table>
+
+<br>
+
+<table>
+
+    <tr>
+        <td class="bold">CATATAN WALI KELAS</td>
+    </tr>
+
+    <tr>
+        <td style="height:100px;text-align:center;">
+            Catatan Walas manual LOKAL
+        </td>
+    </tr>
+
+</table>
+
+<br>
+<br>
+
+<table class="signature">
+
+    <tr>
+        <td class="center">
+            Mengetahui,<br>
+            Orang Tua/Wali
+        </td>
+
+        <td></td>
+
+        <td class="center">
+            Bekasi, @DateTime.Now.ToString("dd MMMM yyyy", new CultureInfo("id-ID"))<br>
+            Wali Kelas
+        </td>
+    </tr>
+
+    <tr>
+        <td class="center"><br><br>(.......................)</td>
+        <td></td>
+        <td class="center"><br><br><b>@data["teacher_name"]</b></td>
+    </tr>
+
+</table>
+
+<br>
+<br>
+
+<table class="signature">
+    <tr>
+        <td class="center">
+            Mengetahui,<br>
+            Kepala SMP IT Haniya
+            <br><br><br><br><br>
+            <b>Cholil Saputra, S.Pd.I</b>
+        </td>
+    </tr>
+</table>
+
+</div>
+<script>
+    function downloadPdf(){
+        window.print();
+    }
+</script>

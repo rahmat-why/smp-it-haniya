@@ -4,6 +4,57 @@
 }
 <div class="flex justify-between items-center mb-4">
     <h2 class="text-xl font-semibold">E - Raport</h2>
+
+    <!-- FILTER BUTTON -->
+    <div class="relative">
+        <button id="filterToggleBtn"
+                onclick="toggleFilter()"
+                class="flex items-center gap-2 bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+            </svg>
+            Filter
+        </button>
+        <!-- FILTER DROPDOWN -->
+        <div id="filterDropdown"
+             class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl border border-gray-200 shadow-xl z-50 overflow-visible">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <h3 class="text-lg font-bold text-gray-800">Filter</h3>
+                <button onclick="toggleFilter()"
+                        class="text-gray-400 hover:text-gray-600 transition p-1 rounded-lg hover:bg-gray-100">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <!-- Fields -->
+            <div class="px-5 py-4 space-y-4">
+                <div class="w-full">
+                    <label class="text-xs font-medium" for="academic_year_filter">Academic Year</label>
+                    <select id="academic_year_filter" class="w-full"></select>
+                </div>
+                <div class="w-full">
+                    <label class="text-xs font-medium" for="class_level_filter">Class</label>
+                    <select id="class_level_filter" class="w-full"></select>
+                </div>
+            </div>
+            <!-- Footer Buttons -->
+            <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
+                <button onclick="resetFilter()"
+                        class="px-5 py-2 rounded-full text-sm font-medium text-indigo-400 bg-indigo-50 hover:bg-indigo-100 transition">
+                    Reset
+                </button>
+                <button onclick="applyFilter()"
+                        class="px-5 py-2 rounded-full text-sm font-medium text-white bg-indigo-500 hover:bg-indigo-600 transition">
+                    Filter
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 <div class="bg-white rounded-lg shadow">
     <!-- Toolbar -->
@@ -20,9 +71,11 @@
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 250px;">Student</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 130px;">Academic Years</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 130px;">Semester</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 130px;">Class</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 130px;">Summary Attendance</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Grade Attendance</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Summary Grade</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase !text-right" style="width: 70px;">Action</th>
                 </tr>
             </thead>
@@ -40,19 +93,85 @@
     </div>
 </div>
 
+
 @section Scripts {
 <script>
+    let currentAcademicYearId = '';
+    let currentClassLevel = '';
+    let eraportTable;
+
     $(document).ready(function () {
+
         initEraportTable();
         $(document).on('click', function (e) {
             if (!$(e.target).closest('.eraport-actions-wrapper').length) {
                 $('.eraport-actions-menu').addClass('hidden');
             }
         });
+
+            $.ajax({
+                url: '/Select2/AcademicClasses',
+                type: 'GET',
+                dataType: 'json',
+                data: {
+                    q: '',
+                    page: 1
+                },
+                success: function (data) {
+                    renderClassButtons(data.results);
+                },
+                error: function (err) {
+                    console.error('Error fetch AcademicClasses:', err);
+                }
+            });
+
+            $('#academic_year_filter').select2({
+                placeholder: 'Academic Year',
+                allowClear: true,
+                width: '100%',
+                ajax: {
+                    url: '/Select2/AcademicYears',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) {
+                        return { q: params.term || '', page: params.page || 1 };
+                    },
+                    processResults: function (data) {
+                        return {
+                            results: data.results,
+                            pagination: data.pagination
+                        };
+                    },
+                    cache: true
+                },
+                minimumInputLength: 0
+            }).on('change', function () {
+                currentAcademicYearId = $(this).val() || '';
+                //eraportTable.ajax.reload();
+
+            });
+
+            $('#class_level_filter').select2({
+                placeholder: 'Select Class Level',
+                allowClear: true,
+                width: '100%',
+                dropdownParent: $('#filterDropdown'),
+                data: [
+                    { id: '', text: 'All Levels' },
+                    { id: '7', text: 'Class 7' },
+                    { id: '8', text: 'Class 8' },
+                    { id: '9', text: 'Class 9' }
+                ]
+            }).on('change', function () {
+                currentClassLevel = $(this).val() || '';
+                //eraportTable.ajax.reload();
+
+            });
     });
 
     function initEraportTable() {
-        $('#eraport-table').DataTable({
+
+        eraportTable = $('#eraport-table').DataTable({
             processing: true,
             serverSide: true,
             searching: true,
@@ -63,7 +182,11 @@
 
             ajax: {
                 url: '/Eraport/GetAll',
-                type: 'GET'
+                type: 'GET',
+                data: function (d) {
+                    d.academicYearId = currentAcademicYearId;
+                    d.classLevel = currentClassLevel;
+                }
             },
 
             dom: 'lftip',
@@ -92,7 +215,7 @@
                     orderable: true,
                     name: 'full_name',
                     className: 'py-3',
-                    render: function (data, type, row) {
+                    render: function (row) {
 
                         var src = row.profile_photo || '/image/no-image.png';
                         var name = row.full_name || '-';
@@ -112,6 +235,34 @@
                     }
                 },
 
+                // Academic Years
+                {
+                    data: null,
+                    orderable: true,
+                    name: 'academic_year',
+                    className: 'px-4 py-3',
+                    render: function (row) {
+
+                        if (!row.start_date || !row.end_date)
+                            return '-';
+
+                        var start = new Date(row.start_date).getFullYear();
+                        var end = new Date(row.end_date).getFullYear();
+
+                        return `${start} / ${end}`;
+                    }
+                },
+                // Semester
+                {
+                    data: 'semester',
+                    orderable: true,
+                    name: 'semester',
+                    className: 'px-4 py-3 text-center',
+                    render: function (data) {
+                        return data ? `Semester ${data}` : '-';
+                    }
+                },
+
                 // Class
                 {
                     data: 'class_name',
@@ -126,31 +277,83 @@
                 // Summary Attendance
                 {
                     data: null,
-                    orderable: false,
-                    defaultContent: '-'
+                    className: 'py-3',
+                    render: function (row) {
+                    return `Hadir: ${row.present || 0} | Sakit: ${row.sick || 0} | Izin: ${row.permit || 0} | Alpa: ${row.alpha || 0}`;
+                    }
                 },
+
 
                 // Grade Attendance
                 {
                     data: null,
-                    orderable: false,
-                    defaultContent: '-'
+                    className: 'py-3 text-center',
+                    render: row => `Pass: ${row.passed || 0} | Remedial: ${row.remedial || 0}`
                 },
 
                 // Action
                 {
-                    data: null,
-                    orderable: false,
-                    className: 'text-right',
-                    defaultContent: '<button class="text-blue-600">View</button>'
-                }
+                        data: null,
+                        orderable: false,
+                        searchable: false,
+                        className: 'text-center py-3',
+                        render: function (data, type, row) {
+                            var id = row.student_id;
+                            var classId = row.academic_class_id;
+                            var uniqueId = id + '-' + classId;
+                            var previewUrl = '/Eraport/Preview?id=' + id + '&classId=' + classId;
+                            return `
+                                <div class="flex justify-center eraport-actions-wrapper relative">
+
+                                        <button type="button"
+                                            onclick="toggleActionsMenu(event, '${uniqueId}')"
+                                            class="p-1.5 hover:bg-gray-100 rounded-md">
+
+                                            <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
+                                            </svg>
+
+                                        </button>
+
+                                        <div id="actions-menu-${uniqueId}"
+                                        class="eraport-actions-menu hidden absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10">
+
+                                        <!-- DOWNLOAD PDF -->
+                                                    <a href="${previewUrl}" target="_blank"
+                                                    class="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+
+                                                    <svg class="w-4 h-4 mr-2 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                            d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"/>
+                                                    </svg>
+
+                                                    Preview PDF
+                                                </a>
+
+                                        <!-- DOWNLOAD EXCEL -->
+                                        <button type="button"
+                                            onclick="delAttendance('${id}')"
+                                            class="w-full text-left flex items-center px-4 py-2 text-sm text-green-600 hover:bg-green-50 border-t border-gray-100">
+
+                                            <svg class="w-4 h-4 mr-2 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
+                                            </svg>
+
+                                            Download EXCEL
+                                        </button>
+
+                                    </div>
+                                </div>
+                            `;
+                        }
+                }    
             ],
 
             // INIT
             initComplete: function () {
 
                 const wrapper = $('#eraport-table_wrapper');
-
                 const $length = wrapper.find('.dataTables_length, .dt-length');
                 const $filter = wrapper.find('.dataTables_filter, .dt-search');
 
@@ -213,6 +416,26 @@
         event.stopPropagation();
         $('.eraport-actions-menu').addClass('hidden');
         $('#actions-menu-' + id).toggleClass('hidden');
+    }
+
+    function applyFilter() {
+
+        currentAcademicYearId = $('#academic_year_filter').val() || '';
+        currentClassLevel = $('#class_level_filter').val() || '';
+
+        eraportTable.ajax.reload(); // reload table
+        toggleFilter(); // tutup dropdown
+    }
+
+    function resetFilter() {
+
+        $('#academic_year_filter').val('').trigger('change');
+        $('#class_level_filter').val('').trigger('change');
+
+        currentAcademicYearId = '';
+        currentClassLevel = '';
+
+        eraportTable.ajax.reload();
     }
 
     
