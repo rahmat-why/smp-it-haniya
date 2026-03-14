@@ -314,6 +314,7 @@ namespace Haniya.Controllers.PortalStudent
             var list = new List<dynamic>();
             var sql = @"
                 SELECT
+                    me.event_id AS event_id,
                     me.event_name AS event_name,
                     mec.class_level AS class_level,
                     me.start_date AS start_date,
@@ -345,6 +346,7 @@ namespace Haniya.Controllers.PortalStudent
             {
                 list.Add(new
                 {
+                    event_id = rd["event_id"]?.ToString(),
                     event_name = rd["event_name"]?.ToString(),
                     class_level = rd["class_level"]?.ToString(),
                     start_date = rd["start_date"] != DBNull.Value ? Convert.ToDateTime(rd["start_date"]) : (DateTime?)null,

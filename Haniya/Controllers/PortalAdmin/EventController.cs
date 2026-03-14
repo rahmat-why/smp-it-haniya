@@ -128,7 +128,7 @@ namespace Haniya.Controllers.PortalAdmin
             "event_name",
             "location",
             "status",
-            "created_at"
+            "start_date"
         };
 
                 var (draw, start, length, searchValue, orderColumn, orderDir) = ParseDataTablesQuery(columns);
@@ -166,7 +166,11 @@ namespace Haniya.Controllers.PortalAdmin
                 e.location,
                 e.status,
                 e.profile_photo,
-                e.created_at,
+                CONCAT(
+                    FORMAT(e.start_date, 'dd MMM yyyy'),
+                    ' - ',
+                    FORMAT(e.end_date, 'dd MMM yyyy')
+                ) AS event_date,
                 STRING_AGG(t.tag_code, ', ') AS tags
             FROM mst_events e
             LEFT JOIN mst_tag_events t ON t.event_id = e.event_id
@@ -178,7 +182,8 @@ namespace Haniya.Controllers.PortalAdmin
                 e.location,
                 e.status,
                 e.profile_photo,
-                e.created_at
+                e.start_date,
+                e.end_date
             ORDER BY {orderColumn} {orderDir}
             OFFSET @start ROWS FETCH NEXT @length ROWS ONLY";
 
@@ -200,7 +205,7 @@ namespace Haniya.Controllers.PortalAdmin
                         location = rd["location"],
                         status = rd["status"],
                         profile_photo = rd["profile_photo"],
-                        created_at = rd["created_at"],
+                        event_date = rd["event_date"]?.ToString() ?? "-",
                         tags = rd["tags"]?.ToString() ?? ""
                     });
                 }

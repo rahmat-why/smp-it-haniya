@@ -23,10 +23,25 @@ namespace Haniya.Controllers.Login
         [HttpGet]
         public IActionResult Index()
         {
-            // If already logged in, redirect to dashboard
-            if (User.Identity.IsAuthenticated && User.HasClaim("UserType", "Employee"))
+            if (User?.Identity?.IsAuthenticated ?? false)
             {
-                return RedirectToAction("Admin", "Dashboard");
+                var userType = User.FindFirst("UserType")?.Value;
+                if (string.Equals(userType, "Employee", StringComparison.OrdinalIgnoreCase))
+                {
+                    return RedirectToAction("Admin", "Dashboard");
+                }
+
+                if (string.Equals(userType, "Teacher", StringComparison.OrdinalIgnoreCase))
+                {
+                    return RedirectToAction("Teacher", "Dashboard");
+                }
+
+                if (string.Equals(userType, "Student", StringComparison.OrdinalIgnoreCase))
+                {
+                    return RedirectToAction("Index", "StDashboard");
+                }
+
+                HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme).Wait();
             }
 
             return View("~/Views/Login/LoginAdmin.cshtml");
@@ -152,12 +167,12 @@ namespace Haniya.Controllers.Login
                 Response.Headers["Expires"] = "0";
 
                 // Redirect to login page
-                return RedirectToAction("Index", "LoginAdmin");
+                return Redirect("/LoginAdmin");
             }
             catch (Exception ex)
             {
                 // Even if there's an error, redirect to login
-                return RedirectToAction("Index", "LoginAdmin");
+                return Redirect("/LoginAdmin");
             }
         }
 

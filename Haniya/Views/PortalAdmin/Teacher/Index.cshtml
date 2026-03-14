@@ -98,7 +98,10 @@
                     name: 'full_name',
                     className: 'py-3',
                     render: function (data, type, row) {
-                        const src = row.profile_photo || '/image/no-image.png';
+                        const rawPhoto = row.profile_photo;
+                        const src = (typeof rawPhoto === 'string' && rawPhoto.trim() !== '')
+                            ? rawPhoto
+                            : '/image/no-image.png';
                         const name = row.full_name || '-';
                         const npk = row.npk || '-';
 

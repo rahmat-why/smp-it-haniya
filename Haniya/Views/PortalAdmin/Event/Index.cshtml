@@ -31,7 +31,7 @@
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 120px;">Status</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Description</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Tag</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 160px;">Created</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 220px;">Event Date</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right" style="width: 70px;">Action</th>
                 </tr>
             </thead>
@@ -139,18 +139,10 @@
                         }
                     },
                     {
-                        data: 'created_at',
+                        data: 'event_date',
                         className: 'py-3',
                         render: function (data) {
-                            if (!data) return '-';
-                            var date = new Date(data);
-                            return date.toLocaleString('id-ID', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            });
+                            return data || '-';
                         }
                     },
                     {

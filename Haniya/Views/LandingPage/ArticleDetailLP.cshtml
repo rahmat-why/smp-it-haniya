@@ -1,0 +1,43 @@
+@{
+    Layout = "~/Views/Shared/_LayoutLandingPage.cshtml";
+    var articleId = ViewBag.ArticleId?.ToString() ?? "";
+}
+
+<section class="pt-24 pb-12 px-4 sm:px-6 lg:px-10">
+    <div class="max-w-4xl mx-auto">
+        <a href="/news-article" class="inline-flex items-center text-sm text-blue-700 hover:underline mb-6"><- Back to Articles</a>
+
+        <article class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <img id="articleImage" class="w-full h-72 object-cover" src="/image/landingpage/default.jpg" alt="Article image">
+
+            <div class="p-6 sm:p-8">
+                <h1 id="articleTitle" class="text-3xl font-bold text-slate-900">Loading...</h1>
+                <p id="articleDate" class="mt-2 text-sm text-gray-500"></p>
+                <p id="articleStatus" class="mt-2 inline-flex px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium"></p>
+                <div id="articleDescription" class="mt-6 text-gray-700 leading-relaxed whitespace-pre-wrap"></div>
+            </div>
+        </article>
+    </div>
+</section>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const id = '@articleId';
+        if (!id) return;
+
+        fetch(`/LandingPage/GetArticleDetail?id=${encodeURIComponent(id)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data) {
+                    document.getElementById("articleTitle").innerText = "Article not found";
+                    return;
+                }
+
+                document.getElementById("articleTitle").innerText = data.name || "-";
+                document.getElementById("articleDate").innerText = data.date || "-";
+                document.getElementById("articleStatus").innerText = data.status || "-";
+                document.getElementById("articleDescription").innerText = data.description || "-";
+                document.getElementById("articleImage").src = data.image ? `/image/landingpage/${data.image}` : "/image/landingpage/default.jpg";
+            });
+    });
+</script>

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Haniya.Models;
 
 namespace Haniya.Controllers.PortalAdmin
@@ -21,7 +22,12 @@ namespace Haniya.Controllers.PortalAdmin
             return new SqlConnection(_config.GetConnectionString("DefaultConnection"));
         }
 
-        /* ===================== PAGES ===================== */
+        private static int ParseTrailingNumber(string rawId)
+        {
+            if (string.IsNullOrWhiteSpace(rawId)) return 0;
+            var match = Regex.Match(rawId, @"(\d+)$");
+            return match.Success && int.TryParse(match.Value, out var n) ? n : 0;
+        }
 
         [HttpGet]
         public IActionResult Index()
@@ -243,10 +249,14 @@ namespace Haniya.Controllers.PortalAdmin
                         ay.end_date,
                         ay.semester,
                         c.class_name,
-                        c.class_level
+                        c.class_level,
+                        t.first_name AS teacher_first_name,
+                        t.last_name AS teacher_last_name,
+                        t.npk AS teacher_npk
                     FROM mst_academic_classes ac
                     JOIN mst_academic_years ay ON ac.academic_year_id = ay.academic_year_id
                     JOIN mst_classes c ON ac.class_id = c.class_id
+                    LEFT JOIN mst_teachers t ON ac.homeroom_teacher_id = t.teacher_id
                     WHERE ac.academic_class_id = @id";
 
                 using var cmd = new SqlCommand(sql, conn);
@@ -255,6 +265,11 @@ namespace Haniya.Controllers.PortalAdmin
                 using var rd = cmd.ExecuteReader();
                 if (!rd.Read())
                     return Json(DTOResponse.fail("data not found", 404));
+
+                var teacherFirstName = rd["teacher_first_name"]?.ToString() ?? "";
+                var teacherLastName = rd["teacher_last_name"]?.ToString() ?? "";
+                var teacherFullName = string.Join(" ", new[] { teacherFirstName, teacherLastName }.Where(x => !string.IsNullOrWhiteSpace(x)));
+                var teacherNpk = rd["teacher_npk"]?.ToString() ?? "";
 
                 return Json(DTOResponse.ok(new
                 {
@@ -266,7 +281,9 @@ namespace Haniya.Controllers.PortalAdmin
                     end_date = rd["end_date"] == DBNull.Value ? null : ((DateTime)rd["end_date"]).ToString("yyyy-MM-dd"),
                     semester = rd["semester"]?.ToString(),
                     class_name = rd["class_name"]?.ToString(),
-                    class_level = rd["class_level"]?.ToString()
+                    class_level = rd["class_level"]?.ToString(),
+                    homeroom_teacher_name = teacherFullName,
+                    homeroom_teacher_npk = teacherNpk
                 }));
             }
             catch (Exception ex)
@@ -293,12 +310,9 @@ namespace Haniya.Controllers.PortalAdmin
                 s.gender,
                 s.status,
                 s.profile_photo,
-                CASE 
-                    WHEN s.gender = 'F' THEN 'Female'
-                    WHEN s.gender = 'M' THEN 'Male'
-                    ELSE 'Unknown'
-                END AS gender_display
+                mds.item_name as gender_display
             FROM mst_students s
+            JOIN mst_detail_settings mds ON s.gender = mds.detail_id
             LEFT JOIN mst_student_classes sc ON sc.student_id = s.student_id
             WHERE s.status = 'ACTIVE'
               AND sc.student_id IS NULL  -- only unassigned students
@@ -347,20 +361,33 @@ namespace Haniya.Controllers.PortalAdmin
                 s.nis,
                 s.gender,
                 s.profile_photo,
+                mds.item_name as gender_display,
                 CASE 
-                    WHEN s.gender = 'F' THEN 'Female'
-                    WHEN s.gender = 'M' THEN 'Male'
-                    ELSE 'Unknown'
-                END AS gender_display,
-                CASE 
-                    WHEN sc.student_id IS NOT NULL THEN 1 
+                    WHEN EXISTS (
+                        SELECT 1
+                        FROM mst_student_classes sc_in_class
+                        WHERE sc_in_class.student_id = s.student_id
+                          AND sc_in_class.academic_class_id = @academicClassId
+                    ) THEN 1
                     ELSE 0 
                 END AS is_assigned
             FROM mst_students s
-            LEFT JOIN mst_student_classes sc 
-                ON sc.student_id = s.student_id 
-                AND sc.academic_class_id = @academicClassId
+            JOIN mst_detail_settings mds ON s.gender = mds.detail_id
             WHERE s.status = 'ACTIVE'
+              AND (
+                    EXISTS (
+                        SELECT 1
+                        FROM mst_student_classes sc_current
+                        WHERE sc_current.student_id = s.student_id
+                          AND sc_current.academic_class_id = @academicClassId
+                    )
+                    OR NOT EXISTS (
+                        SELECT 1
+                        FROM mst_student_classes sc_other
+                        WHERE sc_other.student_id = s.student_id
+                          AND sc_other.academic_class_id <> @academicClassId
+                    )
+              )
             ORDER BY s.full_name";
 
                 using var cmd = new SqlCommand(sql, conn);
@@ -443,7 +470,7 @@ namespace Haniya.Controllers.PortalAdmin
                         "SELECT ISNULL(MAX(academic_class_id),'ACC0000') FROM mst_academic_classes",
                         conn, tran);
                     var lastAccId = lastAccCmd.ExecuteScalar()?.ToString() ?? "ACC0000";
-                    var accCurrent = int.Parse(lastAccId.Substring(3));
+                    var accCurrent = ParseTrailingNumber(lastAccId);
                     accCurrent++;
                     var academicClassId = "ACC" + accCurrent.ToString("D4");
 
@@ -476,7 +503,7 @@ namespace Haniya.Controllers.PortalAdmin
                         "SELECT ISNULL(MAX(student_class_id),'STC0000') FROM mst_student_classes",
                         conn, tran);
                     var lastStcId = lastStcCmd.ExecuteScalar()?.ToString() ?? "STC0000";
-                    var stcCurrent = int.Parse(lastStcId.Substring(3));
+                    var stcCurrent = ParseTrailingNumber(lastStcId);
 
                     foreach (var studentId in studentIds)
                     {
@@ -593,6 +620,26 @@ namespace Haniya.Controllers.PortalAdmin
 
                     var selectedStudents = new HashSet<string>(studentIds.Where(s => !string.IsNullOrWhiteSpace(s)));
 
+                    // Prevent assigning students that already belong to another class
+                    foreach (var sid in selectedStudents)
+                    {
+                        var conflictCmd = new SqlCommand(@"
+                            SELECT TOP 1 academic_class_id
+                            FROM mst_student_classes
+                            WHERE student_id = @sid
+                              AND academic_class_id <> @ac",
+                            conn, tran);
+                        conflictCmd.Parameters.AddWithValue("@sid", sid);
+                        conflictCmd.Parameters.AddWithValue("@ac", academicClassId);
+
+                        var conflictClassId = conflictCmd.ExecuteScalar()?.ToString();
+                        if (!string.IsNullOrWhiteSpace(conflictClassId))
+                        {
+                            tran.Rollback();
+                            return Json(DTOResponse.fail($"student {sid} already assigned to another class ({conflictClassId})", 400));
+                        }
+                    }
+
                     var toAdd = selectedStudents.Except(currentStudents).ToList();
                     var toRemove = currentStudents.Except(selectedStudents).ToList();
 
@@ -623,7 +670,7 @@ namespace Haniya.Controllers.PortalAdmin
                             "SELECT ISNULL(MAX(student_class_id),'STC0000') FROM mst_student_classes",
                             conn, tran);
                         var lastStcId = lastStcCmd.ExecuteScalar()?.ToString() ?? "STC0000";
-                        var stcCurrent = int.Parse(lastStcId.Substring(3));
+                        var stcCurrent = ParseTrailingNumber(lastStcId);
 
                         foreach (var sid in toAdd)
                         {

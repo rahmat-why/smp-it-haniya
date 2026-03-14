@@ -452,9 +452,7 @@
                 $('#entry_date').val(d.entry_date || '');
 
                 if (d.gender) {
-                    const label = d.gender === 'M' ? 'Male'
-                        : d.gender === 'F' ? 'Female'
-                            : d.gender;
+                    const label = d.gender_name || d.gender;
 
                     const option = new Option(label, d.gender, true, true);
                     $('#gender').append(option).trigger('change');

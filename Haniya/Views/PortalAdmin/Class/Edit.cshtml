@@ -4,7 +4,7 @@
     var academicClassId = ViewBag.academicClassId as string;
 }
 
-<h2 class="text-xl font-semibold mb-4">Edit Academic Class</h2>
+<h2 class="text-xl font-semibold mb-4">Edit Class</h2>
 <div class="bg-white p-6 rounded-lg shadow w-full space-y-6">
     <form id="frm" class="space-y-6 w-full flex flex-col">
         <input type="hidden" id="academic_class_id" value="@academicClassId" />
@@ -156,6 +156,19 @@
 
         function clearError($el) {
             $el.text('').addClass('hidden');
+        }
+
+        function formatAcademicYearLabel(startDate, endDate, semester) {
+            if (!startDate || !endDate) return '';
+            const startYear = new Date(startDate).getFullYear();
+            const endYear = new Date(endDate).getFullYear();
+            return `${startYear} - ${endYear} (Semester ${semester || '?'})`;
+        }
+
+        function formatTeacherLabel(name, npk, fallbackId) {
+            if (name && npk) return `${name} - ${npk}`;
+            if (name) return name;
+            return fallbackId || '';
         }
 
         function renderStudents(students) {
@@ -362,14 +375,17 @@
                     $select.val(value).trigger('change');
                 };
 
-                // For Academic Year (use a meaningful text)
-                addOption('academic_year_id', d.academic_year_id, `Year ID: ${d.academic_year_id}`);
+                const academicYearText = formatAcademicYearLabel(d.start_date, d.end_date, d.semester) || d.academic_year_id;
+                const teacherText = formatTeacherLabel(d.homeroom_teacher_name, d.homeroom_teacher_npk, d.homeroom_teacher_id);
+
+                // For Academic Year
+                addOption('academic_year_id', d.academic_year_id, academicYearText);
 
                 // For Class
-                addOption('class_id', d.class_id, `Class: ${d.class_name || d.class_id} (${d.class_level || ''})`);
+                addOption('class_id', d.class_id, `${d.class_name || d.class_id} (${d.class_level || ''})`);
 
                 // For Homeroom Teacher
-                addOption('homeroom_teacher_id', d.homeroom_teacher_id, `Teacher ID: ${d.homeroom_teacher_id}`);
+                addOption('homeroom_teacher_id', d.homeroom_teacher_id, teacherText);
 
                 // Load students with assignment status
                 $.get("/Class/GetStudentsWithAssignmentStatus", { academicClassId: acId }, stRes => {

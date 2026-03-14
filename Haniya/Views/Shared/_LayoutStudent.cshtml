@@ -1,4 +1,20 @@
-﻿@{
+@{
+    var isAuthenticated = User?.Identity?.IsAuthenticated ?? false;
+    var userType = User?.FindFirst("UserType")?.Value;
+
+    if (!isAuthenticated)
+    {
+        Context.Response.Redirect("/LoginStudent/Index");
+        return;
+    }
+
+    if (!string.Equals(userType, "Student", System.StringComparison.OrdinalIgnoreCase))
+    {
+        Context.Response.Redirect("/LoginStudent/AccessDenied");
+        return;
+    }
+}
+@{
     var fullName = User.FindFirst("FullName")?.Value ?? "Student";
     var nis = User.FindFirst("NIS")?.Value ?? "";
     var profilePhoto = User.FindFirst("ProfilePhoto")?.Value ?? "";
@@ -49,17 +65,17 @@
         }
         
         #student-grade-table thead th.sorting::after {
-            content: '⇅';
+            content: '\21C5';
             color: #9ca3af;
         }
         
         #student-grade-table thead th.sorting_asc::after {
-            content: '▲';
+            content: '\25B2';
             color: #1e40af;
         }
         
         #student-grade-table thead th.sorting_desc::after {
-            content: '▼';
+            content: '\25BC';
             color: #1e40af;
         }
         
@@ -308,3 +324,5 @@
     @RenderSection("Scripts", required: false)
 </body>
 </html>
+
+

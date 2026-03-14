@@ -181,6 +181,14 @@ namespace Haniya.Controllers.LandingPage
         }
 
         [HttpGet]
+        [Route("news-event/{id}")]
+        public IActionResult EventDetailLP(string id)
+        {
+            ViewBag.EventId = id;
+            return View();
+        }
+
+        [HttpGet]
         public JsonResult GetEventData(int page = 1)
         {
             int pageSize = 6;
@@ -275,6 +283,14 @@ namespace Haniya.Controllers.LandingPage
         [Route("news-article")]
         public IActionResult ArticleLP()
         {
+            return View();
+        }
+
+        [HttpGet]
+        [Route("news-article/{id}")]
+        public IActionResult ArticleDetailLP(string id)
+        {
+            ViewBag.ArticleId = id;
             return View();
         }
 

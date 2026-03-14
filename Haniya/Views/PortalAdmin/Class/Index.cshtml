@@ -103,7 +103,10 @@
                         data: null,
                         className: 'py-3',
                         render: function (data, type, row) {
-                            var photo = row.homeroom_teacher_photo || '/image/no-image.png';
+                            var rawPhoto = row.homeroom_teacher_photo;
+                            var photo = (typeof rawPhoto === 'string' && rawPhoto.trim() !== '')
+                                ? rawPhoto
+                                : '/image/no-image.png';
                             var name = row.homeroom_teacher_name || '-';
                             var npk = row.homeroom_teacher_npk || '';
                             return `

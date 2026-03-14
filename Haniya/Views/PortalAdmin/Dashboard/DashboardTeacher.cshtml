@@ -102,7 +102,7 @@
                     <div id="gradesLegend" class="flex flex-wrap gap-3 mt-4 text-xs sm:text-sm"></div>
                 </div>
 
-                <h2 class="text-3xl font-bold text-indigo-900 mt-8 mb-8">
+                <h2 class="text-lg font-bold text-indigo-900 mt-8 mb-8">
                     Attendance
                 </h2>
                 <div class="bg-gray-50 rounded-2xl p-5 border border-gray-100 mb-2">
@@ -143,7 +143,6 @@
                         </button>
                     </div>
 
-                    <div id="calendarEventHighlights" class="flex flex-wrap gap-2 text-xs"></div>
                     <div id="calendarClassLegend" class="flex flex-wrap gap-3 text-xs"></div>
 
                     <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100">
@@ -158,6 +157,7 @@
                         </div>
                         <div id="academicCalendarGrid" class="grid grid-cols-7 gap-1"></div>
                     </div>
+                    <div id="calendarEventHighlights" class="flex flex-wrap gap-2 text-xs"></div>
                 </div>
             </div>
         </div>
@@ -188,7 +188,8 @@
             container.append(`
                 <button 
                     class="class-btn px-4 py-2 rounded-full border bg-white hover:bg-indigo-50 whitespace-nowrap"
-                    data-id="${cls.id}">
+                    data-id="${cls.id}"
+                    data-name="${cls.text}">
                     ${cls.text}
                 </button>
             `);
@@ -200,6 +201,7 @@
                 .removeClass('bg-white')
                 .addClass('bg-indigo-600 text-white');
             selectedClassId = firstBtn.data('id');
+            currentClass = firstBtn.data('name') || '';
             loadTeacherDashboard();
         }
     }
@@ -215,6 +217,7 @@
             .addClass('bg-indigo-600 text-white');
 
         selectedClassId = $(this).data('id');
+        currentClass = $(this).data('name') || '';
         loadTeacherDashboard();
     });
 
@@ -517,6 +520,12 @@
         });
     }
 
+    function openEventDetail(eventId) {
+        if (!eventId) return;
+        const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.href = `/news-event/${encodeURIComponent(eventId)}?returnUrl=${returnUrl}`;
+    }
+
     function summarizeEventsByClass(events) {
         const grouped = new Map();
         (events || []).forEach(ev => {
@@ -640,11 +649,10 @@
             const key = toDateKey(d);
             const cal = calendarMap[key];
             const dayEvents = getEventsOnDate(d);
-            const holidayCount = dayEvents.filter(isHolidayEvent).length;
-            const nonHolidayCount = dayEvents.length - holidayCount;
+            const firstEventId = dayEvents.length > 0
+                ? (dayEvents[0].event_id || dayEvents[0].eventId || '')
+                : '';
             const isWeekend = cal?.isWeekend === true;
-            const allHolidayEventDay = dayEvents.length > 0 && nonHolidayCount === 0;
-            const mixedEventDay = holidayCount > 0 && nonHolidayCount > 0;
             const isToday = toDateKey(d) === toDateKey(new Date());
 
             const tooltipLines = [];
@@ -666,24 +674,24 @@
 
             let bgClass = 'bg-white border-gray-200';
             let textClass = 'text-gray-700';
-            if (isWeekend || allHolidayEventDay) {
+            if (dayEvents.length > 0) {
+                bgClass = 'bg-yellow-50 border-yellow-300';
+                textClass = 'text-yellow-700';
+            } else if (isWeekend) {
                 bgClass = 'bg-red-50 border-red-200';
                 textClass = 'text-red-700';
-            } else if (mixedEventDay) {
-                bgClass = 'bg-amber-50 border-amber-200';
-                textClass = 'text-amber-700';
-            } else if (dayEvents.length > 0) {
-                bgClass = 'bg-blue-50 border-blue-200';
-                textClass = 'text-blue-700';
             }
             const todayClass = isToday ? 'ring-2 ring-indigo-500' : '';
             const classMarkers = ['7', '8', '9']
                 .filter(c => participantClasses.has(c))
                 .map(c => `<span class="w-1.5 h-1.5 rounded-full ${classColorMap[c].bg}" title="Kelas ${c}"></span>`)
                 .join('');
+            const isClickable = dayEvents.length > 0 && firstEventId;
+            const clickAttr = isClickable ? `onclick="openEventDetail('${firstEventId}')"` : '';
+            const cursorClass = isClickable ? 'cursor-pointer hover:shadow-sm' : 'cursor-help';
 
             html += `
-                <div class="h-10 rounded-md border ${bgClass} ${todayClass} px-1.5 py-1 text-center cursor-help" title="${title}">
+                <div ${clickAttr} class="h-10 rounded-md border ${bgClass} ${todayClass} px-1.5 py-1 text-center ${cursorClass}" title="${title}">
                     <div class="text-xs font-semibold ${textClass}">${day}</div>
                     <div class="mt-0.5 flex items-center justify-center gap-0.5">${classMarkers}</div>
                 </div>

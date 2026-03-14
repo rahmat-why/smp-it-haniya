@@ -77,14 +77,14 @@ namespace Haniya.Controllers.PortalAdmin
             {
                 var columns = new[]
                 {
-                    "profile_photo",
-                    "nis",
-                    "full_name",
-                    "birth_date",
-                    "birth_place",
-                    "gender",
-                    "address",
-                    "entry_date"
+                    "s.full_name",
+                    "s.birth_date",
+                    "s.birth_place",
+                    "dg.item_desc",
+                    "s.address",
+                    "s.entry_date",
+                    "dl.item_desc",
+                    "msc.academic_class_id"
                 };
 
                 var (draw, start, length, searchValue, orderColumn, orderDir) = ParseDataTablesQuery(columns);
@@ -104,16 +104,25 @@ namespace Haniya.Controllers.PortalAdmin
                     whereSearch = @" AND (
                         s.nis LIKE @search OR
                         s.full_name LIKE @search OR
-                        s.birth_place LIKE @search OR
-                        (s.gender = 'M' AND 'Male' LIKE @search) OR
-                        (s.gender = 'F' AND 'Female' LIKE @search) OR
                         s.address LIKE @search OR
-                        dt.item_desc LIKE @search
+                        dl.item_desc LIKE @search
                     )";
                 }
 
                 var filteredCmd = new SqlCommand(
-                    "SELECT COUNT(*) FROM mst_students WHERE status = 'ACTIVE'" + whereSearch,
+                    @"
+                    SELECT COUNT(DISTINCT s.student_id)
+                    FROM mst_students s
+                    LEFT JOIN mst_student_classes msc ON s.student_id = msc.student_id
+                    LEFT JOIN mst_detail_settings dl
+                        ON dl.detail_id = s.level
+                        AND dl.header_id = 'LEVEL_STUDENT'
+                        AND dl.status = 'ACTIVE'
+                    LEFT JOIN mst_detail_settings dg
+                        ON dg.item_code = s.gender
+                        AND dg.header_id = 'GENDER'
+                        AND dg.status = 'ACTIVE'
+                    WHERE s.status = 'ACTIVE'" + whereSearch,
                     conn
                 );
 
@@ -123,7 +132,7 @@ namespace Haniya.Controllers.PortalAdmin
                 var recordsFiltered = (int)filteredCmd.ExecuteScalar();
 
                 var sql = $@"
-                    SELECT
+                    SELECT DISTINCT
                         s.student_id,
                         s.nis,
                         s.full_name,
@@ -133,8 +142,10 @@ namespace Haniya.Controllers.PortalAdmin
                         s.address,
                         s.entry_date,
                         s.profile_photo,
-                        dl.item_desc AS level
+                        dl.item_desc AS level,
+                        SUBSTRING(msc.academic_class_id, 4, 2) AS [class]
                     FROM mst_students s
+                    LEFT JOIN mst_student_classes msc ON s.student_id = msc.student_id
                     LEFT JOIN mst_detail_settings dl 
                         ON dl.detail_id = s.level 
                         AND dl.header_id = 'LEVEL_STUDENT' 
@@ -169,7 +180,8 @@ namespace Haniya.Controllers.PortalAdmin
                         address = rd["address"],
                         entry_date = rd["entry_date"],
                         profile_photo = rd["profile_photo"],
-                        level = rd["level"]
+                        level = rd["level"],
+                        @class = rd["class"] == DBNull.Value ? null : rd["class"]
                     });
                 }
 

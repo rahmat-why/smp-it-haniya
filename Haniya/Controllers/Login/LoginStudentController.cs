@@ -23,10 +23,25 @@ namespace Haniya.Controllers.Login
         [HttpGet]
         public IActionResult Index()
         {
-            // Jika sudah login sebagai student, langsung ke dashboard student
-            if (User.Identity.IsAuthenticated && User.HasClaim("UserType", "Student"))
+            if (User?.Identity?.IsAuthenticated ?? false)
             {
-                return RedirectToAction("Student", "StDashboard");
+                var userType = User.FindFirst("UserType")?.Value;
+                if (string.Equals(userType, "Student", StringComparison.OrdinalIgnoreCase))
+                {
+                    return RedirectToAction("Index", "StDashboard");
+                }
+
+                if (string.Equals(userType, "Employee", StringComparison.OrdinalIgnoreCase))
+                {
+                    return RedirectToAction("Admin", "Dashboard");
+                }
+
+                if (string.Equals(userType, "Teacher", StringComparison.OrdinalIgnoreCase))
+                {
+                    return RedirectToAction("Teacher", "Dashboard");
+                }
+
+                HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme).Wait();
             }
 
             return View("~/Views/Login/LoginStudent.cshtml");

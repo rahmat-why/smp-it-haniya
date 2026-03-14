@@ -1,4 +1,21 @@
-﻿<!DOCTYPE html>
+@{
+    var isAuthenticated = User?.Identity?.IsAuthenticated ?? false;
+    var userType = User?.FindFirst("UserType")?.Value;
+
+    if (!isAuthenticated)
+    {
+        Context.Response.Redirect("/LoginAdmin");
+        return;
+    }
+
+    if (!string.Equals(userType, "Employee", System.StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(userType, "Teacher", System.StringComparison.OrdinalIgnoreCase))
+    {
+        Context.Response.Redirect("/LoginAdmin/AccessDenied");
+        return;
+    }
+}
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -92,21 +109,21 @@
             }
 
             table.dataTable thead th.sorting:before {
-                content: "▲";
+                content: "\25B2";
                 top: 0.5rem;
                 font-size: 0.65rem;
                 color: #4b5563;
             }
 
             table.dataTable thead th.sorting:after {
-                content: "▼";
+                content: "\25BC";
                 bottom: 0.5rem;
                 font-size: 0.65rem;
                 color: #4b5563;
             }
 
             table.dataTable thead th.sorting_asc:before {
-                content: "▲";
+                content: "\25B2";
                 top: 50%;
                 transform: translateY(-50%);
                 font-size: 0.75rem;
@@ -115,7 +132,7 @@
             }
 
             table.dataTable thead th.sorting_desc:after {
-                content: "▼";
+                content: "\25BC";
                 top: 50%;
                 transform: translateY(-50%);
                 font-size: 0.75rem;
@@ -381,7 +398,7 @@
             }
             else
             {
-                <a href="/LoginAdmin/Index" class="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg font-medium transition">
+                <a href="/LoginAdmin" class="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg font-medium transition">
                     Login
                 </a>
             }
@@ -413,6 +430,7 @@
     </nav>
     <script>
         const currentUserRole = '@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value';
+        const currentUserType = '@User.FindFirst("UserType")?.Value';
 
         $(document).ready(function () {
             loadMenu();
@@ -577,12 +595,12 @@
                         `;
                     }
 
-                    if (currentUserRole === "Employee") {
+                    if (currentUserType === "Employee" || currentUserRole === "Employee" || currentUserRole === "Admin") {
                         window.location.href = '/LoginAdmin/Logout';
-                    } else if (currentUserRole === "Teacher") {
+                    } else if (currentUserType === "Teacher" || currentUserRole === "Teacher") {
                         window.location.href = '/LoginTeacher/Logout';
                     } else {
-                        window.location.href = '/';
+                        window.location.href = '/LoginAdmin/Logout';
                     }
                 }
             });
@@ -621,3 +639,4 @@
     @RenderSection("Scripts", required: false)
 </body>
 </html>
+

@@ -32,6 +32,7 @@
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Address</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 130px;">Entry Date</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 130px;">Level</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 90px;">Class</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase !text-right" style="width: 70px;">Action</th>
                 </tr>
             </thead>
@@ -102,8 +103,10 @@
                     name: 'full_name',
                     className: 'py-3',
                     render: function (data, type, row) {
-
-                        var src = row.profile_photo || '/image/no-image.png';
+                        var rawPhoto = row.profile_photo;
+                        var src = (typeof rawPhoto === 'string' && rawPhoto.trim() !== '')
+                            ? rawPhoto
+                            : '/image/no-image.png';
                         var name = row.full_name || '-';
                         var nis = row.nis || '-';
 
@@ -169,6 +172,15 @@
                     className: 'py-3'
                 },
 
+                // Class
+                {
+                    data: 'class',
+                    className: 'py-3',
+                    render: function (data) {
+                        return data || '-';
+                    }
+                },
+
 
                 // Action
                 {
@@ -219,10 +231,6 @@
                     }
                 }
             ],
-
-
-
-            // INIT
             initComplete: function () {
 
                 const wrapper = $('#student-table_wrapper');
@@ -252,12 +260,9 @@
 
                 styleStudentPagination();
             },
-
-
             drawCallback: function () {
                 setTimeout(styleStudentPagination, 50);
             }
-
         });
     }
 

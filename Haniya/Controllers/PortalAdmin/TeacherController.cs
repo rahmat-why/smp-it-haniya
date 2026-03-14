@@ -210,7 +210,14 @@ namespace Haniya.Controllers.PortalAdmin
                 using var conn = GetConn();
                 conn.Open();
 
-                var sql = "SELECT * FROM mst_teachers WHERE teacher_id = @id";
+                var sql = @"
+                    SELECT t.*, dg.item_desc AS gender_name
+                    FROM mst_teachers t
+                    LEFT JOIN mst_detail_settings dg
+                        ON dg.item_code = t.gender
+                        AND dg.header_id = 'GENDER'
+                        AND dg.status = 'ACTIVE'
+                    WHERE t.teacher_id = @id";
                 using var cmd = new SqlCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@id", id);
 
@@ -235,6 +242,7 @@ namespace Haniya.Controllers.PortalAdmin
                         : ((DateTime)rd["birth_date"]).ToString("yyyy-MM-dd"),
                     birth_place = rd["birth_place"]?.ToString(),
                     gender = rd["gender"]?.ToString(),
+                    gender_name = rd["gender_name"]?.ToString(),
                     address = rd["address"]?.ToString(),
                     phone = rd["phone"]?.ToString(),
                     entry_date = rd["entry_date"] == DBNull.Value

@@ -23,10 +23,25 @@ namespace Haniya.Controllers.Login
         [HttpGet]
         public IActionResult Index()
         {
-            // If already logged in as teacher, redirect to dashboard
-            if (User.Identity.IsAuthenticated && User.HasClaim("UserType", "Teacher"))
+            if (User?.Identity?.IsAuthenticated ?? false)
             {
-                return RedirectToAction("Teacher", "Dashboard");
+                var userType = User.FindFirst("UserType")?.Value;
+                if (string.Equals(userType, "Teacher", StringComparison.OrdinalIgnoreCase))
+                {
+                    return RedirectToAction("Teacher", "Dashboard");
+                }
+
+                if (string.Equals(userType, "Employee", StringComparison.OrdinalIgnoreCase))
+                {
+                    return RedirectToAction("Admin", "Dashboard");
+                }
+
+                if (string.Equals(userType, "Student", StringComparison.OrdinalIgnoreCase))
+                {
+                    return RedirectToAction("Index", "StDashboard");
+                }
+
+                HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme).Wait();
             }
 
             return View("~/Views/Login/LoginTeacher.cshtml");

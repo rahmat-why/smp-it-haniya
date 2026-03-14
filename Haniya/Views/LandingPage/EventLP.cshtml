@@ -1,42 +1,46 @@
-﻿@{
+@{
     Layout = "~/Views/Shared/_LayoutLandingPage.cshtml";
 }
 
-<div id="eventContainer"
-     class="grid grid-cols-1 md:grid-cols-3 gap-8 p-6 pt-28">
-</div>
-
-<div class="flex justify-center gap-4 mb-10">
-    <button onclick="prevPage()" class="px-4 py-2 bg-gray-300 rounded">Prev</button>
-    <button onclick="nextPage()" class="px-4 py-2 bg-blue-600 text-white rounded">Next</button>
-</div>
-
-<div id="eventModal"
-     onclick="outsideClick(event)"
-     class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50">
-
-    <div class="bg-white w-11/12 md:w-2/3 rounded-2xl p-6 relative">
-
-        <button onclick="closeModal()"
-                class="absolute top-3 right-3 text-gray-500 text-xl">
-            ✕
-        </button>
-
-        <img id="modalImage"
-             class="w-full h-64 object-cover rounded-xl mb-4">
-
-        <h2 id="modalTitle" class="text-2xl font-bold mb-2"></h2>
-        <p id="modalDate" class="text-sm text-gray-500 mb-2"></p>
-        <p id="modalLocation" class="text-sm text-gray-600 mb-2"></p>
-        <p id="modalStatus" class="text-sm text-blue-600 mb-4"></p>
-        <p id="modalDescription" class="text-gray-700"></p>
-
+<section class="pt-24 pb-8 px-4 sm:px-6 lg:px-10">
+    <div class="max-w-7xl mx-auto">
+        <div class="rounded-3xl bg-slate-900 text-white p-8 sm:p-10 relative overflow-hidden">
+            <div class="absolute -top-16 -right-16 w-56 h-56 bg-cyan-400/20 rounded-full blur-2xl"></div>
+            <div class="absolute -bottom-20 -left-10 w-64 h-64 bg-blue-500/20 rounded-full blur-2xl"></div>
+            <p class="text-xs uppercase tracking-[0.25em] text-cyan-300">Agenda Sekolah</p>
+            <h1 class="mt-2 text-3xl sm:text-4xl font-bold leading-tight">Event Timeline</h1>
+            <p class="mt-3 max-w-2xl text-slate-200 text-sm sm:text-base">
+                Semua event tampil dalam format timeline vertikal, klik salah satu untuk lihat detail halaman penuh.
+            </p>
+        </div>
     </div>
-</div>
+</section>
 
+<section class="pb-12 px-4 sm:px-6 lg:px-10">
+    <div class="max-w-7xl mx-auto">
+        <div class="flex items-center justify-between mb-5">
+            <h2 class="text-xl font-bold text-slate-800">Latest Events</h2>
+            <span id="eventPageLabel" class="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 font-medium">Page 1</span>
+        </div>
+
+        <div id="eventTimeline" class="relative pl-4 sm:pl-8 border-l-2 border-slate-200 space-y-5"></div>
+
+        <div class="mt-8 flex justify-center gap-3">
+            <button id="prevBtn" onclick="prevPage()"
+                    class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50">
+                Previous
+            </button>
+            <button id="nextBtn" onclick="nextPage()"
+                    class="px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-medium hover:bg-slate-800">
+                Next
+            </button>
+        </div>
+    </div>
+</section>
 
 <script>
     let currentPage = 1;
+    let currentData = [];
 
     document.addEventListener("DOMContentLoaded", function () {
         loadEvents(currentPage);
@@ -46,44 +50,48 @@
         fetch(`/LandingPage/GetEventData?page=${page}`)
             .then(res => res.json())
             .then(data => {
-
-                let container = document.getElementById("eventContainer");
-                container.innerHTML = "";
-
-                if (data.length === 0) {
-                    container.innerHTML = "<p class='col-span-3 text-center'>No data available</p>";
-                    return;
-                }
-
-                data.forEach(item => {
-                    
-                    let card = `
-                    <div onclick="openModal('${item.id}')"
-                        class="relative rounded-2xl overflow-hidden shadow-lg group cursor-pointer">
-
-                        <img src="${item.image
-                        ? '/image/landingpage/' + item.image
-                        : '/image/landingpage/default.jpg'}"
-                        class="w-full h-[420px] object-cover group-hover:scale-105 transition duration-500">
-
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
-
-                        <div class="absolute bottom-0 p-6 text-white">
-                            <h3 class="text-xl font-semibold leading-snug">
-                                ${item.name}
-                            </h3>
-                            <p class="mt-2 text-sm opacity-80">
-                                ${item.date}
-                            </p>
-                        </div>
-
-                    </div>
-                    `;
-
-                    container.innerHTML += card;
-                });
-
+                currentData = Array.isArray(data) ? data : [];
+                document.getElementById("eventPageLabel").innerText = `Page ${currentPage}`;
+                renderTimeline(currentData);
+                updatePagerState();
             });
+    }
+
+    function renderTimeline(data) {
+        const timeline = document.getElementById("eventTimeline");
+        timeline.innerHTML = "";
+
+        if (!data.length) {
+            timeline.innerHTML = `
+                <div class="bg-white border border-dashed border-slate-300 rounded-2xl p-8 text-center text-slate-500">
+                    Belum ada event pada halaman ini.
+                </div>
+            `;
+            return;
+        }
+
+        data.forEach((item, idx) => {
+            const align = idx % 2 === 0 ? "sm:mr-16" : "sm:ml-16";
+            timeline.innerHTML += `
+                <a href="/news-event/${encodeURIComponent(item.id)}"
+                   class="group relative block ${align}">
+                    <span class="absolute -left-[1.05rem] sm:-left-[2.05rem] top-8 w-4 h-4 rounded-full bg-slate-900 ring-4 ring-white"></span>
+                    <article class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition">
+                        <div class="grid grid-cols-1 md:grid-cols-3">
+                            <div class="md:col-span-1">
+                                <img src="${getImage(item.image)}" alt="${escapeHtml(item.name || "Event")}" class="w-full h-52 md:h-full object-cover">
+                            </div>
+                            <div class="md:col-span-2 p-5 sm:p-6">
+                                <p class="text-xs uppercase tracking-wider text-slate-500">Event</p>
+                                <h3 class="mt-2 text-xl font-bold text-slate-900 group-hover:text-blue-700 transition">${escapeHtml(item.name || "-")}</h3>
+                                <p class="mt-2 text-sm text-slate-500">${escapeHtml(item.date || "-")}</p>
+                                <p class="mt-4 text-sm font-medium text-blue-700">Lihat Detail</p>
+                            </div>
+                        </div>
+                    </article>
+                </a>
+            `;
+        });
     }
 
     function nextPage() {
@@ -98,41 +106,28 @@
         }
     }
 
-    function openModal(id) {
-        fetch(`/LandingPage/GetEventDetail?id=${id}`)
-            .then(res => res.json())
-            .then(data => {
+    function updatePagerState() {
+        const prev = document.getElementById("prevBtn");
+        const next = document.getElementById("nextBtn");
+        prev.disabled = currentPage <= 1;
+        prev.classList.toggle("opacity-50", currentPage <= 1);
+        prev.classList.toggle("cursor-not-allowed", currentPage <= 1);
 
-                if (!data) return;
-
-                document.getElementById("modalTitle").innerText = data.name;
-                document.getElementById("modalDate").innerText = data.date;
-                document.getElementById("modalLocation").innerText = "Location: " + data.location;
-                document.getElementById("modalStatus").innerText = "Status: " + data.status;
-                document.getElementById("modalDescription").innerText = data.description;
-
-                document.getElementById("modalImage").src =
-                    data.image
-                    ? '/image/landingpage/' + data.image
-                    : '/image/landingpage/default.jpg';
-
-                document.getElementById("eventModal").classList.remove("hidden");
-                document.getElementById("eventModal").classList.add("flex");
-            });
+        next.disabled = currentData.length === 0;
+        next.classList.toggle("opacity-50", currentData.length === 0);
+        next.classList.toggle("cursor-not-allowed", currentData.length === 0);
     }
 
-    function closeModal() {
-        document.getElementById("eventModal").classList.add("hidden");
+    function getImage(imageName) {
+        return imageName ? `/image/landingpage/${imageName}` : "/image/landingpage/default.jpg";
     }
 
-    function outsideClick(e) {
-        const modal = document.getElementById("eventModal");
-
-        // Kalau yang diklik itu backdrop, bukan isi modal
-        if (e.target === modal) {
-            closeModal();
-        }
+    function escapeHtml(value) {
+        return String(value || "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#39;");
     }
-
-
 </script>

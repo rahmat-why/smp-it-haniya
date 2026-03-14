@@ -424,7 +424,11 @@ namespace Haniya.Controllers.PortalAdmin
         JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
         JOIN mst_classes cls ON ac.class_id = cls.class_id
         WHERE ac.academic_year_id = @academicYear
-        AND (@classLevel = '' OR cls.class_level = @classLevel)
+        AND (
+            @classLevel = ''
+            OR cls.class_name = @classLevel
+            OR (TRY_CONVERT(int, @classLevel) IS NOT NULL AND cls.class_level = TRY_CONVERT(int, @classLevel))
+        )
         AND sd.teacher_id = @teacherId
         ORDER BY
             CASE s.day
@@ -477,7 +481,11 @@ namespace Haniya.Controllers.PortalAdmin
         WHERE ds.header_id = 'ATTENDANCE_STATUS'
         AND ds.status = 'ACTIVE'
         AND ac.academic_year_id = @academicYear
-        AND (@classLevel = '' OR cls.class_level = @classLevel)
+        AND (
+            @classLevel = ''
+            OR cls.class_name = @classLevel
+            OR (TRY_CONVERT(int, @classLevel) IS NOT NULL AND cls.class_level = TRY_CONVERT(int, @classLevel))
+        )
         GROUP BY ac.academic_class_id, cls.class_name, ds.detail_id, ds.item_name
         ORDER BY cls.class_name, ds.item_name";
 
@@ -520,7 +528,11 @@ namespace Haniya.Controllers.PortalAdmin
         WHERE ds.header_id = 'GRADE_TYPE'
         AND ds.status = 'ACTIVE'
         AND ac.academic_year_id = @academicYear
-        AND (@classLevel = '' OR cls.class_level = @classLevel)
+        AND (
+            @classLevel = ''
+            OR cls.class_name = @classLevel
+            OR (TRY_CONVERT(int, @classLevel) IS NOT NULL AND cls.class_level = TRY_CONVERT(int, @classLevel))
+        )
         GROUP BY ac.academic_class_id, cls.class_name, ds.detail_id, ds.item_name
         ORDER BY cls.class_name, ds.item_name";
 
@@ -577,6 +589,7 @@ namespace Haniya.Controllers.PortalAdmin
             var list = new List<dynamic>();
             var sql = @"
         SELECT 
+            me.event_id AS event_id,
             me.event_name AS event_name,
             mec.class_level AS class_level,
             me.start_date AS start_date,
@@ -600,6 +613,7 @@ namespace Haniya.Controllers.PortalAdmin
             {
                 list.Add(new
                 {
+                    event_id = rd["event_id"]?.ToString(),
                     event_name = rd["event_name"]?.ToString(),
                     class_level = rd["class_level"]?.ToString(),
                     start_date = rd["start_date"] != DBNull.Value ? Convert.ToDateTime(rd["start_date"]) : (DateTime?)null,

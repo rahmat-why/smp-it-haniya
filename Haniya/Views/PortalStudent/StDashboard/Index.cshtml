@@ -15,7 +15,8 @@
     </div>
 
     <div id="content" class="hidden space-y-10">
-        <div>
+        <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
+            <h2 class="text-lg font-bold text-indigo-900 mb-4">Payment Reminder</h2>
             <div id="payment-bills" class="grid grid-cols-1 gap-3"></div>
         </div>
 
@@ -36,8 +37,8 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100 lg:col-span-2">
                 <div class="space-y-4">
                 <div class="bg-gray-50 rounded-2xl p-5 border border-gray-100">
                     <h4 class="text-lg font-bold text-indigo-900 mb-4">My Grade</h4>
@@ -50,7 +51,7 @@
                 </div>
             </div>
 
-            <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+            <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 lg:col-span-1">
                 <h2 class="text-lg font-bold text-indigo-900 mb-8">My Calendar</h2>
                 <div class="space-y-4">
                     <div class="flex items-center justify-between">
@@ -67,7 +68,6 @@
                         </button>
                     </div>
 
-                    <div id="calendarEventHighlights" class="flex flex-wrap gap-2 text-xs"></div>
                     <div id="calendarClassLegend" class="flex flex-wrap gap-3 text-xs"></div>
 
                     <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100">
@@ -82,6 +82,7 @@
                         </div>
                         <div id="academicCalendarGrid" class="grid grid-cols-7 gap-1"></div>
                     </div>
+                    <div id="calendarEventHighlights" class="flex flex-wrap gap-2 text-xs"></div>
                 </div>
             </div>
         </div>
@@ -503,10 +504,16 @@
         });
     }
 
+    function openEventDetail(eventId) {
+        if (!eventId) return;
+        const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.href = `/news-event/${encodeURIComponent(eventId)}?returnUrl=${returnUrl}`;
+    }
+
     function renderCalendarClassLegend() {
         $('#calendarClassLegend').html(`
-            <div class="inline-flex items-center gap-2 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200 px-3 py-1">
-                <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+            <div class="inline-flex items-center gap-2 rounded-full bg-yellow-50 text-yellow-800 border border-yellow-200 px-3 py-1">
+                <span class="w-2.5 h-2.5 rounded-full bg-violet-500"></span>
                 <span class="font-medium">My Agenda</span>
             </div>
         `);
@@ -588,11 +595,10 @@
             const key = toDateKey(d);
             const cal = calendarMap[key];
             const dayEvents = getEventsOnDate(d);
-            const holidayCount = dayEvents.filter(isHolidayEvent).length;
-            const nonHolidayCount = dayEvents.length - holidayCount;
+            const firstEventId = dayEvents.length > 0
+                ? (dayEvents[0].event_id || dayEvents[0].eventId || '')
+                : '';
             const isWeekend = cal?.isWeekend === true;
-            const allHolidayEventDay = dayEvents.length > 0 && nonHolidayCount === 0;
-            const mixedEventDay = holidayCount > 0 && nonHolidayCount > 0;
             const isToday = toDateKey(d) === toDateKey(new Date());
 
             const tooltipLines = [];
@@ -610,24 +616,24 @@
 
             let bgClass = 'bg-white border-gray-200';
             let textClass = 'text-gray-700';
-            if (isWeekend || allHolidayEventDay) {
+            if (dayEvents.length > 0) {
+                bgClass = 'bg-yellow-50 border-yellow-300';
+                textClass = 'text-yellow-700';
+            } else if (isWeekend) {
                 bgClass = 'bg-red-50 border-red-200';
                 textClass = 'text-red-700';
-            } else if (mixedEventDay) {
-                bgClass = 'bg-amber-50 border-amber-200';
-                textClass = 'text-amber-700';
-            } else if (dayEvents.length > 0) {
-                bgClass = 'bg-blue-50 border-blue-200';
-                textClass = 'text-blue-700';
             }
             const todayClass = isToday ? 'ring-2 ring-indigo-500' : '';
             const classMarkers = ['7', '8', '9']
                 .filter(c => participantClasses.has(c))
                 .map(c => `<span class="w-1.5 h-1.5 rounded-full ${classColorMap[c].bg}" title="Kelas ${c}"></span>`)
                 .join('');
+            const isClickable = dayEvents.length > 0 && firstEventId;
+            const clickAttr = isClickable ? `onclick="openEventDetail('${firstEventId}')"` : '';
+            const cursorClass = isClickable ? 'cursor-pointer hover:shadow-sm' : 'cursor-help';
 
             html += `
-                <div class="h-10 rounded-md border ${bgClass} ${todayClass} px-1.5 py-1 text-center cursor-help" title="${title}">
+                <div ${clickAttr} class="h-10 rounded-md border ${bgClass} ${todayClass} px-1.5 py-1 text-center ${cursorClass}" title="${title}">
                     <div class="text-xs font-semibold ${textClass}">${day}</div>
                     <div class="mt-0.5 flex items-center justify-center gap-0.5">${classMarkers}</div>
                 </div>
