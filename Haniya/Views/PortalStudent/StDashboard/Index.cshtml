@@ -257,10 +257,13 @@
         return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
     }
 
-    function getEndOfMonth(dateValue) {
+    function isOverdueDate(dateValue) {
         const d = new Date(dateValue);
-        if (isNaN(d.getTime())) return null;
-        return new Date(d.getFullYear(), d.getMonth() + 1, 0);
+        if (isNaN(d.getTime())) return false;
+        d.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return d < today;
     }
 
     function renderPaymentBills(items) {
@@ -270,26 +273,69 @@
         if (!items || items.length === 0) {
             container.html(`
                 <div class="rounded-xl border border-gray-100 bg-gray-50 px-4 py-4 text-sm text-gray-500">
-                    Tidak ada tagihan unpaid.
+                    Tidak ada tagihan pembayaran.
                 </div>
             `);
             return;
         }
 
-        items.forEach(item => {
-            const sppDate = formatDateId(item.tanggalPembayaran);
-            const deadline = getEndOfMonth(item.tanggalPembayaran);
-            const deadlineText = deadline ? formatDateId(deadline) : '-';
-            const nominal = formatRupiah(item.totalBelumLunas);
+        const safeItems = (items || []).filter(x => x && (x.status || '').toUpperCase() !== 'PAID');
+
+        if (safeItems.length === 0) {
+            container.html(`
+                <div class="rounded-xl border border-gray-100 bg-gray-50 px-4 py-4 text-sm text-gray-500">
+                    Tidak ada tagihan pembayaran.
+                </div>
+            `);
+            return;
+        }
+
+        safeItems.forEach(item => {
+            const dueDateText = formatDateId(item.dueDate);
+            const nominal = formatRupiah(item.remainingPayment);
+            const status = (item.status || '').toUpperCase();
+            const paymentType = item.paymentTypeDesc || item.paymentType || '-';
+            const overdue = isOverdueDate(item.dueDate);
+            const isPartial = status === 'PARTIAL';
+            const tone = isPartial
+                ? {
+                    border: 'border-yellow-200',
+                    bg: 'bg-yellow-50',
+                    badgeBg: 'bg-yellow-100',
+                    badgeText: 'text-yellow-700',
+                    titleText: 'text-yellow-800',
+                    nominalText: 'text-yellow-900',
+                    statusLabel: 'PARTIAL',
+                    note: 'Pembayaran belum lunas, segera lanjutkan cicilan sebelum jatuh tempo.'
+                }
+                : {
+                    border: 'border-rose-200',
+                    bg: 'bg-rose-50',
+                    badgeBg: 'bg-rose-100',
+                    badgeText: 'text-rose-700',
+                    titleText: 'text-rose-800',
+                    nominalText: 'text-rose-900',
+                    statusLabel: 'UNPAID',
+                    note: 'Belum ada pembayaran, segera lakukan pembayaran sebelum jatuh tempo.'
+                };
+            const overdueText = overdue
+                ? '<span class="text-red-700 font-semibold">Description: Overdue</span>'
+                : `<span>Description: ${tone.note}</span>`;
 
             container.append(`
-                <div class="rounded-xl border border-rose-100 bg-rose-50/40 p-4">
-                    <div class="text-xs font-semibold uppercase tracking-wide text-rose-700">SPP ${sppDate}</div>
-                    <div class="mt-2 flex items-center gap-2">
-                        <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-rose-100 text-rose-700 font-bold">!</span>
-                        <div class="text-lg font-bold text-rose-800">${nominal}</div>
+                <div class="rounded-xl border ${tone.border} ${tone.bg} p-4 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm font-semibold ${tone.titleText}">${paymentType}</p>
+                        <span class="text-[10px] font-bold px-2 py-1 rounded-full ${tone.badgeBg} ${tone.badgeText}">
+                            ${tone.statusLabel}
+                        </span>
                     </div>
-                    <div class="mt-2 text-xs text-gray-600">Payment Deadline: <span class="font-semibold text-gray-800">${deadlineText}</span></div>
+                    <div>
+                        <p class="text-xs text-gray-600">Remaining Payment</p>
+                        <p class="text-base font-bold ${tone.nominalText}">${nominal}</p>
+                    </div>
+                    <p class="text-xs text-gray-600">Due Date: <span class="font-semibold ${overdue ? 'text-red-700' : 'text-gray-800'}">${dueDateText}${overdue ? ' (Overdue)' : ''}</span></p>
+                    <p class="text-xs text-gray-600">${overdueText}</p>
                 </div>
             `);
         });

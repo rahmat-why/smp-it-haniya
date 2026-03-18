@@ -251,13 +251,21 @@ namespace Haniya.Controllers.PortalStudent
 
             using var cmd = new SqlCommand(@"
                 SELECT
-                    p.remaining_payment AS TotalBelumLunas,
-                    p.payment_date AS TanggalPembayaran
+                    p.payment_id,
+                    p.payment_type,
+                    COALESCE(pt.item_desc, p.payment_type) AS payment_type_desc,
+                    p.remaining_payment AS total_belum_lunas,
+                    p.due_date AS due_date,
+                    p.status
                 FROM txn_payments p
                 JOIN mst_student_classes sc ON p.student_class_id = sc.student_class_id
                 JOIN mst_students s ON sc.student_id = s.student_id
+                LEFT JOIN mst_detail_settings pt
+                    ON p.payment_type = pt.detail_id
+                   AND pt.header_id = 'PAYMENT_TYPE'
                 WHERE s.student_id = @studentId
-                AND p.status IN ('PARTIAL', 'UNPAID');
+                AND p.status IN ('PARTIAL', 'UNPAID')
+                ORDER BY p.due_date ASC;
             ", conn);
             cmd.Parameters.AddWithValue("@studentId", studentId);
 
@@ -266,11 +274,15 @@ namespace Haniya.Controllers.PortalStudent
             {
                 list.Add(new
                 {
-                    totalBelumLunas = rd["TotalBelumLunas"] != DBNull.Value
-                        ? Convert.ToDecimal(rd["TotalBelumLunas"])
+                    paymentId = rd["payment_id"]?.ToString() ?? string.Empty,
+                    paymentType = rd["payment_type"]?.ToString() ?? string.Empty,
+                    paymentTypeDesc = rd["payment_type_desc"]?.ToString() ?? string.Empty,
+                    status = rd["status"]?.ToString() ?? string.Empty,
+                    remainingPayment = rd["total_belum_lunas"] != DBNull.Value
+                        ? Convert.ToDecimal(rd["total_belum_lunas"])
                         : 0m,
-                    tanggalPembayaran = rd["TanggalPembayaran"] != DBNull.Value
-                        ? Convert.ToDateTime(rd["TanggalPembayaran"]).ToString("yyyy-MM-dd")
+                    dueDate = rd["due_date"] != DBNull.Value
+                        ? Convert.ToDateTime(rd["due_date"]).ToString("yyyy-MM-dd")
                         : string.Empty
                 });
             }

@@ -7,7 +7,7 @@
     <h2 class="text-xl font-semibold">Payment List</h2>
     <a href="/Payment/Create"
        class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
-        + Add Payment
+        + Publish Payment
     </a>
 </div>
 
@@ -21,7 +21,7 @@
                class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 120px;">Payment Date</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 120px;">Due Date</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 250px;">Student</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 120px;">Class</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Type</th>
@@ -50,14 +50,26 @@
     let currentAcademicClassId = '';
     let currentPaymentStatus = '';
 
+    function showError(message) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: message || 'Something went wrong.'
+        });
+    }
+
+    function isOverdueAndUnpaid(row) {
+        if (!row || !row.due_date) return false;
+        if ((row.status || '').toUpperCase() === 'PAID') return false;
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const due = new Date(row.due_date + 'T00:00:00');
+        return due < today;
+    }
+
     $(document).ready(function () {
         initPaymentTable();
-
-        $(document).on('click', function (e) {
-            if (!$(e.target).closest('.payment-actions-wrapper').length) {
-                $('.payment-actions-menu').addClass('hidden');
-            }
-        });
     });
 
     function initPaymentTable() {
@@ -72,6 +84,9 @@
                 data: function (d) {
                     d.academic_class_id = currentAcademicClassId || null;
                     d.status = currentPaymentStatus || null;
+                },
+                error: function () {
+                    showError('Failed to load payment data.');
                 }
             },
             dom: 'lftip',
@@ -89,11 +104,16 @@
             },
             columns: [
                 {
-                    data: 'payment_date',
+                    data: 'due_date',
                     className: 'py-3 font-medium text-gray-900',
-                    render: data => data
-                        ? new Date(data).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })
-                        : '-'
+                    render: function (data, type, row) {
+                        if (!data) return '-';
+                        const formatted = new Date(data).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' });
+                        if (isOverdueAndUnpaid(row)) {
+                            return `<span class="text-red-700 font-semibold">${formatted} (Overdue)</span>`;
+                        }
+                        return formatted;
+                    }
                 },
                 {
                     data: null,
@@ -159,28 +179,38 @@
                     className: 'text-center py-3',
                     render: function (data, type, row) {
                         var id = row.payment_id;
+                        var isPaid = (row.status || '').toUpperCase() === 'PAID';
+                        if (isPaid) {
+                            return `
+                                <button type="button"
+                                        class="inline-flex items-center justify-center p-2 rounded-md bg-gray-100 text-gray-400 cursor-not-allowed"
+                                        title="Fully paid"
+                                        disabled>
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a5 5 0 00-10 0v2m-2 0h14a1 1 0 011 1v9a1 1 0 01-1 1H5a1 1 0 01-1-1v-9a1 1 0 011-1z" />
+                                    </svg>
+                                </button>`;
+                        }
+
                         var editUrl = '/Payment/Edit?id=' + id;
                         return `
-                            <div class="flex justify-center payment-actions-wrapper relative">
-                                <button type="button" onclick="toggleActionsMenu(event, '${id}')"
-                                        class="p-1.5 hover:bg-gray-100 rounded-md transition-colors duration-150">
-                                    <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                                    </svg>
-                                </button>
-                                <div id="actions-menu-${id}" class="payment-actions-menu hidden absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10">
-                                    <a href="${editUrl}" class="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">
-                                        Edit
-                                    </a>
-                                    <button type="button" onclick="delPayment('${id}')"
-                                            class="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100">
-                                        Delete
-                                    </button>
-                                </div>
-                            </div>`;
+                            <a href="${editUrl}"
+                               class="inline-flex items-center justify-center p-2 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                               title="Pay">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m3 0h6M5 6h14a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z" />
+                                </svg>
+                            </a>`;
                     }
                 }
             ],
+            rowCallback: function (row, data) {
+                if (isOverdueAndUnpaid(data)) {
+                    $(row).addClass('bg-red-50');
+                } else {
+                    $(row).removeClass('bg-red-50');
+                }
+            },
             initComplete: function () {
                 const wrapper = $('#payment-table_wrapper');
 
@@ -320,30 +350,5 @@
         }
     }
 
-    function toggleActionsMenu(event, id) {
-        event.stopPropagation();
-        $('.payment-actions-menu').addClass('hidden');
-        $('#actions-menu-' + id).toggleClass('hidden');
-    }
-
-    function delPayment(id) {
-        $('.payment-actions-menu').addClass('hidden');
-        if (!confirm("Delete this payment record?")) return;
-
-        $.ajax({
-            url: "/Payment/Delete",
-            type: "POST",
-            contentType: "application/json",
-            data: JSON.stringify({ id: id }),
-            success: res => {
-                if (res.success) {
-                    $('#payment-table').DataTable().ajax.reload(null, false);
-                } else {
-                    alert(res.message || "Failed to delete payment");
-                }
-            },
-            error: () => alert("An error occurred while deleting the payment.")
-        });
-    }
 </script>
 }

@@ -25,7 +25,7 @@
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Class</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Day</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center">Total Subject</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right" style="width: 70px;">Action</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" >Action</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100"></tbody>
@@ -99,7 +99,7 @@
                     data: null,
                     orderable: false,
                     searchable: false,
-                    className: 'text-center py-3',
+                    className: 'text-right py-3',
                     render: function (data, type, row) {
                         var id = row.schedule_id;
                         var editUrl = '/Schedule/Edit?id=' + id;

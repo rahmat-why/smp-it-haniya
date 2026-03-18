@@ -1,57 +1,38 @@
 ﻿@{
     Layout = "_LayoutAdmin";
-    ViewData["Title"] = "Edit Payment";
+    ViewData["Title"] = "Pay Payment";
 }
 
 <input type="hidden" id="payment_id" value="@ViewBag.paymentId">
 
-<h2 class="text-2xl font-bold text-gray-800 mb-6">Edit Payment</h2>
+<h2 class="text-2xl font-bold text-gray-800 mb-6">Pay Payment</h2>
 
 <div class="bg-white p-6 rounded-xl shadow-lg w-full">
     <form id="paymentForm" class="space-y-8">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-                <label for="student_class_id" class="block text-sm font-medium text-gray-700 mb-2">
-                    Student <span class="text-red-600">*</span>
-                </label>
-                <select id="student_class_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                        data-placeholder="-- Select Student --" required></select>
-                <p id="error-student" class="mt-1 text-sm text-red-600 hidden"></p>
+                <div class="block text-sm font-medium text-gray-700 mb-2">Student</div>
+                <div id="student_display" class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">-</div>
             </div>
 
             <div>
-                <label for="payment_type" class="block text-sm font-medium text-gray-700 mb-2">
-                    Payment Type <span class="text-red-600">*</span>
-                </label>
-                <select id="payment_type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                        data-placeholder="-- Select Payment Type --" required></select>
-                <p id="error-payment-type" class="mt-1 text-sm text-red-600 hidden"></p>
+                <div class="block text-sm font-medium text-gray-700 mb-2">Payment Type</div>
+                <div id="payment_type_display" class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">-</div>
             </div>
 
             <div>
-                <label for="total_price" class="block text-sm font-medium text-gray-700 mb-2">
-                    Total Price <span class="text-red-600">*</span>
-                </label>
-                <input type="number" id="total_price" step="1" min="0" required
-                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
-                <p id="error-total-price" class="mt-1 text-sm text-red-600 hidden"></p>
+                <div class="block text-sm font-medium text-gray-700 mb-2">Total Price</div>
+                <div id="total_price_display" class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">-</div>
             </div>
 
             <div>
-                <label for="payment_method" class="block text-sm font-medium text-gray-700 mb-2">
-                    Payment Method
-                </label>
-                <select id="payment_method" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                        data-placeholder="-- Select Payment Method --"></select>
+                <div class="block text-sm font-medium text-gray-700 mb-2">Due Date</div>
+                <div id="due_date_display" class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">-</div>
             </div>
 
             <div>
-                <label for="payment_date" class="block text-sm font-medium text-gray-700 mb-2">
-                    Payment Date <span class="text-red-600">*</span>
-                </label>
-                <input type="date" id="payment_date" required
-                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
-                <p id="error-payment-date" class="mt-1 text-sm text-red-600 hidden"></p>
+                <div class="block text-sm font-medium text-gray-700 mb-2">Remaining Payment</div>
+                <div id="remaining_payment_display" class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">-</div>
             </div>
         </div>
 
@@ -66,14 +47,13 @@
                             <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-1/12">#</th>
                             <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-3/12">Paid</th>
                             <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-3/12">Bill Date</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-3/12">Payment Method</th>
                             <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-4/12">Notes</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-1/12">Action</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-instalments"></tbody>
                 </table>
             </div>
-            <p id="error-instalments" class="text-sm text-red-600 hidden"></p>
         </div>
 
         <div class="flex justify-end gap-4 pt-6 border-t border-gray-200">
@@ -89,8 +69,8 @@
                             </svg>
                 Back
             </button>
-            <button type="button" onclick="updatePayment()" class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
-                Update
+            <button type="button" id="btn-update-payment" onclick="updatePayment()" class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
+                Pay
                 <svg class="w-4 h-4 ml-2 text-white"
                                  fill="none"
                                  viewBox="0 0 24 24"
@@ -107,94 +87,144 @@
 
 @section Scripts {
     <script>
-        // ────────────────────────────────────────────────
-        // Fungsi sama seperti di Create.cshtml
-        // ────────────────────────────────────────────────
+        let isFullyPaid = false;
+        let remainingPaymentValue = 0;
+        let paymentMethodItems = [];
+
+        function showError(message) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: message || 'Something went wrong.'
+            });
+        }
+
+        function showInfo(message) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Info',
+                text: message || 'Information.'
+            });
+        }
+
+        function showSuccess(message) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                text: message || 'Payment updated.'
+            });
+        }
+
+        function formatCurrency(amount) {
+            if (!amount || isNaN(amount)) return 'Rp 0';
+            return 'Rp ' + Number(amount).toLocaleString('id-ID');
+        }
+
+        function getPaymentMethodOptions(selectedValue, selectedText) {
+            const selected = (selectedValue || '').toString();
+            const options = paymentMethodItems.map(item => {
+                const isSelected = item.value === selected ? 'selected' : '';
+                return `<option value="${item.value}" ${isSelected}>${item.text}</option>`;
+            });
+
+            if (selected && !paymentMethodItems.some(x => x.value === selected)) {
+                options.unshift(`<option value="${selected}" selected>${selectedText || selected}</option>`);
+            }
+
+            return options.join('');
+        }
+
         function renumberInstalments() {
             $('#tbody-instalments tr.inst-row').each(function (idx) {
                 $(this).find('.instalment-number-cell').text(idx + 1);
             });
         }
 
-        function addInstalmentRow(prefill = {}) {
-            const row = `
-                        <tr class="inst-row hover:bg-gray-50 border-b last:border-0">
-                            <td class="px-4 py-3 instalment-number-cell"></td>
-                            <td class="px-4 py-3">
-                                <input type="number" step="1" class="inst-amount-input w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" value="${prefill.total_payment || ''}" />
-                            </td>
-                            <td class="px-4 py-3">
-                                <input type="date" class="inst-date-input w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" value="${prefill.payment_date || ''}" />
-                            </td>
-                            <td class="px-4 py-3">
-                                <input type="text" class="inst-notes-input w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" value="${prefill.notes || ''}" />
-                            </td>
-                            <td class="px-4 py-3">
-                                <button type="button" onclick="removeInstalmentRow(this)" class="inline-flex items-center justify-center p-2 bg-red-600 hover:bg-red-700 text-white rounded-md" aria-label="Remove row" title="Remove row">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" />
-                                    </svg>
-                                </button>
-                            </td>
-                        </tr>`;
-            $('#tbody-instalments').append(row);
-            renumberInstalments();
-        }
+        function addInstalmentRow(prefill = {}, options = {}) {
+            const isExisting = !!options.isExisting;
+            const readOnlyAmount = isExisting ? 'readonly' : '';
+            const readOnlyNotes = isExisting ? 'readonly' : '';
+            const amountClass = isExisting ? 'bg-gray-100 cursor-not-allowed' : '';
+            const notesClass = isExisting ? 'bg-gray-100 cursor-not-allowed' : '';
+            const disabledMethod = isExisting ? 'disabled' : '';
+            const methodClass = isExisting ? 'bg-gray-100 cursor-not-allowed' : '';
+            const methodOptions = getPaymentMethodOptions(prefill.payment_method || '', prefill.payment_method_desc || '');
 
-        function removeInstalmentRow(btn) {
-            $(btn).closest('tr').remove();
+            const row = `
+                <tr class="inst-row hover:bg-gray-50 border-b last:border-0 ${isExisting ? 'inst-existing' : 'inst-new'}">
+                    <td class="px-4 py-3 instalment-number-cell"></td>
+                    <td class="px-4 py-3">
+                        <input type="number" step="1" min="0"
+                               class="inst-amount-input w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition ${amountClass}"
+                               value="${prefill.total_payment || ''}" ${readOnlyAmount} />
+                    </td>
+                    <td class="px-4 py-3">
+                        <input type="date"
+                               class="inst-date-input w-full px-3 py-1.5 border border-gray-300 rounded bg-gray-100 cursor-not-allowed"
+                               value="${prefill.payment_date || ''}" readonly />
+                    </td>
+                    <td class="px-4 py-3">
+                        <select class="inst-method-select w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition ${methodClass}" ${disabledMethod}>
+                            <option value="">-- Select Payment Method --</option>
+                            ${methodOptions}
+                        </select>
+                    </td>
+                    <td class="px-4 py-3">
+                        <input type="text"
+                               class="inst-notes-input w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition ${notesClass}"
+                               value="${prefill.notes || ''}" ${readOnlyNotes} />
+                    </td>
+                </tr>`;
+            $('#tbody-instalments').append(row);
             renumberInstalments();
         }
 
         function collectInstalments() {
             const rows = [];
-            $('#tbody-instalments tr.inst-row').each(function () {
+            $('#tbody-instalments tr.inst-row.inst-new').each(function () {
                 const $row = $(this);
                 const total_payment = ($row.find('.inst-amount-input').val() || '').toString().trim();
                 const payment_date = ($row.find('.inst-date-input').val() || '').toString().trim();
                 const notes = ($row.find('.inst-notes-input').val() || '').toString().trim();
+                const payment_method = ($row.find('.inst-method-select').val() || '').toString().trim();
 
-                if (total_payment || payment_date || notes) {
-                    rows.push({ total_payment, payment_date, notes });
+                if (total_payment || payment_date || notes || payment_method) {
+                    rows.push({ total_payment, payment_date, notes, payment_method });
                 }
             });
             return rows;
         }
 
         function validateForm() {
-            $('.text-red-600').addClass('hidden');
-            let valid = true;
-
-            if (!$('#student_class_id').val()) {
-                $('#error-student').text('Please select student').removeClass('hidden');
-                valid = false;
-            }
-            if (!$('#payment_type').val()) {
-                $('#error-payment-type').text('Please select payment type').removeClass('hidden');
-                valid = false;
-            }
-            if (!$('#total_price').val() || parseFloat($('#total_price').val()) <= 0) {
-                $('#error-total-price').text('Please enter valid total price').removeClass('hidden');
-                valid = false;
-            }
-            if (!$('#payment_date').val()) {
-                $('#error-payment-date').text('Please select payment date').removeClass('hidden');
-                valid = false;
-            }
+            if (isFullyPaid) return 'Payment is already fully paid';
 
             const instalments = collectInstalments();
-            instalments.forEach(it => {
-                if (it.total_payment && (isNaN(parseFloat(it.total_payment)) || parseFloat(it.total_payment) <= 0)) {
-                    $('#error-instalments').text('Each instalment must have valid amount').removeClass('hidden');
-                    valid = false;
-                }
-                if (it.total_payment && !it.payment_date) {
-                    $('#error-instalments').text('Instalment with amount must have payment date').removeClass('hidden');
-                    valid = false;
-                }
-            });
+            let hasNewPayment = false;
+            let totalPaid = 0;
 
-            return valid;
+            for (const it of instalments) {
+                const amount = parseFloat(it.total_payment || '0');
+                if (isNaN(amount) || amount < 0) return 'Each instalment must have a valid amount';
+                if (amount > 0) hasNewPayment = true;
+                if (amount > 0 && !it.payment_method) return 'Payment method is required for each payment row';
+                totalPaid += amount;
+            }
+
+            if (!hasNewPayment) return 'Please input payment amount';
+
+            if (totalPaid > remainingPaymentValue) return 'Payment amount cannot exceed remaining payment';
+
+            return '';
+        }
+
+        function setPayButtonDisabled(disabled) {
+            const $btn = $('#btn-update-payment');
+            $btn.prop('disabled', disabled);
+            if (disabled) {
+                $btn.removeClass('bg-blue-900 hover:bg-blue-800').addClass('bg-gray-300 text-gray-500 cursor-not-allowed');
+            } else {
+                $btn.removeClass('bg-gray-300 text-gray-500 cursor-not-allowed').addClass('bg-blue-900 hover:bg-blue-800');
+            }
         }
 
         function goBackPayment() {
@@ -202,41 +232,58 @@
         }
 
         function updatePayment() {
-            if (!validateForm()) return;
+            const validationMessage = validateForm();
+            if (validationMessage) {
+                showError(validationMessage);
+                return;
+            }
 
-            const fd = new FormData();
-            fd.append("payment_id", $('#payment_id').val());
-            fd.append("student_class_id", $('#student_class_id').val());
-            fd.append("payment_type", $('#payment_type').val());
-            fd.append("total_price", $('#total_price').val());
-            fd.append("payment_method", $('#payment_method').val() || '');
-            fd.append("payment_date", $('#payment_date').val());
-            fd.append("instalments", JSON.stringify(collectInstalments()));
+            Swal.fire({
+                title: 'Confirm Payment',
+                text: 'Are you sure you want to submit this payment?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, submit',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (!result.isConfirmed) return;
 
-            $.ajax({
-                url: "/Payment/Update",
-                type: "POST",
-                data: fd,
-                processData: false,
-                contentType: false,
-                success: res => {
-                    if (res.success) {
-                        location.href = "/Payment";
-                    } else {
-                        alert(res.message || "Update failed");
+                const fd = new FormData();
+                fd.append("payment_id", $('#payment_id').val());
+                fd.append("instalments", JSON.stringify(collectInstalments()));
+
+                $.ajax({
+                    url: "/Payment/Update",
+                    type: "POST",
+                    data: fd,
+                    processData: false,
+                    contentType: false,
+                    success: function (res) {
+                        if (res.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success',
+                                text: res.message || 'Payment updated.',
+                                timer: 1200,
+                                showConfirmButton: false
+                            }).then(() => {
+                                window.location.href = "/Payment";
+                            });
+                        } else {
+                            showError(res.message || "Update failed");
+                        }
+                    },
+                    error: function () {
+                        showError("Error updating payment");
                     }
-                },
-                error: () => alert("Error updating payment")
+                });
             });
         }
 
-        // ────────────────────────────────────────────────
-        // Fungsi load data untuk Edit (ini yang diperbaiki)
-        // ────────────────────────────────────────────────
         function loadPayment() {
             const id = $('#payment_id').val().trim();
             if (!id) {
-                alert("Invalid payment ID");
+                showError("Invalid payment ID");
                 return;
             }
 
@@ -246,129 +293,67 @@
                 dataType: 'json',
                 success: function (res) {
                     if (!res.success) {
-                        alert(res.message || "Gagal memuat data");
+                        showError(res.message || "Failed to load payment");
                         return;
                     }
-                    const d = res.data;
+                    const d = res.data || {};
+                    isFullyPaid = (d.status || '').toUpperCase() === 'PAID';
+                    remainingPaymentValue = parseFloat(d.remaining_payment || 0);
 
-                    // Student: Nama - NIS
-                    const $student = $('#student_class_id');
-                    const studentText = d.student_name
-                        ? `${d.student_name} - ${d.nis || '-'}`
-                        : `Student (${d.student_class_id})`;
-                    const studentOpt = new Option(studentText, d.student_class_id, true, true);
-                    $student.append(studentOpt).val(d.student_class_id).trigger('change');
-
-                    // Payment Type
-                    const $ptype = $('#payment_type');
+                    const studentText = d.student_name ? `${d.student_name} - ${d.nis || '-'}` : `Student (${d.student_class_id})`;
+                    $('#student_display').text(studentText);
                     const ptypeText = d.payment_type_desc || d.payment_type;
-                    const ptypeOpt = new Option(ptypeText, d.payment_type, true, true);
-                    $ptype.append(ptypeOpt).val(d.payment_type).trigger('change');  // trigger auto-fill harga
+                    $('#payment_type_display').text(ptypeText || '-');
 
-                    // Payment Method
-                    if (d.payment_method) {
-                        const $pm = $('#payment_method');
-                        const pmText = d.payment_method_desc || d.payment_method;
-                        const pmOpt = new Option(pmText, d.payment_method, true, true);
-                        $pm.append(pmOpt).val(d.payment_method).trigger('change');
-                    }
+                    const price = parseFloat(d.total_price || 0);
+                    $('#total_price_display').text(formatCurrency(price));
+                    $('#due_date_display').text(d.due_date || '-');
+                    $('#remaining_payment_display').text(formatCurrency(d.remaining_payment || 0));
 
-                    // Total Price (tanpa paksa 2 desimal)
-                    let price = d.total_price;
-                    $('#total_price').val(Number.isInteger(price) ? price : price.toFixed(2));
-
-                    $('#payment_date').val(d.payment_date || '');
-
-                    // Instalments
                     $('#tbody-instalments').empty();
                     if (d.instalments && d.instalments.length > 0) {
-                        d.instalments.forEach(inst => addInstalmentRow(inst));
+                        d.instalments.forEach(inst => addInstalmentRow(inst, { isExisting: true }));
                     }
-                    // Always provide one empty row for quick new instalment input.
-                    addInstalmentRow();
+
+                    if (!isFullyPaid) {
+                        const defaultMethod = paymentMethodItems.length > 0 ? paymentMethodItems[0].value : '';
+                        addInstalmentRow({
+                            total_payment: '',
+                            payment_date: new Date().toISOString().split('T')[0],
+                            payment_method: defaultMethod,
+                            notes: ''
+                        }, { isExisting: false });
+                        setPayButtonDisabled(false);
+                    } else {
+                        setPayButtonDisabled(true);
+                        showInfo('This payment is already fully paid.');
+                    }
                 },
                 error: function () {
-                    alert("Gagal memuat data pembayaran");
+                    showError("Failed to load payment");
                 }
             });
         }
 
-        $(document).ready(function () {
-            // Inisialisasi Select2 (sama seperti Create)
-            $('#student_class_id').select2({
-                placeholder: "-- Select Student --",
-                allowClear: true,
-                ajax: {
-                    url: '/Select2/Students',
-                    dataType: 'json',
-                    delay: 250,
-                    data: params => ({ q: params.term || '', page: params.page || 1 }),
-                    processResults: data => ({ results: data.results, pagination: data.pagination }),
-                    cache: true
-                },
-                minimumInputLength: 0
-            });
-
-            $('#payment_type').select2({
-                placeholder: "-- Select Payment Type --",
-                allowClear: false,
-                ajax: {
-                    url: '/Select2/PaymentTypes',
-                    dataType: 'json',
-                    delay: 250,
-                    data: p => ({ q: p.term || '', page: p.page || 1 }),
-                    processResults: d => ({ results: d.results, pagination: d.pagination }),
-                    cache: true
-                },
-                minimumInputLength: 0
-            });
-
-            $('#payment_method').select2({
-                placeholder: "-- Select Payment Method --",
-                allowClear: true,
-                ajax: {
-                    url: '/Select2/PaymentMethods',
-                    dataType: 'json',
-                    delay: 250,
-                    data: p => ({ q: p.term || '', page: p.page || 1 }),
-                    processResults: d => ({ results: d.results, pagination: d.pagination }),
-                    cache: true
-                },
-                minimumInputLength: 0
-            });
-
-            // Auto-fill total price (sama seperti Create, tapi tanpa .toFixed paksa)
-            $('#payment_type').on('change', function () {
-                const selectedId = $(this).val();
-                if (!selectedId) {
-                    $('#total_price').val('');
-                    return;
+        function loadPaymentMethods() {
+            return $.ajax({
+                url: '/Payment/GetPaymentMethodItems',
+                type: 'GET',
+                dataType: 'json'
+            }).then(function (res) {
+                if (!res.success) {
+                    throw new Error(res.message || 'Failed to load payment methods');
                 }
-
-                $.ajax({
-                    url: '/Payment/GetTotalPriceByPaymentType',
-                    type: 'GET',
-                    data: { paymentTypeId: selectedId },
-                    dataType: 'json',
-                    success: function (res) {
-                        if (res.success) {
-                            let val = res.amount;
-                            // Tampilkan tanpa desimal jika bulat
-                            $('#total_price').val(Number.isInteger(val) ? val : val.toFixed(2));
-                        } else {
-                            $('#total_price').val('');
-                            if (res.message) alert(res.message);
-                        }
-                    },
-                    error: function () {
-                        alert('Gagal mengambil nominal biaya.');
-                        $('#total_price').val('');
-                    }
-                });
+                paymentMethodItems = res.data || [];
             });
+        }
 
-            // Load data saat halaman dibuka
-            loadPayment();
+        $(document).ready(function () {
+            loadPaymentMethods().then(function () {
+                loadPayment();
+            }).catch(function (err) {
+                showError(err?.message || 'Failed to load payment methods');
+            });
         });
     </script>
 }
