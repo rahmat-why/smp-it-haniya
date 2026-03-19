@@ -171,9 +171,7 @@ namespace Haniya.Controllers.PortalAdmin
                 var classes = new List<object>();
                 var classSql = @"
                     SELECT DISTINCT mac.academic_class_id, mc.class_name
-                    FROM mst_student_classes msc
-                    JOIN mst_academic_classes mac
-                        ON msc.academic_class_id = mac.academic_class_id
+                    FROM mst_academic_classes mac
                     JOIN mst_classes mc
                         ON mac.class_id = mc.class_id
                     JOIN mst_academic_years may
