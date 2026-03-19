@@ -411,34 +411,37 @@ namespace Haniya.Controllers.PortalAdmin
             var list = new List<dynamic>();
 
             var sql = @"
-        SELECT
-            s.day,
-            sd.start_time,
-            sd.end_time,
-            sub.subject_name,
-            ISNULL(t.first_name + ' ' + t.last_name, 'Tidak Ditentukan') AS teacher
-        FROM mst_schedules s
-        JOIN mst_schedule_details sd ON s.schedule_id = sd.schedule_id
-        JOIN mst_subjects sub ON sd.subject_id = sub.subject_id
-        LEFT JOIN mst_teachers t ON sd.teacher_id = t.teacher_id
-        JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
-        JOIN mst_classes cls ON ac.class_id = cls.class_id
-        WHERE ac.academic_year_id = @academicYear
-        AND (
-            @classLevel = ''
-            OR cls.class_name = @classLevel
-            OR (TRY_CONVERT(int, @classLevel) IS NOT NULL AND cls.class_level = TRY_CONVERT(int, @classLevel))
-        )
-        AND sd.teacher_id = @teacherId
-        ORDER BY
-            CASE s.day
-                WHEN 'Senin' THEN 1
-                WHEN 'Selasa' THEN 2
-                WHEN 'Rabu' THEN 3
-                WHEN 'Kamis' THEN 4
-                WHEN 'Jumat' THEN 5
-                WHEN 'Sabtu' THEN 6
-            END, sd.start_time";
+                SELECT
+                    s.day,
+                    sd.start_time,
+                    sd.end_time,
+                    sub.subject_name,
+                    ISNULL(t.first_name + ' ' + t.last_name, '-') AS teacher,
+	                CASE 
+		                WHEN sd.teacher_id = @teacherId THEN CAST(1 AS BIT)
+		                ELSE CAST(0 AS BIT)
+	                END AS is_pic
+                FROM mst_schedules s
+                JOIN mst_schedule_details sd ON s.schedule_id = sd.schedule_id
+                JOIN mst_subjects sub ON sd.subject_id = sub.subject_id
+                LEFT JOIN mst_teachers t ON sd.teacher_id = t.teacher_id
+                JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
+                JOIN mst_classes cls ON ac.class_id = cls.class_id
+                WHERE ac.academic_year_id = @academicYear
+                AND (
+                    @classLevel = ''
+                    OR cls.class_name = @classLevel
+                    OR (TRY_CONVERT(int, @classLevel) IS NOT NULL AND cls.class_level = TRY_CONVERT(int, @classLevel))
+                )
+                ORDER BY
+                    CASE s.day
+                        WHEN 'DAY_MON' THEN 1
+                        WHEN 'DAY_TUE' THEN 2
+                        WHEN 'DAY_WED' THEN 3
+                        WHEN 'DAY_THU' THEN 4
+                        WHEN 'DAY_FRI' THEN 5
+                        WHEN 'DAY_SAT' THEN 6
+                    END, sd.start_time";
 
             var cmd = new SqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@academicYear", academicYear);
@@ -453,7 +456,8 @@ namespace Haniya.Controllers.PortalAdmin
                     day = rd["day"].ToString(),
                     time = rd["start_time"].ToString() + " - " + rd["end_time"].ToString(),
                     subject = rd["subject_name"].ToString(),
-                    teacher = rd["teacher"].ToString()
+                    teacher = rd["teacher"].ToString(),
+                    is_pic = rd["is_pic"].ToString()
                 });
             }
 
