@@ -5,7 +5,7 @@
 
 <div class="flex justify-between items-center mb-4">
     <h2 class="text-xl font-semibold">Student List</h2>
-    <a id="student-add-link" href="./Create"
+    <a id="student-add-link" href="/Student/Create"
        class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900"
        data-testid="student-add-button">
         + Add Student
@@ -91,7 +91,7 @@
 
     function syncStateToUrl() {
         history.replaceState({ ...pageState }, '', `?${getStateQuery()}`);
-        $('#student-add-link').attr('href', `./Create?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+        $('#student-add-link').attr('href', `/Student/Create?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`);
     }
 
     function hydrateStateFromUrl() {
@@ -197,7 +197,7 @@
                                 </svg>
                             </button>
                             <div id="actions-menu-${id}" class="student-actions-menu hidden absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10">
-                                <a href="./Edit?id=${encodeURIComponent(id)}&returnUrl=${returnUrl}" class="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">Edit</a>
+                                <a href="/Student/Edit?id=${encodeURIComponent(id)}&returnUrl=${returnUrl}" class="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">Edit</a>
                                 <button type="button" onclick="delStudent('${id}')" class="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100">Delete</button>
                             </div>
                         </div>
