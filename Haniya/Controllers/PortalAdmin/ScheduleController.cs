@@ -39,8 +39,16 @@ namespace Haniya.Controllers.PortalAdmin
             var totalSql = @"
                 SELECT COUNT(*) 
                 FROM mst_schedules s
+                JOIN mst_detail_settings mds ON (s.day = mds.item_name OR s.day = mds.detail_id) AND mds.header_id = 'DAY'
+                JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
                 WHERE (@classId IS NULL OR s.academic_class_id = @classId)
-                  AND (@day IS NULL OR s.day = @day)";
+                  AND (
+                        @day IS NULL
+                        OR s.day = @day
+                        OR mds.item_name = @day
+                        OR mds.item_desc = @day
+                        OR mds.detail_id = @day
+                  )";
 
             int recordsTotal;
             using (var cmd = new SqlCommand(totalSql, conn))
@@ -54,16 +62,23 @@ namespace Haniya.Controllers.PortalAdmin
                 SELECT 
                     s.schedule_id,
                     c.class_name,
-                    s.day,
+                    mds.item_name AS day,
                     COUNT(d.schedule_detail_id) AS lesson_count
                 FROM mst_schedules s
                 JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
                 JOIN mst_classes c ON ac.class_id = c.class_id
+                JOIN mst_detail_settings mds ON (s.day = mds.item_name OR s.day = mds.detail_id) AND mds.header_id = 'DAY'
                 LEFT JOIN mst_schedule_details d ON d.schedule_id = s.schedule_id
                 WHERE (@classId IS NULL OR s.academic_class_id = @classId)
-                  AND (@day IS NULL OR s.day = @day)
-                GROUP BY s.schedule_id, c.class_name, s.day
-                ORDER BY c.class_name, s.day
+                  AND (
+                        @day IS NULL
+                        OR s.day = @day
+                        OR mds.item_name = @day
+                        OR mds.item_desc = @day
+                        OR mds.detail_id = @day
+                  )
+                GROUP BY s.schedule_id, c.class_name, mds.item_name
+                ORDER BY c.class_name, mds.item_name
                 OFFSET @start ROWS FETCH NEXT @length ROWS ONLY";
 
             var list = new List<object>();
@@ -118,11 +133,12 @@ namespace Haniya.Controllers.PortalAdmin
                 s.day,
                 s.academic_class_id,
                 c.class_name,
-                COALESCE(dt.item_desc, s.day) AS day_desc
+                COALESCE(dt.item_name, s.day) AS day_value,
+                COALESCE(dt.item_desc, dt.item_name, s.day) AS day_desc
             FROM mst_schedules s
             JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
             JOIN mst_classes c ON ac.class_id = c.class_id
-            LEFT JOIN mst_detail_settings dt ON s.day = dt.detail_id AND dt.header_id = 'DAY'
+            LEFT JOIN mst_detail_settings dt ON (s.day = dt.detail_id OR s.day = dt.item_name) AND dt.header_id = 'DAY'
             WHERE s.schedule_id = @id";
 
                 dynamic header = null;
@@ -135,7 +151,7 @@ namespace Haniya.Controllers.PortalAdmin
                         header = new
                         {
                             schedule_id = r["schedule_id"].ToString(),
-                            day = r["day"]?.ToString(),
+                            day = r["day_value"]?.ToString(),
                             day_desc = r["day_desc"]?.ToString(),
                             academic_class_id = r["academic_class_id"]?.ToString(),
                             class_name = r["class_name"]?.ToString()
@@ -151,7 +167,10 @@ namespace Haniya.Controllers.PortalAdmin
             SELECT 
                 d.schedule_detail_id,
                 d.subject_id,
-                s.subject_name,
+                CASE 
+                    WHEN NULLIF(LTRIM(RTRIM(s.class_level)), '') IS NULL THEN s.subject_name
+                    ELSE CONCAT(s.subject_name, ' - Class ', s.class_level)
+                END AS subject_name,
                 d.teacher_id,
                 CONCAT(t.first_name, ' ', t.last_name) AS teacher_name,
                 CONVERT(varchar(5), d.start_time, 108) AS start_time,

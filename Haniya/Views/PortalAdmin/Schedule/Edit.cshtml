@@ -108,6 +108,7 @@
             $subject.select2({
                 placeholder: "-- Select Subject --",
                 allowClear: true,
+                width: '100%',
                 ajax: {
                     url: '/Select2/Subjects',
                     dataType: 'json',
@@ -122,6 +123,7 @@
             $teacher.select2({
                 placeholder: "-- Select Teacher --",
                 allowClear: true,
+                width: '100%',
                 ajax: {
                     url: '/Select2/Teachers',
                     dataType: 'json',
@@ -231,7 +233,8 @@
                     const d = res.data;
 
                     $('#academic_class_id').val(d.academic_class_id);
-                    $('#class_display').text(d.class_name || '--');
+                    const classText = (d.class_name || '--').replace(/\s*\(\d+\)\s*$/, '').trim();
+                    $('#class_display').text(classText || '--');
 
                     // Preload selected day with description
                     preloadedDay = { id: d.day, text: d.day_desc || d.day };
@@ -262,6 +265,7 @@
             $('#day').select2({
                 placeholder: "-- Select Day --",
                 allowClear: false,
+                width: '100%',
                 ajax: {
                     url: '/Select2/Days',
                     dataType: 'json',

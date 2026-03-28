@@ -102,6 +102,7 @@
             $newRow.find('.subject-select').select2({
                 placeholder: "-- Select Subject --",
                 allowClear: true,
+                width: '100%',
                 ajax: {
                     url: '/Select2/Subjects',
                     dataType: 'json',
@@ -116,6 +117,7 @@
             $newRow.find('.teacher-select').select2({
                 placeholder: "-- Select Teacher --",
                 allowClear: true,
+                width: '100%',
                 ajax: {
                     url: '/Select2/Teachers',
                     dataType: 'json',
@@ -206,6 +208,9 @@
             $('#academic_class_id').select2({
                 placeholder: "-- Select Academic Class --",
                 allowClear: false,
+                width: '100%',
+                templateResult: formatClassText,
+                templateSelection: formatClassText,
                 ajax: {
                     url: '/Select2/AcademicClasses',
                     dataType: 'json',
@@ -221,6 +226,7 @@
             $('#day').select2({
                 placeholder: "-- Select Day --",
                 allowClear: false,
+                width: '100%',
                 ajax: {
                     url: '/Select2/Days',
                     dataType: 'json',
@@ -234,5 +240,12 @@
 
             addDetailRow(); // Start with one empty row
         });
+
+        function formatClassText(item) {
+            if (!item) return '';
+            if (!item.id) return item.text;
+            const text = item.text || '';
+            return text.replace(/\s*\(\d+\)\s*$/, '').trim();
+        }
     </script>
 }

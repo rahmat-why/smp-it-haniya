@@ -25,7 +25,7 @@
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Class</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Day</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center">Total Subject</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" >Action</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right" >Action</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100"></tbody>
@@ -104,7 +104,7 @@
                         var id = row.schedule_id;
                         var editUrl = '/Schedule/Edit?id=' + id;
                         return `
-                            <div class="flex justify-center schedule-actions-wrapper relative">
+                            <div class="flex justify-end schedule-actions-wrapper relative">
                                 <button type="button" onclick="toggleActionsMenu(event, '${id}')"
                                         class="p-1.5 hover:bg-gray-100 rounded-md transition-colors duration-150">
                                     <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
@@ -204,6 +204,8 @@
                     placeholder: "-- All Classes --",
                     allowClear: true,
                     width: '100%',
+                    templateResult: formatClassText,
+                    templateSelection: formatClassText,
                     ajax: {
                         url: '/Select2/AcademicClasses',
                         dataType: 'json',
@@ -247,6 +249,13 @@
         scheduleTable.search(searchKeyword);
         scheduleTable.ajax.reload(null, true);
         toggleFilter();
+    }
+
+    function formatClassText(item) {
+        if (!item) return '';
+        if (!item.id) return item.text;
+        const text = item.text || '';
+        return text.replace(/\s*\(\d+\)\s*$/, '').trim();
     }
 
     function stylePagination() {

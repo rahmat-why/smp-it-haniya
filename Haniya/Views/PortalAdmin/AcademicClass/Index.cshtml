@@ -5,7 +5,7 @@
 
 <div class="flex justify-between items-center mb-4">
     <h2 class="text-xl font-semibold">Academic Class List</h2>
-    <a href="/AcademicClass/Create"
+    <a id="academic-class-add-link" href="./Create"
        class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900"
        data-testid="academic-class-add-button">
         + Add Academic Class
@@ -23,12 +23,12 @@
             <table id="academic-class-table" class="w-full text-sm text-left text-gray-700 border-collapse">
                 <thead class="bg-gray-50 text-gray-600 border-b border-gray-200">
                     <tr>
-                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Academic Year</th>
-                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Semester</th>
-                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Class</th>
-                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Class Level</th>
-                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Homeroom Teacher</th>
-                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Teacher NPK</th>
+                        <th data-sort="academicYear" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Academic Year</th>
+                        <th data-sort="semester" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Semester</th>
+                        <th data-sort="className" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Class</th>
+                        <th data-sort="classLevel" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Class Level</th>
+                        <th data-sort="teacherName" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Homeroom Teacher</th>
+                        <th data-sort="teacherNpk" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Teacher NPK</th>
                         <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-right">Action</th>
                     </tr>
                 </thead>
@@ -44,185 +44,41 @@
     </div>
 </div>
 
+<div id="tw-modal" class="hidden fixed inset-0 z-50" aria-hidden="true">
+    <div class="absolute inset-0 bg-black/40" data-modal-close></div>
+    <div class="relative min-h-full flex items-center justify-center p-4">
+        <div class="w-full max-w-md rounded-xl bg-white shadow-xl" role="dialog" aria-modal="true" aria-labelledby="tw-modal-title">
+            <div class="px-5 py-4 border-b border-gray-100">
+                <h3 id="tw-modal-title" class="text-base font-semibold text-gray-900"></h3>
+            </div>
+            <div class="px-5 py-4">
+                <p id="tw-modal-message" class="text-sm text-gray-600"></p>
+            </div>
+            <div class="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
+                <button id="tw-modal-cancel" type="button" class="px-4 py-2 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">Cancel</button>
+                <button id="tw-modal-confirm" type="button" class="px-4 py-2 text-sm rounded-md bg-blue-900 text-white hover:bg-blue-800">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
-        $(document).ready(function () {
-            initAcademicClassTable();
-            $(document).on('click', function (e) {
-                if (!$(e.target).closest('.academic-class-actions-wrapper').length) {
-                    $('.academic-class-actions-menu').addClass('hidden');
-                }
-            });
-        });
+        const pageState = {
+            page: 1,
+            limit: 10,
+            filters: { search: '' },
+            sort: { field: 'academicYear', order: 'desc' },
+            hasNextPage: false
+        };
+        let lastRequestKey = '';
+        let searchDebounce = null;
 
         function formatDateShort(d) {
-            if (!d) return "";
+            if (!d) return '';
             const date = new Date(d);
-            if (isNaN(date.getTime())) return "";
+            if (isNaN(date.getTime())) return '';
             return date.getFullYear();
-        }
-
-        function initAcademicClassTable() {
-            const table = $('#academic-class-table').DataTable({
-                processing: true,
-                serverSide: false,
-                searching: true,
-                lengthChange: true,
-                ordering: true,
-                order: [[0, 'desc']],
-                dom: 't', 
-                ajax: {
-                    url: '/AcademicClass/GetAll',
-                    type: 'GET',
-                    dataSrc: function (res) {
-                        if (!res.success) {
-                            alert(res.message || "Failed to load academic classes");
-                            return [];
-                        }
-                        return res.data;
-                    }
-                },
-                columns: [
-                    {
-                        data: null,
-                        className: 'px-5 py-3 whitespace-nowrap',
-                        render: function(data) {
-                            return (data.start_date && data.end_date)
-                                ? `${formatDateShort(data.start_date)} / ${formatDateShort(data.end_date)}`
-                                : '-';
-                        }
-                    },
-                    {
-                        data: 'semester',
-                        className: 'px-5 py-3 whitespace-nowrap',
-                        render: data => data ? `Semester ${data}` : '-'
-                    },
-                    {
-                        data: 'class_name',
-                        className: 'px-5 py-3 whitespace-nowrap',
-                        render: data => data || '-'
-                    },
-                    {
-                        data: 'class_level',
-                        className: 'px-5 py-3 whitespace-nowrap',
-                        render: data => data || '-'
-                    },
-                    {
-                        data: 'homeroom_teacher_name',
-                        className: 'px-5 py-3 whitespace-nowrap',
-                        render: data => data || '-'
-                    },
-                    {
-                        data: 'homeroom_teacher_npk',
-                        className: 'px-5 py-3 whitespace-nowrap',
-                        render: data => data || '-'
-                    },
-                    {
-                        data: 'academic_class_id',
-                        className: 'px-5 py-3 text-right',
-                        orderable: false,
-                        render: function(data, type, row) {
-                            const id = data;
-                            return `
-                                <div class="relative inline-block text-left academic-class-actions-wrapper">
-                                    <button type="button"
-                                            onclick="toggleActionsMenu('${id}')"
-                                            class="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            data-testid="academic-class-actions-toggle-${id}">
-                                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round"
-                                                  stroke-linejoin="round"
-                                                  stroke-width="2"
-                                                  d="M12 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" />
-                                        </svg>
-                                    </button>
-
-                                    <div id="actions-menu-${id}"
-                                         class="academic-class-actions-menu hidden origin-top-right absolute right-0 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10"
-                                         data-testid="academic-class-actions-menu-${id}">
-                                        <div class="py-1">
-                                            <a href="/AcademicClass/Edit?id=${id}"
-                                               class="block px-3 py-1.5 text-left text-gray-700 hover:bg-gray-100 text-sm"
-                                               data-testid="academic-class-edit-action-${id}">
-                                                Edit
-                                            </a>
-                                            <button type="button"
-                                                    onclick="delAcademicClass('${id}')"
-                                                    class="w-full text-left block px-3 py-1.5 text-sm text-red-600 hover:bg-red-50"
-                                                    data-testid="academic-class-delete-action-${id}">
-                                                Delete
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
-                        }
-                    }
-                ],
-                initComplete: function () {
-                    renderCustomControls(this.api());
-                },
-                drawCallback: function () {
-                    renderCustomControls(this.api());
-                },
-            });
-        }
-
-        function renderCustomControls(api) {
-            $('#academic-toolbar').html(`
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 w-full">
-                    <div class="flex items-center gap-2 text-sm text-gray-600">
-                        Show 
-                        <select id="dt-length" class="border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-900">
-                            <option value="10">10</option>
-                            <option value="25">25</option>
-                            <option value="50">50</option>
-                        </select> rows
-                    </div>
-                    <div>
-                        <input id="dt-search"
-                            type="text"
-                            placeholder="Search academic class..."
-                            class="border border-gray-300 rounded-lg px-3 py-2 w-full md:w-72 focus:outline-none focus:ring-2 focus:ring-blue-900"/>
-                    </div>
-                </div>
-            `);
-
-            $('#dt-length').val(api.page.len());
-            $('#dt-length').off().on('change', function () {
-                api.page.len($(this).val()).draw();
-            });
-
-            $('#dt-search').off().on('keyup', function () {
-                api.search(this.value).draw();
-            });
-
-            const info = api.page.info();
-            $('#table-info').html(`
-                <span class="text-sm text-gray-600">
-                    Showing ${info.start + 1} to ${info.end} of ${info.recordsTotal} entries
-                </span>
-            `);
-
-            let paginateHtml = `<div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm">`;
-
-            for (let i = 0; i < info.pages; i++) {
-                paginateHtml += `
-                <button data-page="${i}"
-                    class="px-3 py-2 text-sm border-r border-gray-200 rounded-none last:rounded-r-lg last:border-r-0 
-                        ${i === info.page ? 'bg-blue-900 text-white font-semibold' : 'bg-white text-gray-700 hover:bg-gray-50'} 
-                        flex-shrink-0">
-                    ${i + 1}
-                </button>
-                `;
-            }
-
-            paginateHtml += `</div>`;
-            $('#table-pagination').html(paginateHtml);
-
-            $('#table-pagination button').off().on('click', function () {
-                api.page($(this).data('page')).draw('page');
-            });
         }
 
         function toggleActionsMenu(id) {
@@ -239,19 +95,228 @@
             else $menu.addClass('hidden');
         }
 
-        function delAcademicClass(id) {
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "You won't be able to revert this!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Yes, delete it!',
-                cancelButtonText: 'Cancel'
-            }).then((result) => {
-                $.ajax({
-                url: "/AcademicClass/Delete",
+        function getStateQuery() {
+            return `page=${pageState.page}&limit=${pageState.limit}&search=${encodeURIComponent(pageState.filters.search || '')}&sortField=${encodeURIComponent(pageState.sort.field)}&sortOrder=${encodeURIComponent(pageState.sort.order)}`;
+        }
+
+        function syncStateToUrl() {
+            history.replaceState({ ...pageState }, '', `?${getStateQuery()}`);
+            $('#academic-class-add-link').attr('href', `./Create?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+        }
+
+        function hydrateStateFromUrl() {
+            const q = new URLSearchParams(window.location.search);
+            const page = Number(q.get('page') || 1);
+            const limit = Number(q.get('limit') || 10);
+            pageState.page = Number.isFinite(page) && page > 0 ? page : 1;
+            pageState.limit = Number.isFinite(limit) && limit > 0 ? limit : 10;
+            pageState.filters.search = q.get('search') || '';
+            pageState.sort.field = q.get('sortField') || 'academicYear';
+            pageState.sort.order = q.get('sortOrder') || 'desc';
+        }
+
+        function renderToolbar() {
+            $('#academic-toolbar').html(`
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 w-full">
+                    <div class="flex items-center gap-2 text-sm text-gray-600">
+                        Show
+                        <select id="list-limit" class="border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-900">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                        </select> rows
+                    </div>
+                    <div>
+                        <input id="list-search" type="text" placeholder="Search academic class..." class="border border-gray-300 rounded-lg px-3 py-2 w-full md:w-72 focus:outline-none focus:ring-2 focus:ring-blue-900"/>
+                    </div>
+                </div>
+            `);
+
+            $('#list-limit').val(String(pageState.limit));
+            $('#list-search').val(pageState.filters.search || '');
+
+            $('#list-limit').off('change').on('change', function () {
+                const nextLimit = Number($(this).val() || 10);
+                if (pageState.limit === nextLimit) return;
+                pageState.limit = nextLimit;
+                pageState.page = 1;
+                fetchAcademicClasses();
+            });
+
+            $('#list-search').off('input').on('input', function () {
+                const val = $(this).val() || '';
+                if ((pageState.filters.search || '') === val) return;
+                clearTimeout(searchDebounce);
+                searchDebounce = setTimeout(() => {
+                    pageState.filters.search = val;
+                    pageState.page = 1;
+                    fetchAcademicClasses();
+                }, 300);
+            });
+        }
+
+        function renderSortIndicators() {
+            $('#academic-class-table thead th[data-sort]').each(function () {
+                const field = $(this).data('sort');
+                const isActive = field === pageState.sort.field;
+                const icon = isActive ? (pageState.sort.order === 'asc' ? ' ▲' : ' ▼') : '';
+                const base = $(this).text().replace(/ [▲▼]$/, '');
+                $(this).text(base + icon);
+            });
+        }
+
+        function renderRows(items) {
+            const $tbody = $('#academic-class-table tbody');
+            if (!items || !items.length) {
+                $tbody.html(`<tr><td colspan="7" class="px-5 py-8 text-center text-gray-500">No data found.</td></tr>`);
+                return;
+            }
+
+            let html = '';
+            items.forEach(row => {
+                const id = row.academic_class_id || '';
+                const yearText = (row.start_date && row.end_date) ? `${formatDateShort(row.start_date)} / ${formatDateShort(row.end_date)}` : '-';
+                const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+                html += `
+                    <tr class="border-b border-gray-100">
+                        <td class="px-5 py-3 whitespace-nowrap">${yearText}</td>
+                        <td class="px-5 py-3 whitespace-nowrap">${row.semester ? `Semester ${row.semester}` : '-'}</td>
+                        <td class="px-5 py-3 whitespace-nowrap">${row.class_name || '-'}</td>
+                        <td class="px-5 py-3 whitespace-nowrap">${row.class_level || '-'}</td>
+                        <td class="px-5 py-3 whitespace-nowrap">${row.homeroom_teacher_name || '-'}</td>
+                        <td class="px-5 py-3 whitespace-nowrap">${row.homeroom_teacher_npk || '-'}</td>
+                        <td class="px-5 py-3 text-right">
+                            <div class="relative inline-block text-left academic-class-actions-wrapper">
+                                <button type="button" onclick="toggleActionsMenu('${id}')" class="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5.25a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" />
+                                    </svg>
+                                </button>
+                                <div id="actions-menu-${id}" class="academic-class-actions-menu hidden origin-top-right absolute right-0 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
+                                    <div class="py-1">
+                                        <a href="./Edit?id=${encodeURIComponent(id)}&returnUrl=${returnUrl}" class="block px-3 py-1.5 text-left text-gray-700 hover:bg-gray-100 text-sm">Edit</a>
+                                        <button type="button" onclick="delAcademicClass('${id}')" class="w-full text-left block px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">Delete</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>`;
+            });
+            $tbody.html(html);
+        }
+
+        function renderPagination(currentCount) {
+            const start = currentCount === 0 ? 0 : ((pageState.page - 1) * pageState.limit) + 1;
+            const end = ((pageState.page - 1) * pageState.limit) + currentCount;
+            $('#table-info').html(`<span class="text-sm text-gray-600">Showing ${start} to ${end}</span>`);
+
+            const prevDisabled = pageState.page <= 1;
+            const nextDisabled = !pageState.hasNextPage;
+            $('#table-pagination').html(`
+                <div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                    <button id="page-prev" class="px-3 py-2 text-sm border-r border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Prev</button>
+                    <span class="px-3 py-2 text-sm bg-blue-900 text-white font-semibold">${pageState.page}</span>
+                    <button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Next</button>
+                </div>
+            `);
+
+            $('#page-prev').off('click').on('click', function () {
+                if (pageState.page <= 1) return;
+                pageState.page -= 1;
+                fetchAcademicClasses();
+            });
+            $('#page-next').off('click').on('click', function () {
+                if (!pageState.hasNextPage) return;
+                pageState.page += 1;
+                fetchAcademicClasses();
+            });
+        }
+
+        async function fetchAcademicClasses() {
+            const payload = {
+                page: pageState.page,
+                limit: pageState.limit,
+                filters: { ...pageState.filters },
+                sort: { ...pageState.sort }
+            };
+            const requestKey = JSON.stringify(payload);
+            if (requestKey === lastRequestKey) return; // avoid unnecessary re-fetch
+            lastRequestKey = requestKey;
+            syncStateToUrl();
+            renderSortIndicators();
+
+            try {
+                const res = await $.ajax({
+                    url: '/AcademicClass/GetAll',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(payload)
+                });
+                if (!res.success) {
+                    showMessageModal('Failed', res.message || 'Failed to load academic classes.');
+                    return;
+                }
+
+                const result = res.data || {};
+                const items = result.data || [];
+                pageState.hasNextPage = !!result.hasNextPage;
+                renderRows(items);
+                renderPagination(items.length);
+            } catch {
+                showMessageModal('Error', 'An error occurred while loading academic classes.');
+            }
+        }
+
+        function confirmModal({ title, message, confirmText = 'Confirm', cancelText = 'Cancel' }) {
+            return new Promise((resolve) => {
+                const $modal = $('#tw-modal');
+                const $title = $('#tw-modal-title');
+                const $msg = $('#tw-modal-message');
+                const $confirm = $('#tw-modal-confirm');
+                const $cancel = $('#tw-modal-cancel');
+
+                $title.text(title || 'Confirm');
+                $msg.text(message || '');
+                $confirm.text(confirmText);
+                $cancel.text(cancelText);
+                $modal.removeClass('hidden').attr('aria-hidden', 'false');
+                $confirm.trigger('focus');
+
+                const close = (result) => {
+                    $modal.addClass('hidden').attr('aria-hidden', 'true');
+                    $confirm.off('click');
+                    $cancel.off('click');
+                    $modal.find('[data-modal-close]').off('click');
+                    $(document).off('keydown.modalEsc');
+                    resolve(result);
+                };
+
+                $confirm.on('click', () => close(true));
+                $cancel.on('click', () => close(false));
+                $modal.find('[data-modal-close]').on('click', () => close(false));
+                $(document).on('keydown.modalEsc', function (e) {
+                    if (e.key === 'Escape') close(false);
+                });
+            });
+        }
+
+        function showMessageModal(title, message) {
+            return confirmModal({ title, message, confirmText: 'OK', cancelText: 'Close' });
+        }
+
+        async function delAcademicClass(id) {
+            $('.academic-class-actions-menu').addClass('hidden');
+            const yes = await confirmModal({
+                title: 'Delete Confirmation',
+                message: 'Are you sure you want to delete this data?',
+                confirmText: 'Delete',
+                cancelText: 'Cancel'
+            });
+            if (!yes) return;
+
+            try {
+                const res = await $.ajax({
+                    url: "/AcademicClass/Delete",
                     type: "POST",
                     contentType: "application/json",
                     data: JSON.stringify({
@@ -259,31 +324,44 @@
                         id: id,
                         data: null
                     }),
-                    success: res => {
-                        if (res.success) {
-                            $('#student-table').DataTable().ajax.reload(null, false);
-                            Swal.fire(
-                                'Deleted!',
-                                'Class data has been deleted.',
-                                'success'
-                            );
-                        } else {
-                            Swal.fire(
-                                'Failed!',
-                                res.message,
-                                'error'
-                            );
-                        }
-                    },
-                    error: function () {
-                        Swal.fire(
-                            'Error!',
-                            'An error occurred while deleting the class.',
-                            'error'
-                        );
-                    }
                 });
-            });
+                if (!res || !res.success) {
+                    await showMessageModal('Failed', (res && res.message) ? res.message : 'Delete failed.');
+                    return;
+                }
+                lastRequestKey = '';
+                await fetchAcademicClasses();
+                await showMessageModal('Deleted', 'Class data has been deleted.');
+            } catch {
+                await showMessageModal('Error', 'An error occurred while deleting the class.');
+            }
         }
+
+        $(document).ready(function () {
+            hydrateStateFromUrl();
+            renderToolbar();
+            renderSortIndicators();
+            fetchAcademicClasses();
+
+            $(document).on('click', function (e) {
+                if (!$(e.target).closest('.academic-class-actions-wrapper').length) {
+                    $('.academic-class-actions-menu').addClass('hidden');
+                }
+            });
+
+            $('#academic-class-table thead').on('click', 'th[data-sort]', function () {
+                const field = $(this).data('sort');
+                if (!field) return;
+                if (pageState.sort.field === field) {
+                    pageState.sort.order = pageState.sort.order === 'asc' ? 'desc' : 'asc';
+                } else {
+                    pageState.sort.field = field;
+                    pageState.sort.order = 'asc';
+                }
+                pageState.page = 1;
+                lastRequestKey = '';
+                fetchAcademicClasses();
+            });
+        });
     </script>
 }

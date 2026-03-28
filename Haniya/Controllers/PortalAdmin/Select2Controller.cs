@@ -51,7 +51,7 @@ namespace Haniya.Controllers
 
                 // NOTE: CAST item_desc agar bisa di-ORDER BY
                 var sql = $@"
-            SELECT detail_id, item_desc
+            SELECT item_name, item_desc
             FROM mst_detail_settings
             {where}
             ORDER BY CAST(item_desc AS NVARCHAR(4000))
@@ -69,7 +69,7 @@ namespace Haniya.Controllers
                 {
                     results.Add(new
                     {
-                        id = rd["detail_id"]?.ToString(),
+                        id = rd["item_name"]?.ToString(),
                         text = rd["item_desc"]?.ToString()
                     });
                 }
@@ -728,7 +728,7 @@ namespace Haniya.Controllers
 
                 if (!string.IsNullOrWhiteSpace(q))
                 {
-                    where += " AND subject_name LIKE @q";
+                    where += " AND (subject_name LIKE @q OR class_level LIKE @q)";
                     parameters["@q"] = $"%{q}%";
                 }
 
@@ -746,7 +746,7 @@ namespace Haniya.Controllers
 
                 var offset = (page - 1) * pageSize;
                 var sql = $@"
-            SELECT subject_id, subject_name
+            SELECT subject_id, subject_name, class_level
             FROM mst_subjects
             {where}
             ORDER BY subject_name
@@ -762,10 +762,16 @@ namespace Haniya.Controllers
                 using var rd = cmd.ExecuteReader();
                 while (rd.Read())
                 {
+                    var subjectName = rd["subject_name"]?.ToString() ?? "";
+                    var classLevel = rd["class_level"]?.ToString() ?? "";
+                    var text = string.IsNullOrWhiteSpace(classLevel)
+                        ? subjectName
+                        : $"{subjectName} - Class {classLevel}";
+
                     results.Add(new
                     {
                         id = rd["subject_id"].ToString(),
-                        text = rd["subject_name"]?.ToString()
+                        text
                     });
                 }
 
@@ -874,7 +880,7 @@ namespace Haniya.Controllers
                 var offset = (page - 1) * pageSize;
 
                 var sql = $@"
-            SELECT detail_id, item_desc
+            SELECT item_name, item_desc
             FROM mst_detail_settings
             {where}
             ORDER BY CAST(item_desc AS NVARCHAR(4000))
@@ -892,7 +898,7 @@ namespace Haniya.Controllers
                 {
                     results.Add(new
                     {
-                        id = rd["detail_id"]?.ToString(),
+                        id = rd["item_name"]?.ToString(),
                         text = rd["item_desc"]?.ToString()
                     });
                 }
