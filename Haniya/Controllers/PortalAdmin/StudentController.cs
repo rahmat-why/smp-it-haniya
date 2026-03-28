@@ -1,6 +1,8 @@
 ﻿using Haniya.Models;
 using Microsoft.AspNetCore.Mvc;
+using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 
 namespace Haniya.Controllers.PortalAdmin
 {
@@ -33,106 +35,70 @@ namespace Haniya.Controllers.PortalAdmin
             return View("~/Views/PortalAdmin/Student/Edit.cshtml");
         }
 
-        private (int draw, int start, int length, string searchValue, string orderColumn, string orderDir)
-            ParseDataTablesQuery(string[] columns)
+                public class ListSort
         {
-            var q = Request.Query;
-
-            int.TryParse(q["draw"], out var draw);
-            if (draw <= 0) draw = 1;
-
-            int.TryParse(q["start"], out var start);
-            if (start < 0) start = 0;
-
-            int.TryParse(q["length"], out var length);
-            if (length <= 0) length = 10;
-
-            var searchValue = q["search[value]"].ToString() ?? string.Empty;
-
-            var orderColumn = "created_at";
-            var orderDir = "DESC";
-
-            var orderColIdxStr = q["order[0][column]"].ToString();
-            if (int.TryParse(orderColIdxStr, out var orderColIdx))
-            {
-                if (orderColIdx >= 0 && orderColIdx < columns.Length)
-                    orderColumn = columns[orderColIdx];
-            }
-
-            var dir = q["order[0][dir]"].ToString();
-            if (!string.IsNullOrWhiteSpace(dir) &&
-                (dir.Equals("asc", StringComparison.OrdinalIgnoreCase) ||
-                 dir.Equals("desc", StringComparison.OrdinalIgnoreCase)))
-            {
-                orderDir = dir.ToUpper();
-            }
-
-            return (draw, start, length, searchValue, orderColumn, orderDir);
+            public string field { get; set; } = "student";
+            public string order { get; set; } = "desc";
         }
 
-        [HttpGet]
-        public IActionResult GetAll()
+        public class ListRequest
+        {
+            public int page { get; set; } = 1;
+            public int limit { get; set; } = 10;
+            public Dictionary<string, string>? filters { get; set; }
+            public ListSort? sort { get; set; }
+        }
+
+        [HttpPost]
+        public IActionResult GetAll([FromBody] ListRequest? req)
         {
             try
             {
-                var columns = new[]
-                {
-                    "s.full_name",
-                    "s.birth_date",
-                    "s.birth_place",
-                    "dg.item_desc",
-                    "s.address",
-                    "s.entry_date",
-                    "dl.item_desc",
-                    "msc.academic_class_id"
-                };
+                req ??= new ListRequest();
+                var page = req.page <= 0 ? 1 : req.page;
+                var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
+                var offset = (page - 1) * limit;
+                var take = limit + 1;
 
-                var (draw, start, length, searchValue, orderColumn, orderDir) = ParseDataTablesQuery(columns);
+                var filters = req.filters ?? new Dictionary<string, string>();
+                filters.TryGetValue("search", out var search);
+                filters.TryGetValue("level", out var level);
+                filters.TryGetValue("gender", out var gender);
+
+                var sortMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["student"] = "s.full_name",
+                    ["birthDate"] = "s.birth_date",
+                    ["birthPlace"] = "s.birth_place",
+                    ["gender"] = "dg.item_desc",
+                    ["address"] = "s.address",
+                    ["entryDate"] = "s.entry_date",
+                    ["level"] = "dl.item_desc",
+                    ["class"] = "ca.class_code"
+                };
+                var sort = req.sort ?? new ListSort();
+                var orderBy = sortMap.TryGetValue(sort.field ?? "", out var mapped) ? mapped : "s.full_name";
+                var orderDir = string.Equals(sort.order, "asc", StringComparison.OrdinalIgnoreCase) ? "ASC" : "DESC";
 
                 using var conn = GetConn();
                 conn.Open();
 
-                var totalCmd = new SqlCommand(
-                    "SELECT COUNT(*) FROM mst_students WHERE status = 'ACTIVE'",
-                    conn
-                );
-                var recordsTotal = (int)totalCmd.ExecuteScalar();
-
-                string whereSearch = "";
-                if (!string.IsNullOrWhiteSpace(searchValue))
+                var where = new List<string> { "s.status = 'ACTIVE'" };
+                if (!string.IsNullOrWhiteSpace(search))
                 {
-                    whereSearch = @" AND (
+                    where.Add(@"(
                         s.nis LIKE @search OR
                         s.full_name LIKE @search OR
                         s.address LIKE @search OR
                         dl.item_desc LIKE @search
-                    )";
+                    )");
                 }
-
-                var filteredCmd = new SqlCommand(
-                    @"
-                    SELECT COUNT(DISTINCT s.student_id)
-                    FROM mst_students s
-                    LEFT JOIN mst_student_classes msc ON s.student_id = msc.student_id
-                    LEFT JOIN mst_detail_settings dl
-                        ON dl.detail_id = s.level
-                        AND dl.header_id = 'LEVEL_STUDENT'
-                        AND dl.status = 'ACTIVE'
-                    LEFT JOIN mst_detail_settings dg
-                        ON dg.item_code = s.gender
-                        AND dg.header_id = 'GENDER'
-                        AND dg.status = 'ACTIVE'
-                    WHERE s.status = 'ACTIVE'" + whereSearch,
-                    conn
-                );
-
-                if (!string.IsNullOrWhiteSpace(searchValue))
-                    filteredCmd.Parameters.AddWithValue("@search", $"%{searchValue}%");
-
-                var recordsFiltered = (int)filteredCmd.ExecuteScalar();
+                if (!string.IsNullOrWhiteSpace(level)) where.Add("s.level = @level");
+                if (!string.IsNullOrWhiteSpace(gender)) where.Add("s.gender = @gender");
+                var whereSql = "WHERE " + string.Join(" AND ", where);
 
                 var sql = $@"
-                    SELECT DISTINCT
+                    SELECT
                         s.student_id,
                         s.nis,
                         s.full_name,
@@ -143,27 +109,32 @@ namespace Haniya.Controllers.PortalAdmin
                         s.entry_date,
                         s.profile_photo,
                         dl.item_desc AS level,
-                        SUBSTRING(msc.academic_class_id, 4, 2) AS [class]
+                        ca.class_code AS [class]
                     FROM mst_students s
-                    LEFT JOIN mst_student_classes msc ON s.student_id = msc.student_id
-                    LEFT JOIN mst_detail_settings dl 
-                        ON dl.detail_id = s.level 
-                        AND dl.header_id = 'LEVEL_STUDENT' 
+                    OUTER APPLY (
+                        SELECT TOP 1 SUBSTRING(msc.academic_class_id, 4, 2) AS class_code
+                        FROM mst_student_classes msc
+                        WHERE msc.student_id = s.student_id
+                        ORDER BY msc.student_class_id DESC
+                    ) ca
+                    LEFT JOIN mst_detail_settings dl
+                        ON dl.detail_id = s.level
+                        AND dl.header_id = 'LEVEL_STUDENT'
                         AND dl.status = 'ACTIVE'
-                    LEFT JOIN mst_detail_settings dg 
+                    LEFT JOIN mst_detail_settings dg
                         ON dg.item_code = s.gender
                         AND dg.header_id = 'GENDER'
                         AND dg.status = 'ACTIVE'
-                    WHERE s.status = 'ACTIVE'
-                        {whereSearch}
-                    ORDER BY {orderColumn} {orderDir}
-                    OFFSET @start ROWS FETCH NEXT @length ROWS ONLY";
+                    {whereSql}
+                    ORDER BY {orderBy} {orderDir}
+                    OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY";
 
                 using var cmd = new SqlCommand(sql, conn);
-                cmd.Parameters.AddWithValue("@start", start);
-                cmd.Parameters.AddWithValue("@length", length);
-                if (!string.IsNullOrWhiteSpace(searchValue))
-                    cmd.Parameters.AddWithValue("@search", $"%{searchValue}%");
+                cmd.Parameters.AddWithValue("@offset", offset);
+                cmd.Parameters.AddWithValue("@take", take);
+                if (!string.IsNullOrWhiteSpace(search)) cmd.Parameters.AddWithValue("@search", $"%{search.Trim()}%");
+                if (!string.IsNullOrWhiteSpace(level)) cmd.Parameters.AddWithValue("@level", level.Trim());
+                if (!string.IsNullOrWhiteSpace(gender)) cmd.Parameters.AddWithValue("@gender", gender.Trim());
 
                 var list = new List<object>();
                 using var rd = cmd.ExecuteReader();
@@ -185,13 +156,10 @@ namespace Haniya.Controllers.PortalAdmin
                     });
                 }
 
-                return Json(new
-                {
-                    draw,
-                    recordsTotal,
-                    recordsFiltered,
-                    data = list
-                });
+                var hasNextPage = list.Count > limit;
+                if (hasNextPage) list = list.Take(limit).ToList();
+
+                return Json(DTOResponse.ok(new { data = list, hasNextPage }));
             }
             catch (Exception ex)
             {
