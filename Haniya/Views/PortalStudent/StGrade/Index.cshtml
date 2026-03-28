@@ -23,8 +23,8 @@
                         <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Teacher</th>
                         <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Type</th>
                         <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Min</th>
-                        <th class="px-5 py-3 text-xs font-semibold uppercase text-center tracking-wider">Score</th>
-                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Notes</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase text-left tracking-wider">Score</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase text-left tracking-wider">Notes</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white"></tbody>
@@ -38,6 +38,20 @@
         </div>
     </div>
 </div>
+
+<style>
+    #student-grade-table thead th:nth-child(1),
+    #student-grade-table tbody td:nth-child(1) {
+        text-align: left !important;
+    }
+
+    #student-grade-table thead th:nth-child(7),
+    #student-grade-table thead th:nth-child(8),
+    #student-grade-table tbody td:nth-child(7),
+    #student-grade-table tbody td:nth-child(8) {
+        text-align: left !important;
+    }
+</style>
 
 @section Scripts {
 
@@ -78,7 +92,7 @@
                 columns: [
                     {
                         data: 'grade_date',
-                        className: 'px-5 py-3 text-gray-900 whitespace-nowrap',
+                        className: 'px-5 py-3 whitespace-nowrap',
                         render: data => data
                             ? formatDateId(data)
                             : '-',
@@ -96,13 +110,13 @@
                     },
                     {
                         data: 'grade_value',
-                        className: 'px-5 py-3',
+                        className: 'px-5 py-3 text-left',
                         render: data => data ?? '-',
                         type: 'num'
                     },
                     {
                         data: 'notes',
-                        className: 'px-5 py-3 text-gray-600',
+                        className: 'px-5 py-3 text-left text-gray-600',
                         render: data => data || '-',
                         orderable: false
                     }

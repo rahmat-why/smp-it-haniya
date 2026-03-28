@@ -25,9 +25,9 @@
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 250px;">Student</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 120px;">Class</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Type</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right" style="width: 130px;">Bill</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right" style="width: 130px;">Paid</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right" style="width: 130px;">Remaining</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right !text-right" style="width: 130px;">Bill</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right !text-right" style="width: 130px;">Paid</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right !text-right" style="width: 130px;">Remaining</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 100px;">Status</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 70px;">Action</th>
                 </tr>
@@ -49,6 +49,7 @@
     let paymentTable = null;
     let currentAcademicClassId = '';
     let currentPaymentStatus = '';
+    let currentPaymentType = '';
 
     function showError(message) {
         Swal.fire({
@@ -84,6 +85,7 @@
                 data: function (d) {
                     d.academic_class_id = currentAcademicClassId || null;
                     d.status = currentPaymentStatus || null;
+                    d.payment_type = currentPaymentType || null;
                 },
                 error: function () {
                     showError('Failed to load payment data.');
@@ -261,12 +263,16 @@
                                     </select>
                                 </div>
                                 <div class="w-full">
+                                    <label class="block text-xs font-medium mb-1" for="filter_type">Type</label>
+                                    <select id="filter_type" class="w-full"></select>
+                                </div>
+                                <div class="w-full">
                                     <label class="block text-xs font-medium mb-1" for="payment_search_filter">Search</label>
                                     <input id="payment_search_filter"
                                            type="text"
                                            value="${initialSearch}"
                                            class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                           placeholder="Search..." />
+                                           placeholder="Search by student name / NIS..." />
                                 </div>
                             </div>
                             <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
@@ -292,12 +298,39 @@
 
                 $('#payment-table-toolbar').addClass('flex flex-col md:flex-row md:items-center md:justify-between gap-4');
 
+                const $filterDropdown = $('#filterDropdown');
+
                 $('#filter_class').select2({
                     placeholder: "-- All Class --",
                     allowClear: true,
                     width: '100%',
+                    dropdownParent: $filterDropdown,
                     ajax: {
                         url: '/Select2/AcademicClasses',
+                        dataType: 'json',
+                        delay: 250,
+                        data: params => ({ q: params.term || '', page: params.page || 1 }),
+                        processResults: data => ({ results: data.results, pagination: data.pagination }),
+                        cache: true
+                    },
+                    minimumInputLength: 0
+                });
+
+                $('#filter_status').select2({
+                    placeholder: "-- All Status --",
+                    allowClear: true,
+                    width: '100%',
+                    dropdownParent: $filterDropdown,
+                    minimumResultsForSearch: 0
+                });
+
+                $('#filter_type').select2({
+                    placeholder: "-- All Type --",
+                    allowClear: true,
+                    width: '100%',
+                    dropdownParent: $filterDropdown,
+                    ajax: {
+                        url: '/Select2/PaymentTypes',
                         dataType: 'json',
                         delay: 250,
                         data: params => ({ q: params.term || '', page: params.page || 1 }),
@@ -320,6 +353,7 @@
     function applyPaymentFilter() {
         currentAcademicClassId = $('#filter_class').val() || '';
         currentPaymentStatus = $('#filter_status').val() || '';
+        currentPaymentType = $('#filter_type').val() || '';
         const searchKeyword = ($('#payment_search_filter').val() || '').trim();
         paymentTable.search(searchKeyword);
         paymentTable.ajax.reload(null, true);

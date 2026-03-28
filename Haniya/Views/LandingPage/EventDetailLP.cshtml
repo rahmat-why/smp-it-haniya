@@ -1,15 +1,15 @@
 @{
     Layout = "~/Views/Shared/_LayoutLandingPage.cshtml";
     var eventId = ViewBag.EventId?.ToString() ?? "";
-    var returnUrlRaw = Context.Request.Query["returnUrl"].ToString();
-    var returnUrl = !string.IsNullOrWhiteSpace(returnUrlRaw) && returnUrlRaw.StartsWith("/")
-        ? returnUrlRaw
-        : "/news-event";
+    var isLoggedIn = User?.Identity?.IsAuthenticated ?? false;
 }
 
 <section class="pt-24 pb-12 px-4 sm:px-6 lg:px-10">
     <div class="max-w-4xl mx-auto">
-        <a href="@returnUrl" class="inline-flex items-center text-sm text-blue-700 hover:underline mb-6"><- Back</a>
+        @if (!isLoggedIn)
+        {
+            <a href="/news-event" class="inline-flex items-center text-sm text-blue-700 hover:underline mb-6">&larr; Back</a>
+        }
 
         <article class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <img id="eventImage" class="w-full h-72 object-cover" src="/image/landingpage/default.jpg" alt="Event image">

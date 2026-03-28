@@ -25,9 +25,10 @@ namespace Haniya.Controllers.PortalAdmin
             return View("~/Views/PortalAdmin/Payment/Edit.cshtml");
         }
 
-        public IActionResult GetAll(string academic_class_id = null, string status = null)
+        public IActionResult GetAll(string academic_class_id = null, string status = null, string payment_type = null)
         {
-            var (draw, start, length, _, _, _) = ParseDataTablesQuery();
+            var (draw, start, length, searchValue, _, _) = ParseDataTablesQuery();
+            var searchKeyword = string.IsNullOrWhiteSpace(searchValue) ? null : searchValue.Trim();
 
             using var conn = GetConn();
             conn.Open();
@@ -36,14 +37,24 @@ namespace Haniya.Controllers.PortalAdmin
         SELECT COUNT(*) 
         FROM txn_payments p
         LEFT JOIN mst_student_classes sc ON p.student_class_id = sc.student_class_id
+        LEFT JOIN mst_students s ON sc.student_id = s.student_id
         WHERE (@classId IS NULL OR sc.academic_class_id = @classId)
-          AND (@status IS NULL OR p.status = @status)";
+          AND (@status IS NULL OR p.status = @status)
+          AND (@paymentType IS NULL OR p.payment_type = @paymentType)
+          AND (
+                @search IS NULL
+                OR COALESCE(s.full_name, CONCAT(s.first_name, ' ', s.last_name)) LIKE @searchPattern
+                OR s.nis LIKE @searchPattern
+              )";
 
             int recordsTotal;
             using (var cmd = new SqlCommand(totalSql, conn))
             {
                 cmd.Parameters.AddWithValue("@classId", (object)academic_class_id ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@status", (object)status ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@paymentType", (object)payment_type ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@search", (object)searchKeyword ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@searchPattern", $"%{searchKeyword ?? ""}%");
                 recordsTotal = (int)cmd.ExecuteScalar();
             }
 
@@ -76,6 +87,12 @@ namespace Haniya.Controllers.PortalAdmin
                                         AND (p.payment_method = pm.detail_id OR p.payment_method = pm.item_code)
         WHERE (@classId IS NULL OR sc.academic_class_id = @classId)
           AND (@status IS NULL OR p.status = @status)
+          AND (@paymentType IS NULL OR p.payment_type = @paymentType)
+          AND (
+                @search IS NULL
+                OR COALESCE(s.full_name, CONCAT(s.first_name, ' ', s.last_name)) LIKE @searchPattern
+                OR s.nis LIKE @searchPattern
+              )
         GROUP BY 
             p.payment_id, p.student_class_id, p.payment_type, p.payment_method,
             p.total_price, p.total_payment, p.remaining_payment,
@@ -90,6 +107,9 @@ namespace Haniya.Controllers.PortalAdmin
             {
                 cmd.Parameters.AddWithValue("@classId", (object)academic_class_id ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@status", (object)status ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@paymentType", (object)payment_type ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@search", (object)searchKeyword ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@searchPattern", $"%{searchKeyword ?? ""}%");
                 cmd.Parameters.AddWithValue("@start", start);
                 cmd.Parameters.AddWithValue("@length", length);
 

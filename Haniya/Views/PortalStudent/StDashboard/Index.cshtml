@@ -1,4 +1,4 @@
-﻿@{
+@{
     Layout = "_LayoutStudent";
     ViewData["Title"] = "My Dashboard";
 }
@@ -552,8 +552,8 @@
 
     function openEventDetail(eventId) {
         if (!eventId) return;
-        const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
-        window.location.href = `/news-event/${encodeURIComponent(eventId)}?returnUrl=${returnUrl}`;
+        const url = `/news-event/${encodeURIComponent(eventId)}`;
+        window.open(url, '_blank', 'noopener');
     }
 
     function renderCalendarClassLegend() {
@@ -598,9 +598,13 @@
                 if (!clippedStart || s.getTime() < clippedStart.getTime()) clippedStart = s;
                 if (!clippedEnd || e.getTime() > clippedEnd.getTime()) clippedEnd = e;
             });
+            const holidayClasses = [...ev.holiday].sort();
+            const nonHolidayClasses = [...ev.nonHoliday].sort();
+            const holidayText = holidayClasses.length ? `Libur: ${holidayClasses.join(', ')}` : 'Libur: -';
+            const nonHolidayText = nonHolidayClasses.length ? `Masuk: ${nonHolidayClasses.join(', ')}` : 'Masuk: -';
             const rangeText = clippedStart && clippedEnd ? `${formatDateID(clippedStart)} - ${formatDateID(clippedEnd)}` : '-';
-            html += `<span class="inline-flex items-center px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200">` +
-                `${ev.name} | ${rangeText}</span>`;
+            html += `<span class="inline-block px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 border border-amber-200 leading-relaxed">` +
+                `<strong>${ev.name}</strong> | ${rangeText}<br>${holidayText} | ${nonHolidayText}</span>`;
         });
         container.html(html);
     }
@@ -655,7 +659,6 @@
                 const holidayClasses = [...ev.holiday].sort();
                 const nonHolidayClasses = [...ev.nonHoliday].sort();
                 holidayClasses.forEach(c => participantClasses.add(c));
-                nonHolidayClasses.forEach(c => participantClasses.add(c));
                 tooltipLines.push(`${ev.name}`);
             });
             const title = (tooltipLines.length ? tooltipLines.join(' | ') : 'Tidak ada keterangan').replace(/"/g, '&quot;');
