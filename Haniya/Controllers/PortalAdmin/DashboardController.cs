@@ -428,6 +428,7 @@ namespace Haniya.Controllers.PortalAdmin
                 JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
                 JOIN mst_classes cls ON ac.class_id = cls.class_id
                 WHERE ac.academic_year_id = @academicYear
+                AND sd.teacher_id = @teacherId
                 AND (
                     @classLevel = ''
                     OR cls.class_name = @classLevel

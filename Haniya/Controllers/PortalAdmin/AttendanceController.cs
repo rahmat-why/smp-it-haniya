@@ -217,23 +217,46 @@ namespace Haniya.Controllers.PortalAdmin
             return View("~/Views/PortalAdmin/Attendance/Edit.cshtml");
         }
 
-        public IActionResult GetAll(string attendance_date = null)
+        public IActionResult GetAll(string academic_year_id = null, string academic_class_id = null, string attendance_month = null)
         {
-            var (draw, start, length, search, orderColumn, orderDir) = ParseDataTablesQuery();
+            var (draw, start, length, _, _, _) = ParseDataTablesQuery();
 
             using var conn = GetConn();
             conn.Open();
 
-            DateTime date = DateTime.Today;
-            if (!string.IsNullOrWhiteSpace(attendance_date))
-                DateTime.TryParse(attendance_date, out date);
+            var monthStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+            if (!string.IsNullOrWhiteSpace(attendance_month) &&
+                DateTime.TryParseExact(attendance_month + "-01", "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedMonthStart))
+            {
+                monthStart = parsedMonthStart;
+            }
+            var nextMonth = monthStart.AddMonths(1);
+
+            if (string.IsNullOrWhiteSpace(academic_year_id))
+            {
+                using var activeYearCmd = new SqlCommand(@"
+                    SELECT TOP 1 academic_year_id
+                    FROM mst_academic_years
+                    WHERE status = 'ACTIVE'
+                    ORDER BY start_date DESC", conn);
+                academic_year_id = activeYearCmd.ExecuteScalar()?.ToString();
+            }
 
             // TOTAL
             int recordsTotal;
             using (var cmd = new SqlCommand(
-                "SELECT COUNT(*) FROM dbo.txn_attendances WHERE CAST(attendance_date AS DATE)=@date", conn))
+                @"SELECT COUNT(*) 
+                  FROM dbo.txn_attendances a
+                  JOIN dbo.mst_academic_classes ac ON ac.academic_class_id = a.academic_class_id
+                  WHERE a.attendance_date >= @monthStart
+                    AND a.attendance_date < @nextMonth
+                    AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
+                    AND (@academicClassId IS NULL OR a.academic_class_id = @academicClassId)", conn))
             {
-                cmd.Parameters.AddWithValue("@date", date);
+                cmd.Parameters.AddWithValue("@monthStart", monthStart);
+                cmd.Parameters.AddWithValue("@nextMonth", nextMonth);
+                cmd.Parameters.AddWithValue("@academicYearId", (object)academic_year_id ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@academicClassId", (object)academic_class_id ?? DBNull.Value);
                 recordsTotal = (int)cmd.ExecuteScalar();
             }
 
@@ -242,6 +265,9 @@ namespace Haniya.Controllers.PortalAdmin
     SELECT
         a.attendance_id,
         a.attendance_date,
+        ay.start_date,
+        ay.end_date,
+        ay.semester,
         c.class_name,
         CONCAT(t.first_name,' ',t.last_name) AS teacher_name,
         SUM(CASE WHEN d.status='PRESENT' THEN 1 ELSE 0 END) AS present,
@@ -250,13 +276,20 @@ namespace Haniya.Controllers.PortalAdmin
         SUM(CASE WHEN d.status='NOINFO' THEN 1 ELSE 0 END) AS alpha
     FROM dbo.txn_attendances a
     JOIN dbo.mst_academic_classes ac ON ac.academic_class_id = a.academic_class_id
+    JOIN dbo.mst_academic_years ay ON ay.academic_year_id = ac.academic_year_id
     JOIN dbo.mst_classes c ON c.class_id = ac.class_id
     JOIN dbo.mst_teachers t ON t.teacher_id = a.teacher_id
     LEFT JOIN dbo.txn_attendance_details d ON d.attendance_id = a.attendance_id
-    WHERE CAST(a.attendance_date AS DATE) = @date
+    WHERE a.attendance_date >= @monthStart
+      AND a.attendance_date < @nextMonth
+      AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
+      AND (@academicClassId IS NULL OR a.academic_class_id = @academicClassId)
     GROUP BY
         a.attendance_id,
         a.attendance_date,
+        ay.start_date,
+        ay.end_date,
+        ay.semester,
         c.class_name,
         t.first_name,
         t.last_name
@@ -266,7 +299,10 @@ namespace Haniya.Controllers.PortalAdmin
             var list = new List<object>();
             using (var cmd = new SqlCommand(sql, conn))
             {
-                cmd.Parameters.AddWithValue("@date", date);
+                cmd.Parameters.AddWithValue("@monthStart", monthStart);
+                cmd.Parameters.AddWithValue("@nextMonth", nextMonth);
+                cmd.Parameters.AddWithValue("@academicYearId", (object)academic_year_id ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@academicClassId", (object)academic_class_id ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@start", start);
                 cmd.Parameters.AddWithValue("@length", length);
 
@@ -277,6 +313,9 @@ namespace Haniya.Controllers.PortalAdmin
                     {
                         attendance_id = r["attendance_id"].ToString(),
                         attendance_date = ((DateTime)r["attendance_date"]).ToString("yyyy-MM-dd"),
+                        start_date = r["start_date"],
+                        end_date = r["end_date"],
+                        semester = r["semester"]?.ToString(),
                         class_name = r["class_name"].ToString(),
                         teacher_name = r["teacher_name"].ToString(),
                         present = Convert.ToInt32(r["present"]),
@@ -294,6 +333,43 @@ namespace Haniya.Controllers.PortalAdmin
                 recordsFiltered = recordsTotal,
                 data = list
             });
+        }
+
+        [HttpGet]
+        public IActionResult GetActiveAcademicYear()
+        {
+            try
+            {
+                using var conn = GetConn();
+                conn.Open();
+
+                var sql = @"
+                    SELECT TOP 1 academic_year_id, start_date, end_date, semester
+                    FROM mst_academic_years
+                    WHERE status = 'ACTIVE'
+                    ORDER BY start_date DESC";
+
+                using var cmd = new SqlCommand(sql, conn);
+                using var rd = cmd.ExecuteReader();
+                if (!rd.Read())
+                {
+                    return Json(DTOResponse.ok(null));
+                }
+
+                var startYear = Convert.ToDateTime(rd["start_date"]).Year;
+                var endYear = Convert.ToDateTime(rd["end_date"]).Year;
+                var semester = rd["semester"]?.ToString();
+
+                return Json(DTOResponse.ok(new
+                {
+                    id = rd["academic_year_id"]?.ToString(),
+                    text = $"{startYear} - {endYear} (Semester {semester})"
+                }));
+            }
+            catch (Exception ex)
+            {
+                return Json(DTOResponse.fail(ex.Message, 500));
+            }
         }
 
         // ParseDataTablesQuery method (same as ClassController)

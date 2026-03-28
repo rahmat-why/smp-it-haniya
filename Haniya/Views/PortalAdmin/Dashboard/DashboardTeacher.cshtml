@@ -233,7 +233,13 @@
                     </td>
                 </tr>`;
         } else {
-            const today = new Date().toLocaleDateString('id-ID', { weekday: 'long' });
+            const now = new Date();
+            const jsDay = now.getDay(); // 0=Sunday, 6=Saturday
+            const isWeekendToday = jsDay === 0 || jsDay === 6;
+            const todayName = now.toLocaleDateString('id-ID', { weekday: 'long' });
+            const normalizedTodayName = todayName
+                ? todayName.charAt(0).toUpperCase() + todayName.slice(1).toLowerCase()
+                : '';
 
             const grouped = {};
             schedule.forEach(item => {
@@ -242,23 +248,35 @@
             });
 
             const daysOrder = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+            const upcomingDay = isWeekendToday
+                ? daysOrder.find(day => Array.isArray(grouped[day]) && grouped[day].length > 0)
+                : null;
 
             daysOrder.forEach(day => {
                 const items = grouped[day];
                 if (!items) return;
 
-                const isToday = day === today;
+                const isToday = !isWeekendToday && day === normalizedTodayName;
+                const isUpcoming = isWeekendToday && day === upcomingDay;
+                const isHighlighted = isToday || isUpcoming;
+                const dayLabel = isToday
+                    ? '<span class="ml-1 text-xs font-semibold text-amber-700">(Today)</span>'
+                    : (isUpcoming
+                        ? '<span class="ml-1 text-xs font-semibold text-amber-700">(Upcoming)</span>'
+                        : '');
 
                 items.forEach((i, index) => {
                     html += `
                         <tr class="
-                            ${isToday ? 'bg-amber-50 border-l-4 border-amber-400' : 'hover:bg-gray-50'}
+                            ${isHighlighted ? 'bg-amber-50 border-l-4 border-amber-400' : 'hover:bg-gray-50'}
                             ${index === 0 ? 'border-t-2 border-gray-200' : ''}
                         ">
                             ${index === 0 ? `
                                 <td rowspan="${items.length}" 
-                                    class="px-6 py-4 font-medium align-middle text-center ${isToday ? 'text-amber-900' : 'text-gray-900'}">
-                                    ${day} ${isToday ? '(Today)' : ''}
+                                    class="px-6 py-4 font-medium align-middle text-center ${isHighlighted ? 'text-amber-900' : 'text-gray-900'}">
+                                    <div class="leading-tight">
+                                        <span>${day}</span>${dayLabel}
+                                    </div>
                                 </td>
                             ` : ''}
 

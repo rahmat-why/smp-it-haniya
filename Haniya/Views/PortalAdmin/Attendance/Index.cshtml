@@ -22,6 +22,8 @@
                class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Academic Year</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Semester</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Date</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Class</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Teacher</th>
@@ -45,12 +47,14 @@
 @section Scripts {
     <script>
         let attendanceTable = null;
-        let currentAttendanceDate = '';
+        let currentAttendanceMonth = '';
+        let currentAcademicYearId = '';
+        let currentAcademicClassId = '';
 
         $(document).ready(function () {
-            // Default to today
-            const today = new Date().toISOString().split('T')[0];
-            currentAttendanceDate = today;
+            // Default to current month (yyyy-MM)
+            const today = new Date();
+            currentAttendanceMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
 
             initAttendanceTable();
 
@@ -66,13 +70,15 @@
             attendanceTable = $('#attendance-table').DataTable({
                 processing: true,
                 serverSide: true,
-                searching: true,
+                searching: false,
                 lengthChange: true,
                 ajax: {
                     url: '/Attendance/GetAll',
                     type: 'GET',
                     data: function (d) {
-                        d.attendance_date = currentAttendanceDate || null;
+                        d.academic_year_id = currentAcademicYearId || null;
+                        d.academic_class_id = currentAcademicClassId || null;
+                        d.attendance_month = currentAttendanceMonth || null;
                     }
                 },
                 dom: 'lftip',
@@ -89,6 +95,20 @@
                     info: "Showing _START_ to _END_ of _TOTAL_ entries"
                 },
                 columns: [
+                    {
+                        data: null,
+                        className: 'py-3',
+                        render: function (data, type, row) {
+                            return `${formatYearShort(row.start_date)} - ${formatYearShort(row.end_date)}`;
+                        }
+                    },
+                    {
+                        data: 'semester',
+                        className: 'py-3',
+                        render: function (data) {
+                            return data ? `Semester ${data}` : '-';
+                        }
+                    },
                     {
                         data: 'attendance_date',
                         className: 'py-3 text-gray-900',
@@ -162,7 +182,6 @@
 
                     const $length = wrapper.find('.dataTables_length, .dt-length');
                     const $filter = wrapper.find('.dataTables_filter, .dt-search');
-                    const initialSearch = (attendanceTable.search() || '').replace(/"/g, '&quot;');
 
                     $filter.hide();
 
@@ -194,18 +213,18 @@
                                 </div>
                                 <div class="px-5 py-4 space-y-4">
                                     <div class="w-full">
-                                        <label class="block text-xs font-medium mb-1" for="filter_date">Attendance Date</label>
-                                        <input type="date" id="filter_date"
-                                               value="${currentAttendanceDate}"
+                                        <label class="block text-xs font-medium mb-1" for="filter_academic_year">Academic Year</label>
+                                        <select id="filter_academic_year" class="w-full"></select>
+                                    </div>
+                                    <div class="w-full">
+                                        <label class="block text-xs font-medium mb-1" for="filter_month">Attendance Month</label>
+                                        <input type="month" id="filter_month"
+                                               value="${currentAttendanceMonth}"
                                                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
                                     </div>
                                     <div class="w-full">
-                                        <label class="block text-xs font-medium mb-1" for="attendance_search_filter">Search</label>
-                                        <input id="attendance_search_filter"
-                                               type="text"
-                                               value="${initialSearch}"
-                                               class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                               placeholder="Search..." />
+                                        <label class="block text-xs font-medium mb-1" for="filter_class">Class</label>
+                                        <select id="filter_class" class="w-full"></select>
                                     </div>
                                 </div>
                                 <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
@@ -230,6 +249,54 @@
 
                     $('#attendance-table-toolbar').addClass('flex flex-col md:flex-row md:items-center md:justify-between gap-4');
 
+                    $('#filter_academic_year').select2({
+                        placeholder: "All Academic Years",
+                        allowClear: true,
+                        width: '100%',
+                        ajax: {
+                            url: '/Select2/AcademicYears',
+                            dataType: 'json',
+                            delay: 250,
+                            data: params => ({ q: params.term || '', page: params.page || 1 }),
+                            processResults: data => ({ results: data.results, pagination: data.pagination }),
+                            cache: true
+                        },
+                        minimumInputLength: 0
+                    });
+
+                    $('#filter_class').select2({
+                        placeholder: "-- All Classes --",
+                        allowClear: true,
+                        width: '100%',
+                        ajax: {
+                            url: '/Select2/AcademicClasses',
+                            dataType: 'json',
+                            delay: 250,
+                            data: params => ({ q: params.term || '', page: params.page || 1 }),
+                            processResults: data => ({ results: data.results, pagination: data.pagination }),
+                            cache: true
+                        },
+                        minimumInputLength: 0
+                    });
+
+                    $.ajax({
+                        url: '/Attendance/GetActiveAcademicYear',
+                        type: 'GET',
+                        success: function (res) {
+                            if (!res || !res.success || !res.data || !res.data.id) return;
+
+                            currentAcademicYearId = res.data.id;
+
+                            if ($('#filter_academic_year option[value="' + res.data.id + '"]').length === 0) {
+                                const option = new Option(res.data.text || '', res.data.id, true, true);
+                                $('#filter_academic_year').append(option);
+                            }
+
+                            $('#filter_academic_year').val(res.data.id).trigger('change');
+                            attendanceTable.ajax.reload(null, true);
+                        }
+                    });
+
                     stylePagination();
                 },
                 drawCallback: function () {
@@ -239,11 +306,18 @@
         }
 
         function applyAttendanceFilter() {
-            currentAttendanceDate = $('#filter_date').val() || '';
-            const searchKeyword = ($('#attendance_search_filter').val() || '').trim();
-            attendanceTable.search(searchKeyword);
+            currentAcademicYearId = $('#filter_academic_year').val() || '';
+            currentAttendanceMonth = $('#filter_month').val() || '';
+            currentAcademicClassId = $('#filter_class').val() || '';
             attendanceTable.ajax.reload(null, true);
             toggleFilter();
+        }
+
+        function formatYearShort(d) {
+            if (!d) return "";
+            const date = new Date(d);
+            if (isNaN(date.getTime())) return "";
+            return date.getFullYear();
         }
 
         function stylePagination() {

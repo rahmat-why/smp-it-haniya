@@ -137,8 +137,30 @@
         </div>
 
         <div class="flex justify-end gap-4 pt-6 border-t border-gray-200">
-            <button type="button" onclick="goBackRPS()" class="px-6 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-lg font-medium transition">Back</button>
-            <button type="button" onclick="updateRPS()" class="px-6 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-medium transition">Update</button>
+            <button type="button" onclick="goBackRPS()" class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300">
+                <svg class="w-4 h-4 mr-2 text-gray-600"
+                     fill="none"
+                     viewBox="0 0 24 24"
+                     stroke="currentColor">
+                    <path stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M15 19l-7-7 7-7" />
+                </svg>
+                Back
+            </button>
+            <button type="button" onclick="updateRPS()" class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
+                Update
+                <svg class="w-4 h-4 ml-2 text-white"
+                     fill="none"
+                     viewBox="0 0 24 24"
+                     stroke="currentColor">
+                    <path stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M5 13l4 4L19 7" />
+                </svg>
+            </button>
         </div>
     </form>
 </div>
@@ -185,7 +207,14 @@
                                         data-placeholder="-- Select Activity --"></select>
                             </td>
                             <td class="px-4 py-3 text-right">
-                                <button type="button" onclick="removeMeetingRow(this)" class="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md">Remove</button>
+                                <button type="button"
+                                        onclick="removeMeetingRow(this)"
+                                        class="inline-flex items-center justify-center p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition"
+                                        title="Remove meeting">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
                             </td>
                         </tr>`;
             $('#tbody-meetings').append(row);

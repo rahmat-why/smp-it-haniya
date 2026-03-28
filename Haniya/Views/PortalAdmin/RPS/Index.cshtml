@@ -22,11 +22,12 @@
                class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Subject</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center">Minimum Value</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Class</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Teacher</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Academic Year</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Semester</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Subject</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Teacher</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Class</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center">Minimum Value</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center">Meetings</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right" style="width: 70px;">Action</th>
                 </tr>
@@ -46,6 +47,7 @@
 @section Scripts {
     <script>
         let rpsTable = null;
+        let currentAcademicYearId = '';
         let currentAcademicClassId = '';
         let currentSubjectId = '';
         let currentTeacherId = '';
@@ -70,6 +72,7 @@
                     url: '/RPS/GetAll',
                     type: 'GET',
                     data: function (d) {
+                        d.academic_year_id = currentAcademicYearId || null;
                         d.subject_id = currentSubjectId || null;
                         d.academic_class_id = currentAcademicClassId || null;
                         d.teacher_id = currentTeacherId || null;
@@ -89,11 +92,24 @@
                     info: "Showing _START_ to _END_ of _TOTAL_ entries"
                 },
                 columns: [
+                    {
+                        data: null,
+                        className: 'py-3 text-gray-700',
+                        render: function (data, type, row) {
+                            return `${formatYearShort(row.start_date)} - ${formatYearShort(row.end_date)}`;
+                        }
+                    },
+                    {
+                        data: 'semester',
+                        className: 'py-3 text-gray-700',
+                        render: function (data) {
+                            return data ? `Semester ${data}` : '-';
+                        }
+                    },
                     { data: 'subject_name', className: 'py-3 text-gray-900' },
-                    { data: 'minimum_value', className: 'py-3' },
-                    { data: 'class_name', className: 'py-3 text-gray-700' },
                     { data: 'teacher_name', className: 'py-3 text-gray-700' },
-                    { data: 'academic_year_id', className: 'py-3 text-gray-700' },
+                    { data: 'class_name', className: 'py-3 text-gray-700' },
+                    { data: 'minimum_value', className: 'py-3 text-center' },
                     {
                         data: 'meeting_count',
                         className: 'py-3 text-center',
@@ -164,6 +180,10 @@
                                 </div>
                                 <div class="px-5 py-4 space-y-4">
                                     <div class="w-full">
+                                        <label class="block text-xs font-medium mb-1" for="filter_academic_year">Academic Year</label>
+                                        <select id="filter_academic_year" class="w-full"></select>
+                                    </div>
+                                    <div class="w-full">
                                         <label class="block text-xs font-medium mb-1" for="filter_class">Class</label>
                                         <select id="filter_class" class="w-full"></select>
                                     </div>
@@ -205,6 +225,21 @@
                     );
 
                     $('#rps-table-toolbar').addClass('flex flex-col md:flex-row md:items-center md:justify-between gap-4');
+
+                    $('#filter_academic_year').select2({
+                        placeholder: "All Academic Years",
+                        allowClear: true,
+                        width: '100%',
+                        ajax: {
+                            url: '/Select2/AcademicYears',
+                            dataType: 'json',
+                            delay: 250,
+                            data: params => ({ q: params.term || '', page: params.page || 1 }),
+                            processResults: data => ({ results: data.results, pagination: data.pagination }),
+                            cache: true
+                        },
+                        minimumInputLength: 0
+                    });
 
                     $('#filter_class').select2({
                         placeholder: "-- All Classes --",
@@ -255,6 +290,24 @@
 
                     initSubject('');
 
+                    $.ajax({
+                        url: '/RPS/GetActiveAcademicYear',
+                        type: 'GET',
+                        success: function (res) {
+                            if (!res || !res.success || !res.data || !res.data.id) return;
+
+                            currentAcademicYearId = res.data.id;
+
+                            if ($('#filter_academic_year option[value="' + res.data.id + '"]').length === 0) {
+                                const option = new Option(res.data.text || '', res.data.id, true, true);
+                                $('#filter_academic_year').append(option);
+                            }
+
+                            $('#filter_academic_year').val(res.data.id).trigger('change');
+                            rpsTable.ajax.reload(null, true);
+                        }
+                    });
+
                     stylePagination();
                 },
                 drawCallback: function () {
@@ -264,6 +317,7 @@
         }
 
         function applyRPSFilter() {
+            currentAcademicYearId = $('#filter_academic_year').val() || '';
             currentAcademicClassId = $('#filter_class').val() || '';
             currentSubjectId = $('#filter_subject').val() || '';
             currentTeacherId = $('#filter_teacher').val() || '';
@@ -320,6 +374,13 @@
                 },
                 error: () => alert("Error deleting RPS")
             });
+        }
+
+        function formatYearShort(d) {
+            if (!d) return "";
+            const date = new Date(d);
+            if (isNaN(date.getTime())) return "";
+            return date.getFullYear();
         }
 
         function initSubject(classLevel) {

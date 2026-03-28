@@ -20,6 +20,8 @@
         <table id="grade-table" class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Academic Year</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Semester</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 140px;">Date</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Class</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Subject</th>
@@ -45,8 +47,9 @@
 @section Scripts {
     <script>
         let gradeTable = null;
+        let currentAcademicYearId = '';
         let currentAcademicClassId = '';
-        let currentGradeDate = '';
+        let currentGradeType = '';
 
         $(document).ready(function () {
             initGradeTable();
@@ -68,8 +71,9 @@
                     url: '/Grade/GetAll',
                     type: 'GET',
                     data: function (d) {
+                        d.academic_year_id = currentAcademicYearId || null;
                         d.academic_class_id = currentAcademicClassId || null;
-                        d.grade_date = currentGradeDate || null;
+                        d.grade_type = currentGradeType || null;
                     }
                 },
                 dom: 'lftip',
@@ -86,6 +90,20 @@
                     info: "Showing _START_ to _END_ of _TOTAL_ entries"
                 },
                 columns: [
+                    {
+                        data: null,
+                        className: 'py-3',
+                        render: function (data, type, row) {
+                            return `${formatYearShort(row.start_date)} - ${formatYearShort(row.end_date)}`;
+                        }
+                    },
+                    {
+                        data: 'semester',
+                        className: 'py-3 text-gray-700',
+                        render: function (data) {
+                            return data ? `Semester ${data}` : '-';
+                        }
+                    },
                     {
                         data: 'grade_date',
                         className: 'py-3 text-gray-900',
@@ -170,13 +188,16 @@
                                 </div>
                                 <div class="px-5 py-4 space-y-4">
                                     <div class="w-full">
+                                        <label class="block text-xs font-medium mb-1" for="filter_academic_year">Academic Year</label>
+                                        <select id="filter_academic_year" class="w-full"></select>
+                                    </div>
+                                    <div class="w-full">
                                         <label class="block text-xs font-medium mb-1" for="filter_class">Class</label>
                                         <select id="filter_class" class="w-full"></select>
                                     </div>
                                     <div class="w-full">
-                                        <label class="block text-xs font-medium mb-1" for="filter_date">Grade Date</label>
-                                        <input type="date" id="filter_date"
-                                                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                                        <label class="block text-xs font-medium mb-1" for="filter_grade_type">Grade Type</label>
+                                        <select id="filter_grade_type" class="w-full"></select>
                                     </div>
                                     <div class="w-full">
                                         <label class="block text-xs font-medium mb-1" for="grade_search_filter">Search</label>
@@ -184,7 +205,7 @@
                                                 type="text"
                                                 value="${initialSearch}"
                                                 class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                placeholder="Search..." />
+                                                placeholder="Filter by grade type / title / description" />
                                     </div>
                                 </div>
                                 <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
@@ -206,6 +227,21 @@
 
                     $('#grade-table-toolbar').addClass('flex flex-col md:flex-row md:items-center md:justify-between gap-4');
 
+                    $('#filter_academic_year').select2({
+                        placeholder: "All Academic Years",
+                        allowClear: true,
+                        width: '100%',
+                        ajax: {
+                            url: '/Select2/AcademicYears',
+                            dataType: 'json',
+                            delay: 250,
+                            data: params => ({ q: params.term || '', page: params.page || 1 }),
+                            processResults: data => ({ results: data.results, pagination: data.pagination }),
+                            cache: true
+                        },
+                        minimumInputLength: 0
+                    });
+
                     $('#filter_class').select2({
                         placeholder: "-- All Class --",
                         allowClear: true,
@@ -221,6 +257,39 @@
                         minimumInputLength: 0
                     });
 
+                    $('#filter_grade_type').select2({
+                        placeholder: "-- All Grade Type --",
+                        allowClear: true,
+                        width: '100%',
+                        ajax: {
+                            url: '/Select2/GradeTypes',
+                            dataType: 'json',
+                            delay: 250,
+                            data: params => ({ q: params.term || '', page: params.page || 1 }),
+                            processResults: data => ({ results: data.results, pagination: data.pagination }),
+                            cache: true
+                        },
+                        minimumInputLength: 0
+                    });
+
+                    $.ajax({
+                        url: '/Grade/GetActiveAcademicYear',
+                        type: 'GET',
+                        success: function (res) {
+                            if (!res || !res.success || !res.data || !res.data.id) return;
+
+                            currentAcademicYearId = res.data.id;
+
+                            if ($('#filter_academic_year option[value="' + res.data.id + '"]').length === 0) {
+                                const option = new Option(res.data.text || '', res.data.id, true, true);
+                                $('#filter_academic_year').append(option);
+                            }
+
+                            $('#filter_academic_year').val(res.data.id).trigger('change');
+                            gradeTable.ajax.reload(null, true);
+                        }
+                    });
+
                     stylePagination();
                 },
                 drawCallback: function () {
@@ -230,8 +299,9 @@
         }
 
         function applyGradeFilter() {
+            currentAcademicYearId = $('#filter_academic_year').val() || '';
             currentAcademicClassId = $('#filter_class').val() || '';
-            currentGradeDate = $('#filter_date').val() || '';
+            currentGradeType = $('#filter_grade_type').val() || '';
             const searchKeyword = ($('#grade_search_filter').val() || '').trim();
             gradeTable.search(searchKeyword);
             gradeTable.ajax.reload(null, true);
@@ -259,6 +329,13 @@
             if (typeof applyAdminPaginationStyle === 'function') {
                 applyAdminPaginationStyle($('#table-pagination-container'));
             }
+        }
+
+        function formatYearShort(d) {
+            if (!d) return "";
+            const date = new Date(d);
+            if (isNaN(date.getTime())) return "";
+            return date.getFullYear();
         }
 
         function toggleActionsMenu(event, id) {

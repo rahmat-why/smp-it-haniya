@@ -30,6 +30,7 @@ namespace Haniya.Controllers.PortalAdmin
         }
 
         public IActionResult GetAll(
+    string academic_year_id = null,
     string academic_class_id = null,
     string subject_id = null,
     string teacher_id = null
@@ -40,13 +41,25 @@ namespace Haniya.Controllers.PortalAdmin
             using var conn = GetConn();
             conn.Open();
 
+            if (string.IsNullOrWhiteSpace(academic_year_id))
+            {
+                using var activeYearCmd = new SqlCommand(@"
+                    SELECT TOP 1 academic_year_id
+                    FROM mst_academic_years
+                    WHERE status = 'ACTIVE'
+                    ORDER BY start_date DESC", conn);
+                academic_year_id = activeYearCmd.ExecuteScalar()?.ToString();
+            }
+
             // ============================
             // COUNT DATA
             // ============================
             var totalSql = @"
         SELECT COUNT(*)
         FROM mst_rps r
+        JOIN mst_academic_classes ac ON r.academic_class_id = ac.academic_class_id
         WHERE r.status = 'ACTIVE'
+          AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
           AND (@subjectId IS NULL OR r.subject_id = @subjectId)
           AND (@academicClassId IS NULL OR r.academic_class_id = @academicClassId)
           AND (@teacherId IS NULL OR r.teacher_id = @teacherId)";
@@ -55,6 +68,7 @@ namespace Haniya.Controllers.PortalAdmin
 
             using (var cmd = new SqlCommand(totalSql, conn))
             {
+                cmd.Parameters.AddWithValue("@academicYearId", (object)academic_year_id ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@subjectId", (object)subject_id ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@academicClassId", (object)academic_class_id ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@teacherId", (object)teacher_id ?? DBNull.Value);
@@ -72,6 +86,9 @@ namespace Haniya.Controllers.PortalAdmin
             CONCAT(t.first_name, ' ', t.last_name) AS teacher_name,
             c.class_name,
             ac.academic_year_id,
+            ay.start_date,
+            ay.end_date,
+            ay.semester,
             COUNT(d.rps_detail_id) AS meeting_count,
             r.minimum_value
 
@@ -86,6 +103,9 @@ namespace Haniya.Controllers.PortalAdmin
         JOIN mst_academic_classes ac 
             ON r.academic_class_id = ac.academic_class_id
 
+        JOIN mst_academic_years ay
+            ON ac.academic_year_id = ay.academic_year_id
+
         JOIN mst_classes c 
             ON ac.class_id = c.class_id
 
@@ -93,6 +113,7 @@ namespace Haniya.Controllers.PortalAdmin
             ON d.rps_id = r.rps_id
 
         WHERE r.status = 'ACTIVE'
+          AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
           AND (@subjectId IS NULL OR r.subject_id = @subjectId)
           AND (@academicClassId IS NULL OR r.academic_class_id = @academicClassId)
           AND (@teacherId IS NULL OR r.teacher_id = @teacherId)
@@ -104,6 +125,9 @@ namespace Haniya.Controllers.PortalAdmin
             t.last_name,
             c.class_name,
             ac.academic_year_id,
+            ay.start_date,
+            ay.end_date,
+            ay.semester,
             r.minimum_value
 
         ORDER BY 
@@ -117,6 +141,7 @@ namespace Haniya.Controllers.PortalAdmin
 
             using (var cmd = new SqlCommand(sql, conn))
             {
+                cmd.Parameters.AddWithValue("@academicYearId", (object)academic_year_id ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@subjectId", (object)subject_id ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@academicClassId", (object)academic_class_id ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@teacherId", (object)teacher_id ?? DBNull.Value);
@@ -135,6 +160,9 @@ namespace Haniya.Controllers.PortalAdmin
                         teacher_name = r["teacher_name"].ToString(),
                         class_name = r["class_name"].ToString(),
                         academic_year_id = r["academic_year_id"].ToString(),
+                        start_date = r["start_date"],
+                        end_date = r["end_date"],
+                        semester = r["semester"]?.ToString(),
                         meeting_count = Convert.ToInt32(r["meeting_count"]),
                         minimum_value = r["minimum_value"].ToString(),
                     });
@@ -148,6 +176,40 @@ namespace Haniya.Controllers.PortalAdmin
                 recordsFiltered = recordsTotal,
                 data = list
             });
+        }
+
+        [HttpGet]
+        public IActionResult GetActiveAcademicYear()
+        {
+            try
+            {
+                using var conn = GetConn();
+                conn.Open();
+
+                var sql = @"
+                    SELECT TOP 1 academic_year_id, start_date, end_date, semester
+                    FROM mst_academic_years
+                    WHERE status = 'ACTIVE'
+                    ORDER BY start_date DESC";
+
+                using var cmd = new SqlCommand(sql, conn);
+                using var rd = cmd.ExecuteReader();
+                if (!rd.Read()) return Json(DTOResponse.ok(null));
+
+                var startYear = Convert.ToDateTime(rd["start_date"]).Year;
+                var endYear = Convert.ToDateTime(rd["end_date"]).Year;
+                var semester = rd["semester"]?.ToString();
+
+                return Json(DTOResponse.ok(new
+                {
+                    id = rd["academic_year_id"]?.ToString(),
+                    text = $"{startYear} - {endYear} (Semester {semester})"
+                }));
+            }
+            catch (Exception ex)
+            {
+                return Json(DTOResponse.fail(ex.Message, 500));
+            }
         }
 
         private (int draw, int start, int length, string searchValue, int orderColumnIndex, string orderDir) ParseDataTablesQuery()

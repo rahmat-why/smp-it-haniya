@@ -22,10 +22,12 @@
                class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Academic Year</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Semester</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Class</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Day</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center">Total Subject</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right" >Action</th>
+                    <th class="px-4 py-3 pr-6 text-xs font-semibold tracking-wide uppercase text-right">Action</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100"></tbody>
@@ -43,6 +45,7 @@
 @section Scripts {
 <script>
     let scheduleTable = null;
+    let currentAcademicYearId = '';
     let currentAcademicClassId = '';
     let currentDay = '';
 
@@ -66,6 +69,7 @@
                 url: '/Schedule/GetAll',
                 type: 'GET',
                 data: function (d) {
+                    d.academic_year_id = currentAcademicYearId || null;
                     d.academic_class_id = currentAcademicClassId || null;
                     d.day = currentDay || null;
                 }
@@ -84,6 +88,20 @@
                 info: "Showing _START_ to _END_ of _TOTAL_ entries"
             },
             columns: [
+                {
+                    data: null,
+                    className: 'py-3',
+                    render: function (data, type, row) {
+                        return `${formatYearShort(row.start_date)} - ${formatYearShort(row.end_date)}`;
+                    }
+                },
+                {
+                    data: 'semester',
+                    className: 'py-3',
+                    render: function (data) {
+                        return data ? `Semester ${data}` : '-';
+                    }
+                },
                 { data: 'class_name', className: 'py-3 text-gray-900' },
                 {
                     data: 'day',
@@ -129,7 +147,6 @@
 
                 const $length = wrapper.find('.dataTables_length, .dt-length');
                 const $filter = wrapper.find('.dataTables_filter, .dt-search');
-                const initialSearch = (scheduleTable.search() || '').replace(/"/g, '&quot;');
 
                 $filter.hide();
 
@@ -161,20 +178,16 @@
                             </div>
                             <div class="px-5 py-4 space-y-4">
                                 <div class="w-full">
+                                    <label class="block text-xs font-medium mb-1" for="filter_academic_year">Academic Year</label>
+                                    <select id="filter_academic_year" class="w-full"></select>
+                                </div>
+                                <div class="w-full">
                                     <label class="block text-xs font-medium mb-1" for="filter_class">Academic Class</label>
                                     <select id="filter_class" class="w-full"></select>
                                 </div>
                                 <div class="w-full">
                                     <label class="block text-xs font-medium mb-1" for="filter_day">Day</label>
                                     <select id="filter_day" class="w-full"></select>
-                                </div>
-                                <div class="w-full">
-                                    <label class="block text-xs font-medium mb-1" for="schedule_search_filter">Search</label>
-                                    <input id="schedule_search_filter"
-                                            type="text"
-                                            value="${initialSearch}"
-                                            class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Search..." />
                                 </div>
                             </div>
                             <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
@@ -199,6 +212,21 @@
                     );
 
                 $('#schedule-table-toolbar').addClass('flex flex-col md:flex-row md:items-center md:justify-between gap-4');
+
+                $('#filter_academic_year').select2({
+                    placeholder: "All Academic Years",
+                    allowClear: true,
+                    width: '100%',
+                    ajax: {
+                        url: '/Select2/AcademicYears',
+                        dataType: 'json',
+                        delay: 250,
+                        data: params => ({ q: params.term || '', page: params.page || 1 }),
+                        processResults: data => ({ results: data.results, pagination: data.pagination }),
+                        cache: true
+                    },
+                    minimumInputLength: 0
+                });
 
                 $('#filter_class').select2({
                     placeholder: "-- All Classes --",
@@ -232,6 +260,17 @@
                     minimumInputLength: 0
                 });
 
+                $.ajax({
+                    url: '/Select2/AcademicYears',
+                    data: { page: 1 },
+                    success: function (data) {
+                        if (data.results && data.results.length === 1) {
+                            const activeYear = data.results[0];
+                            $('#filter_academic_year').val(activeYear.id).trigger('change');
+                        }
+                    }
+                });
+
                 stylePagination();
             },
             drawCallback: function () {
@@ -243,10 +282,9 @@
     }
 
     function applyScheduleFilter() {
+        currentAcademicYearId = $('#filter_academic_year').val() || '';
         currentAcademicClassId = $('#filter_class').val() || '';
         currentDay = $('#filter_day').val() || '';
-        const searchKeyword = ($('#schedule_search_filter').val() || '').trim();
-        scheduleTable.search(searchKeyword);
         scheduleTable.ajax.reload(null, true);
         toggleFilter();
     }
@@ -280,6 +318,13 @@
         if (typeof applyAdminPaginationStyle === 'function') {
             applyAdminPaginationStyle($('#table-pagination-container'));
         }
+    }
+
+    function formatYearShort(d) {
+        if (!d) return "";
+        const date = new Date(d);
+        if (isNaN(date.getTime())) return "";
+        return date.getFullYear();
     }
 
     function toggleActionsMenu(event, id) {

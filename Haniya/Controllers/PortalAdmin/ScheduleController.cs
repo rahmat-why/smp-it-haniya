@@ -29,7 +29,7 @@ namespace Haniya.Controllers.PortalAdmin
             return View("~/Views/PortalAdmin/Schedule/Edit.cshtml");
         }
 
-        public IActionResult GetAll(string academic_class_id = null, string day = null)
+        public IActionResult GetAll(string academic_year_id = null, string academic_class_id = null, string day = null)
         {
             var (draw, start, length, _, _, _) = ParseDataTablesQuery();
 
@@ -41,7 +41,9 @@ namespace Haniya.Controllers.PortalAdmin
                 FROM mst_schedules s
                 JOIN mst_detail_settings mds ON (s.day = mds.item_name OR s.day = mds.detail_id) AND mds.header_id = 'DAY'
                 JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
+                JOIN mst_academic_years ay ON ac.academic_year_id = ay.academic_year_id
                 WHERE (@classId IS NULL OR s.academic_class_id = @classId)
+                  AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
                   AND (
                         @day IS NULL
                         OR s.day = @day
@@ -54,6 +56,7 @@ namespace Haniya.Controllers.PortalAdmin
             using (var cmd = new SqlCommand(totalSql, conn))
             {
                 cmd.Parameters.AddWithValue("@classId", (object)academic_class_id ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@academicYearId", (object)academic_year_id ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@day", (object)day ?? DBNull.Value);
                 recordsTotal = (int)cmd.ExecuteScalar();
             }
@@ -61,15 +64,20 @@ namespace Haniya.Controllers.PortalAdmin
             var sql = @"
                 SELECT 
                     s.schedule_id,
+                    ay.start_date,
+                    ay.end_date,
+                    ay.semester,
                     c.class_name,
                     mds.item_name AS day,
                     COUNT(d.schedule_detail_id) AS lesson_count
                 FROM mst_schedules s
                 JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
+                JOIN mst_academic_years ay ON ac.academic_year_id = ay.academic_year_id
                 JOIN mst_classes c ON ac.class_id = c.class_id
                 JOIN mst_detail_settings mds ON (s.day = mds.item_name OR s.day = mds.detail_id) AND mds.header_id = 'DAY'
                 LEFT JOIN mst_schedule_details d ON d.schedule_id = s.schedule_id
                 WHERE (@classId IS NULL OR s.academic_class_id = @classId)
+                  AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
                   AND (
                         @day IS NULL
                         OR s.day = @day
@@ -77,14 +85,15 @@ namespace Haniya.Controllers.PortalAdmin
                         OR mds.item_desc = @day
                         OR mds.detail_id = @day
                   )
-                GROUP BY s.schedule_id, c.class_name, mds.item_name
-                ORDER BY c.class_name, mds.item_name
+                GROUP BY s.schedule_id, ay.start_date, ay.end_date, ay.semester, c.class_name, mds.item_name
+                ORDER BY ay.start_date, ay.semester, c.class_name, mds.item_name
                 OFFSET @start ROWS FETCH NEXT @length ROWS ONLY";
 
             var list = new List<object>();
             using (var cmd = new SqlCommand(sql, conn))
             {
                 cmd.Parameters.AddWithValue("@classId", (object)academic_class_id ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@academicYearId", (object)academic_year_id ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@day", (object)day ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@start", start);
                 cmd.Parameters.AddWithValue("@length", length);
@@ -95,6 +104,9 @@ namespace Haniya.Controllers.PortalAdmin
                     list.Add(new
                     {
                         schedule_id = r["schedule_id"].ToString(),
+                        start_date = r["start_date"],
+                        end_date = r["end_date"],
+                        semester = r["semester"]?.ToString(),
                         class_name = r["class_name"].ToString(),
                         day = r["day"].ToString(),
                         lesson_count = Convert.ToInt32(r["lesson_count"])

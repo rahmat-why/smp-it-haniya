@@ -763,10 +763,10 @@ namespace Haniya.Controllers
                 while (rd.Read())
                 {
                     var subjectName = rd["subject_name"]?.ToString() ?? "";
-                    var classLevel = rd["class_level"]?.ToString() ?? "";
-                    var text = string.IsNullOrWhiteSpace(classLevel)
+                    var subjectClassLevel = rd["class_level"]?.ToString() ?? "";
+                    var text = string.IsNullOrWhiteSpace(subjectClassLevel)
                         ? subjectName
-                        : $"{subjectName} - Class {classLevel}";
+                        : $"{subjectName} - Class {subjectClassLevel}";
 
                     results.Add(new
                     {

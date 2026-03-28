@@ -23,26 +23,41 @@ namespace Haniya.Controllers.PortalAdmin
             return View("~/Views/PortalAdmin/Grade/Edit.cshtml");
         }
 
-        public IActionResult GetAll(string academic_class_id = null, string grade_date = null)
+        public IActionResult GetAll(string academic_year_id = null, string academic_class_id = null, string grade_type = null)
         {
-            var (draw, start, length, _, _, _) = ParseDataTablesQuery();
+            var (draw, start, length, search, _, _) = ParseDataTablesQuery();
 
             using var conn = GetConn();
             conn.Open();
+
+            if (string.IsNullOrWhiteSpace(academic_year_id))
+            {
+                using var activeYearCmd = new SqlCommand(@"
+                    SELECT TOP 1 academic_year_id
+                    FROM mst_academic_years
+                    WHERE status = 'ACTIVE'
+                    ORDER BY start_date DESC", conn);
+                academic_year_id = activeYearCmd.ExecuteScalar()?.ToString();
+            }
+
+            var searchKeyword = string.IsNullOrWhiteSpace(search) ? null : $"%{search.Trim()}%";
 
             // ================= TOTAL =================
             var totalSql = @"
         SELECT COUNT(*) 
         FROM txn_grades g
+        JOIN mst_academic_classes ac ON g.academic_class_id = ac.academic_class_id
         WHERE (@classId IS NULL OR g.academic_class_id = @classId)
-          AND (@date IS NULL OR g.grade_date = @date)";
+          AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
+          AND (@gradeType IS NULL OR g.grade_type = @gradeType)";
 
             int recordsTotal;
 
             using (var cmd = new SqlCommand(totalSql, conn))
             {
                 cmd.Parameters.AddWithValue("@classId", (object)academic_class_id ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@date", (object)grade_date ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@academicYearId", (object)academic_year_id ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@gradeType", (object)grade_type ?? DBNull.Value);
 
                 recordsTotal = (int)cmd.ExecuteScalar();
             }
@@ -53,6 +68,9 @@ namespace Haniya.Controllers.PortalAdmin
         SELECT 
             g.grade_id,
             g.grade_date,
+            ay.start_date,
+            ay.end_date,
+            ay.semester,
             c.class_name,
             s.subject_name,
             CONCAT(t.first_name,' ',t.last_name) AS teacher_name,
@@ -87,6 +105,9 @@ namespace Haniya.Controllers.PortalAdmin
         JOIN mst_academic_classes ac 
             ON g.academic_class_id = ac.academic_class_id
 
+        JOIN mst_academic_years ay
+            ON ac.academic_year_id = ay.academic_year_id
+
         JOIN mst_classes c 
             ON ac.class_id = c.class_id
 
@@ -108,11 +129,19 @@ namespace Haniya.Controllers.PortalAdmin
            AND dt.header_id = 'GRADE_TYPE'
 
         WHERE (@classId IS NULL OR g.academic_class_id = @classId)
-          AND (@date IS NULL OR g.grade_date = @date)
+          AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
+          AND (@gradeType IS NULL OR g.grade_type = @gradeType)
+          AND (@search IS NULL 
+               OR g.grade_type LIKE @search
+               OR dt.item_name LIKE @search
+               OR dt.item_desc LIKE @search)
 
         GROUP BY 
             g.grade_id,
             g.grade_date,
+            ay.start_date,
+            ay.end_date,
+            ay.semester,
             c.class_name,
             s.subject_name,
             t.first_name,
@@ -160,7 +189,12 @@ namespace Haniya.Controllers.PortalAdmin
                AND dt.header_id = 'GRADE_TYPE'
 
             WHERE (@classId IS NULL OR g.academic_class_id = @classId)
-              AND (@date IS NULL OR g.grade_date = @date)
+              AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
+              AND (@gradeType IS NULL OR g.grade_type = @gradeType)
+              AND (@search IS NULL 
+                   OR g.grade_type LIKE @search
+                   OR dt.item_name LIKE @search
+                   OR dt.item_desc LIKE @search)
 
             GROUP BY g.grade_id
         ) x";
@@ -171,7 +205,9 @@ namespace Haniya.Controllers.PortalAdmin
             using (var cmd = new SqlCommand(filteredSql, conn))
             {
                 cmd.Parameters.AddWithValue("@classId", (object)academic_class_id ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@date", (object)grade_date ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@academicYearId", (object)academic_year_id ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@gradeType", (object)grade_type ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@search", (object)searchKeyword ?? DBNull.Value);
 
                 recordsFiltered = (int)cmd.ExecuteScalar();
             }
@@ -183,7 +219,9 @@ namespace Haniya.Controllers.PortalAdmin
             using (var cmd = new SqlCommand(sql, conn))
             {
                 cmd.Parameters.AddWithValue("@classId", (object)academic_class_id ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@date", (object)grade_date ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@academicYearId", (object)academic_year_id ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@gradeType", (object)grade_type ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@search", (object)searchKeyword ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@start", start);
                 cmd.Parameters.AddWithValue("@length", length);
 
@@ -198,6 +236,10 @@ namespace Haniya.Controllers.PortalAdmin
                         grade_date = r["grade_date"] == DBNull.Value
                             ? null
                             : ((DateTime)r["grade_date"]).ToString("yyyy-MM-dd"),
+
+                        start_date = r["start_date"],
+                        end_date = r["end_date"],
+                        semester = r["semester"]?.ToString(),
 
                         class_name = r["class_name"].ToString(),
                         subject_name = r["subject_name"].ToString(),
@@ -220,6 +262,40 @@ namespace Haniya.Controllers.PortalAdmin
                 recordsFiltered,
                 data = list
             });
+        }
+
+        [HttpGet]
+        public IActionResult GetActiveAcademicYear()
+        {
+            try
+            {
+                using var conn = GetConn();
+                conn.Open();
+
+                var sql = @"
+                    SELECT TOP 1 academic_year_id, start_date, end_date, semester
+                    FROM mst_academic_years
+                    WHERE status = 'ACTIVE'
+                    ORDER BY start_date DESC";
+
+                using var cmd = new SqlCommand(sql, conn);
+                using var rd = cmd.ExecuteReader();
+                if (!rd.Read()) return Json(DTOResponse.ok(null));
+
+                var startYear = Convert.ToDateTime(rd["start_date"]).Year;
+                var endYear = Convert.ToDateTime(rd["end_date"]).Year;
+                var semester = rd["semester"]?.ToString();
+
+                return Json(DTOResponse.ok(new
+                {
+                    id = rd["academic_year_id"]?.ToString(),
+                    text = $"{startYear} - {endYear} (Semester {semester})"
+                }));
+            }
+            catch (Exception ex)
+            {
+                return Json(DTOResponse.fail(ex.Message, 500));
+            }
         }
 
         private (int draw, int start, int length, string searchValue, int orderColumnIndex, string orderDir) ParseDataTablesQuery()
