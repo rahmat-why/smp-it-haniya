@@ -225,10 +225,9 @@
                     </div>
 
                     <div class="pt-4 flex items-center justify-end space-x-2">
-                        <button type="button"
-                                onclick="goBack()"
-                                class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
-                                data-testid="teacher-edit-back-button">
+                        <a id="teacher-back-link" href="/Teacher"
+                           class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
+                           data-testid="teacher-edit-back-button">
                             <svg class="w-4 h-4 mr-2 text-gray-600"
                                  fill="none"
                                  viewBox="0 0 24 24"
@@ -239,7 +238,7 @@
                                       d="M15 19l-7-7 7-7" />
                             </svg>
                             <span>Back</span>
-                        </button>
+                        </a>
 
                         <button type="button"
                                 onclick="updateTeacher()"
@@ -264,6 +263,8 @@
 
     </form>
 </div>
+
+@await Html.PartialAsync("_TailwindConfirmModal")
 
 @section Scripts {
     <script>
@@ -435,7 +436,7 @@
 
             $.get("/Teacher/GetById", { id: id }, function (res) {
                 if (!res.success) {
-                    alert(res.message || "Failed to load teacher.");
+                    tailwindMessageModal('Failed', res.message || "Failed to load teacher.");
                     return;
                 }
 
@@ -473,10 +474,17 @@
             });
         }
 
-        function updateTeacher() {
+        async function updateTeacher() {
             if (!validateForm()) {
                 return;
             }
+            const confirmed = await tailwindConfirmModal({
+                title: 'Update Confirmation',
+                message: 'Are you sure you want to update this data?',
+                confirmText: 'Update',
+                cancelText: 'Cancel'
+            });
+            if (!confirmed) return;
 
             const fd = new FormData();
 
@@ -498,14 +506,11 @@
                 processData: false,
                 contentType: false,
                 success: res => {
-                    if (res.success) location.href = "/Teacher";
-                    else alert(res.message);
-                }
+                    if (res.success) window.location.href = "/Teacher";
+                    else tailwindMessageModal('Failed', res.message || 'Failed to update teacher');
+                },
+                error: () => tailwindMessageModal('Error', 'An error occurred while updating teacher data.')
             });
-        }
-
-        function goBack() {
-            window.location.href = "/Teacher";
         }
     </script>
 }

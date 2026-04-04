@@ -57,7 +57,7 @@
         </div>
 
         <div class="flex justify-end gap-4 pt-6 border-t border-gray-200">
-            <button type="button" onclick="goBackPayment()" class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300">
+            <a id="payment-back-link" href="/Payment" class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300">
                 <svg class="w-4 h-4 mr-2 text-gray-600"
                                  fill="none"
                                  viewBox="0 0 24 24"
@@ -68,7 +68,7 @@
                                       d="M15 19l-7-7 7-7" />
                             </svg>
                 Back
-            </button>
+            </a>
             <button type="button" id="btn-update-payment" onclick="updatePayment()" class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
                 Pay
                 <svg class="w-4 h-4 ml-2 text-white"
@@ -85,34 +85,20 @@
     </form>
 </div>
 
+@await Html.PartialAsync("_TailwindConfirmModal")
+
 @section Scripts {
     <script>
         let isFullyPaid = false;
         let remainingPaymentValue = 0;
         let paymentMethodItems = [];
 
-        function showError(message) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: message || 'Something went wrong.'
-            });
+        async function showError(message) {
+            await tailwindMessageModal('Error', message || 'Something went wrong.');
         }
 
-        function showInfo(message) {
-            Swal.fire({
-                icon: 'info',
-                title: 'Info',
-                text: message || 'Information.'
-            });
-        }
-
-        function showSuccess(message) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Success',
-                text: message || 'Payment updated.'
-            });
+        async function showInfo(message) {
+            await tailwindMessageModal('Info', message || 'Information.');
         }
 
         function formatCurrency(amount) {
@@ -227,56 +213,42 @@
             }
         }
 
-        function goBackPayment() {
-            window.location.href = "/Payment";
-        }
-
-        function updatePayment() {
+        async function updatePayment() {
             const validationMessage = validateForm();
             if (validationMessage) {
-                showError(validationMessage);
+                await showError(validationMessage);
                 return;
             }
 
-            Swal.fire({
+            const confirmed = await tailwindConfirmModal({
                 title: 'Confirm Payment',
-                text: 'Are you sure you want to submit this payment?',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Yes, submit',
-                cancelButtonText: 'Cancel'
-            }).then((result) => {
-                if (!result.isConfirmed) return;
+                message: 'Are you sure you want to submit this payment?',
+                confirmText: 'Yes, submit',
+                cancelText: 'Cancel'
+            });
+            if (!confirmed) return;
 
-                const fd = new FormData();
-                fd.append("payment_id", $('#payment_id').val());
-                fd.append("instalments", JSON.stringify(collectInstalments()));
+            const fd = new FormData();
+            fd.append("payment_id", $('#payment_id').val());
+            fd.append("instalments", JSON.stringify(collectInstalments()));
 
-                $.ajax({
-                    url: "/Payment/Update",
-                    type: "POST",
-                    data: fd,
-                    processData: false,
-                    contentType: false,
-                    success: function (res) {
-                        if (res.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Success',
-                                text: res.message || 'Payment updated.',
-                                timer: 1200,
-                                showConfirmButton: false
-                            }).then(() => {
-                                window.location.href = "/Payment";
-                            });
-                        } else {
-                            showError(res.message || "Update failed");
-                        }
-                    },
-                    error: function () {
-                        showError("Error updating payment");
+            $.ajax({
+                url: "/Payment/Update",
+                type: "POST",
+                data: fd,
+                processData: false,
+                contentType: false,
+                success: async function (res) {
+                    if (res.success) {
+                        await tailwindMessageModal('Success', res.message || 'Payment updated.');
+                        window.location.href = "/Payment";
+                    } else {
+                        await showError(res.message || "Update failed");
                     }
-                });
+                },
+                error: async function () {
+                    await showError("Error updating payment");
+                }
             });
         }
 

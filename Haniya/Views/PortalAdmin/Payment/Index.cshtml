@@ -1,11 +1,11 @@
-﻿@{
+@{
     Layout = "_LayoutAdmin";
     ViewData["Title"] = "Payments";
 }
 
 <div class="flex justify-between items-center mb-4">
     <h2 class="text-xl font-semibold">Payment List</h2>
-    <a href="/Payment/Create"
+    <a id="payment-add-link" href="/Payment/Create"
        class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
         + Publish Payment
     </a>
@@ -21,14 +21,14 @@
                class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 120px;">Due Date</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 250px;">Student</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 120px;">Class</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Type</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right !text-right" style="width: 130px;">Bill</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right !text-right" style="width: 130px;">Paid</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right !text-right" style="width: 130px;">Remaining</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 100px;">Status</th>
+                    <th data-sort="dueDate" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 130px;">Due Date</th>
+                    <th data-sort="student" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 250px;">Student</th>
+                    <th data-sort="class" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 120px;">Class</th>
+                    <th data-sort="type" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Type</th>
+                    <th data-sort="bill" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right !text-right cursor-pointer select-none" style="width: 130px;">Bill</th>
+                    <th data-sort="paid" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right !text-right cursor-pointer select-none" style="width: 130px;">Paid</th>
+                    <th data-sort="remaining" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right !text-right cursor-pointer select-none" style="width: 130px;">Remaining</th>
+                    <th data-sort="status" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center cursor-pointer select-none" style="width: 100px;">Status</th>
                     <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 70px;">Action</th>
                 </tr>
             </thead>
@@ -44,18 +44,36 @@
     </div>
 </div>
 
+@await Html.PartialAsync("_TailwindConfirmModal")
+
 @section Scripts {
 <script>
-    let paymentTable = null;
-    let currentAcademicClassId = '';
-    let currentPaymentStatus = '';
-    let currentPaymentType = '';
+    const pageState = {
+        page: 1,
+        limit: 10,
+        filters: {
+            search: '',
+            academicClassId: '',
+            status: '',
+            paymentType: ''
+        },
+        sort: { field: 'dueDate', order: 'desc' },
+        hasNextPage: false
+    };
+    let lastRequestKey = '';
+    let searchDebounce = null;
 
-    function showError(message) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: message || 'Something went wrong.'
+    function formatCurrencyCell(amount) {
+        if (!amount || isNaN(amount)) return '-';
+        return 'Rp ' + Number(amount).toLocaleString('id-ID');
+    }
+
+    function formatDateId(value) {
+        if (!value) return '-';
+        return new Date(value).toLocaleDateString('id-ID', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
         });
     }
 
@@ -69,320 +87,375 @@
         return due < today;
     }
 
-    $(document).ready(function () {
-        initPaymentTable();
-    });
+    function getStateQuery() {
+        return `page=${pageState.page}&limit=${pageState.limit}&search=${encodeURIComponent(pageState.filters.search || '')}&classId=${encodeURIComponent(pageState.filters.academicClassId || '')}&status=${encodeURIComponent(pageState.filters.status || '')}&paymentType=${encodeURIComponent(pageState.filters.paymentType || '')}&sortField=${encodeURIComponent(pageState.sort.field)}&sortOrder=${encodeURIComponent(pageState.sort.order)}`;
+    }
 
-    function initPaymentTable() {
-        paymentTable = $('#payment-table').DataTable({
-            processing: true,
-            serverSide: true,
-            searching: true,
-            lengthChange: true,
-            ajax: {
-                url: '/Payment/GetAll',
-                type: 'GET',
-                data: function (d) {
-                    d.academic_class_id = currentAcademicClassId || null;
-                    d.status = currentPaymentStatus || null;
-                    d.payment_type = currentPaymentType || null;
-                },
-                error: function () {
-                    showError('Failed to load payment data.');
-                }
-            },
-            dom: 'lftip',
-            language: {
-                lengthMenu: "Show _MENU_ rows",
-                search: "",
-                searchPlaceholder: "Search...",
-                paginate: {
-                    first: "First",
-                    last: "Last",
-                    next: "Next",
-                    previous: "Previous"
-                },
-                info: "Showing _START_ to _END_ of _TOTAL_ entries"
-            },
-            columns: [
-                {
-                    data: 'due_date',
-                    className: 'py-3 font-medium text-gray-900',
-                    render: function (data, type, row) {
-                        if (!data) return '-';
-                        const formatted = new Date(data).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' });
-                        if (isOverdueAndUnpaid(row)) {
-                            return `<span class="text-red-700 font-semibold">${formatted} (Overdue)</span>`;
-                        }
-                        return formatted;
-                    }
-                },
-                {
-                    data: null,
-                    orderable: true,
-                    className: 'py-3',
-                    render: function (data, type, row) {
-                        var src = row.profile_photo && row.profile_photo.trim() !== ''
-                            ? row.profile_photo
-                            : '/image/no-image.png';
+    function syncStateToUrl() {
+        history.replaceState({ ...pageState }, '', `?${getStateQuery()}`);
+        $('#payment-add-link').attr('href', `/Payment/Create?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+    }
 
-                        var name = row.student_name || '-';
-                        var nis = row.nis || '-';
+    function hydrateStateFromUrl() {
+        const q = new URLSearchParams(window.location.search);
+        const page = Number(q.get('page') || 1);
+        const limit = Number(q.get('limit') || 10);
+        pageState.page = Number.isFinite(page) && page > 0 ? page : 1;
+        pageState.limit = Number.isFinite(limit) && limit > 0 ? limit : 10;
+        pageState.filters.search = q.get('search') || '';
+        pageState.filters.academicClassId = q.get('classId') || '';
+        pageState.filters.status = q.get('status') || '';
+        pageState.filters.paymentType = q.get('paymentType') || '';
+        pageState.sort.field = q.get('sortField') || 'dueDate';
+        pageState.sort.order = q.get('sortOrder') || 'desc';
+    }
 
-                        return `
-                            <div class="flex items-center gap-3">
-                                <img 
-                                    src="${src}" 
-                                    class="w-10 h-10 rounded-full object-cover border-2 border-gray-200 flex-shrink-0"
-                                    alt="Photo"
-                                    loading="lazy"
-                                >
-                                <div class="min-w-0 flex-1">
-                                    <div class="font-medium text-gray-900 truncate">${name}</div>
-                                    <div class="text-xs text-gray-500 truncate">NIS: ${nis}</div>
-                                </div>
-                            </div>`;
-                    }
-                },
-                { data: 'class_name', className: 'py-3 text-gray-700', render: d => d || '-' },
-                { data: 'payment_type', className: 'py-3 text-gray-700', render: d => d || '-' },
-                {
-                    data: 'total_price',
-                    className: 'py-3 text-right text-gray-700',
-                    render: d => d ? 'Rp ' + Number(d).toLocaleString('id-ID') : '-'
-                },
-                {
-                    data: 'total_payment',
-                    className: 'py-3 text-right text-gray-700',
-                    render: d => d ? 'Rp ' + Number(d).toLocaleString('id-ID') : '-'
-                },
-                {
-                    data: 'remaining_payment',
-                    className: 'py-3 text-right text-gray-700',
-                    render: d => d ? 'Rp ' + Number(d).toLocaleString('id-ID') : '-'
-                },
-                {
-                    data: 'status',
-                    className: 'py-3 text-center',
-                    render: function (data) {
-                        let badge = '';
-                        if (data === 'PAID') badge = 'bg-green-100 text-green-800';
-                        else if (data === 'PARTIAL') badge = 'bg-yellow-100 text-yellow-800';
-                        else if (data === 'UNPAID') badge = 'bg-red-100 text-red-800';
-                        else badge = 'bg-gray-100 text-gray-700';
-
-                        return `<span class="inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${badge}">${data || 'UNKNOWN'}</span>`;
-                    }
-                },
-                {
-                    data: null,
-                    orderable: false,
-                    searchable: false,
-                    className: 'text-center py-3',
-                    render: function (data, type, row) {
-                        var id = row.payment_id;
-                        var isPaid = (row.status || '').toUpperCase() === 'PAID';
-                        if (isPaid) {
-                            return `
-                                <button type="button"
-                                        class="inline-flex items-center justify-center p-2 rounded-md bg-gray-100 text-gray-400 cursor-not-allowed"
-                                        title="Fully paid"
-                                        disabled>
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a5 5 0 00-10 0v2m-2 0h14a1 1 0 011 1v9a1 1 0 01-1 1H5a1 1 0 01-1-1v-9a1 1 0 011-1z" />
-                                    </svg>
-                                </button>`;
-                        }
-
-                        var editUrl = '/Payment/Edit?id=' + id;
-                        return `
-                            <a href="${editUrl}"
-                               class="inline-flex items-center justify-center p-2 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
-                               title="Pay">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m3 0h6M5 6h14a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z" />
-                                </svg>
-                            </a>`;
-                    }
-                }
-            ],
-            rowCallback: function (row, data) {
-                if (isOverdueAndUnpaid(data)) {
-                    $(row).addClass('bg-red-50');
-                } else {
-                    $(row).removeClass('bg-red-50');
-                }
-            },
-            initComplete: function () {
-                const wrapper = $('#payment-table_wrapper');
-
-                const $length = wrapper.find('.dataTables_length, .dt-length');
-                const $filter = wrapper.find('.dataTables_filter, .dt-search');
-                const initialSearch = (paymentTable.search() || '').replace(/"/g, '&quot;');
-
-                $filter.hide();
-
-                const $toggleFilter = $(`
-                    <div class="relative">
-                        <button id="filterToggleBtn"
-                                onclick="toggleFilter()"
-                                class="flex items-center gap-2 bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none"
-                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-                            </svg>
-                            Filter
-                        </button>
-
-                        <div id="filterDropdown"
-                             class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl border border-gray-200 shadow-xl z-50 overflow-visible">
-                            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                                <h3 class="text-lg font-bold text-gray-800">Filter</h3>
-                                <button type="button"
-                                        onclick="toggleFilter()"
-                                        class="text-gray-400 hover:text-gray-600 transition p-1 rounded-lg hover:bg-gray-100">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
-                                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <line x1="18" y1="6" x2="6" y2="18" />
-                                        <line x1="6" y1="6" x2="18" y2="18" />
-                                    </svg>
-                                </button>
-                            </div>
-                            <div class="px-5 py-4 space-y-4">
-                                <div class="w-full">
-                                    <label class="block text-xs font-medium mb-1" for="filter_class">Class</label>
-                                    <select id="filter_class" class="w-full"></select>
-                                </div>
-                                <div class="w-full">
-                                    <label class="block text-xs font-medium mb-1" for="filter_status">Status</label>
-                                    <select id="filter_status" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                        <option value="">-- All Status --</option>
-                                        <option value="PAID">PAID</option>
-                                        <option value="PARTIAL">PARTIAL</option>
-                                        <option value="UNPAID">UNPAID</option>
-                                    </select>
-                                </div>
-                                <div class="w-full">
-                                    <label class="block text-xs font-medium mb-1" for="filter_type">Type</label>
-                                    <select id="filter_type" class="w-full"></select>
-                                </div>
-                                <div class="w-full">
-                                    <label class="block text-xs font-medium mb-1" for="payment_search_filter">Search</label>
-                                    <input id="payment_search_filter"
-                                           type="text"
-                                           value="${initialSearch}"
-                                           class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                           placeholder="Search by student name / NIS..." />
-                                </div>
-                            </div>
-                            <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
-                                <button type="button"
-                                        onclick="applyPaymentFilter()"
-                                        class="px-5 py-2 rounded-full text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 transition">
-                                    Filter
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `);
-
-                $('#payment-table-toolbar').empty().append($length).append($toggleFilter);
-
-                // LENGTH
-                $length.addClass('flex items-center gap-2 text-sm text-gray-600');
-                $length.find('label').addClass('flex items-center gap-2');
-                $length.find('select').addClass(
-                    'border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 ' +
-                        'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-                );
-
-                $('#payment-table-toolbar').addClass('flex flex-col md:flex-row md:items-center md:justify-between gap-4');
-
-                const $filterDropdown = $('#filterDropdown');
-
-                $('#filter_class').select2({
-                    placeholder: "-- All Class --",
-                    allowClear: true,
-                    width: '100%',
-                    dropdownParent: $filterDropdown,
-                    ajax: {
-                        url: '/Select2/AcademicClasses',
-                        dataType: 'json',
-                        delay: 250,
-                        data: params => ({ q: params.term || '', page: params.page || 1 }),
-                        processResults: data => ({ results: data.results, pagination: data.pagination }),
-                        cache: true
-                    },
-                    minimumInputLength: 0
-                });
-
-                $('#filter_status').select2({
-                    placeholder: "-- All Status --",
-                    allowClear: true,
-                    width: '100%',
-                    dropdownParent: $filterDropdown,
-                    minimumResultsForSearch: 0
-                });
-
-                $('#filter_type').select2({
-                    placeholder: "-- All Type --",
-                    allowClear: true,
-                    width: '100%',
-                    dropdownParent: $filterDropdown,
-                    ajax: {
-                        url: '/Select2/PaymentTypes',
-                        dataType: 'json',
-                        delay: 250,
-                        data: params => ({ q: params.term || '', page: params.page || 1 }),
-                        processResults: data => ({ results: data.results, pagination: data.pagination }),
-                        cache: true
-                    },
-                    minimumInputLength: 0
-                });
-
-                stylePagination();
-            },
-            drawCallback: function () {
-                setTimeout(function () {
-                    stylePagination();
-                }, 50);
-            }
+    function renderSortIndicators() {
+        $('#payment-table thead th[data-sort]').each(function () {
+            const field = $(this).data('sort');
+            const isActive = field === pageState.sort.field;
+            const icon = isActive ? (pageState.sort.order === 'asc' ? ' ▲' : ' ▼') : '';
+            const base = $(this).text().replace(/ [▲▼]$/, '');
+            $(this).text(base + icon);
         });
     }
 
+    function renderToolbar() {
+        const searchValue = (pageState.filters.search || '').replace(/"/g, '&quot;');
+        $('#payment-table-toolbar').html(`
+            <div class="flex items-center gap-2 text-sm text-gray-600">
+                Show
+                <select id="list-limit" class="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:ring-2 focus:ring-blue-500">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select> rows
+            </div>
+
+            <div class="relative">
+                <button id="paymentFilterToggleBtn"
+                        type="button"
+                        class="flex items-center gap-2 bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                    </svg>
+                    Filter
+                </button>
+
+                <div id="paymentFilterDropdown"
+                     class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl border border-gray-200 shadow-xl z-50 overflow-visible">
+                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                        <h3 class="text-lg font-bold text-gray-800">Filter</h3>
+                        <button type="button" id="paymentFilterCloseBtn"
+                                class="text-gray-400 hover:text-gray-600 transition p-1 rounded-lg hover:bg-gray-100">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="px-5 py-4 space-y-4">
+                        <div class="w-full">
+                            <label class="block text-xs font-medium mb-1" for="filter_class">Class</label>
+                            <select id="filter_class" class="w-full"></select>
+                        </div>
+                        <div class="w-full">
+                            <label class="block text-xs font-medium mb-1" for="filter_status">Status</label>
+                            <select id="filter_status" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">-- All Status --</option>
+                                <option value="PAID">PAID</option>
+                                <option value="PARTIAL">PARTIAL</option>
+                                <option value="UNPAID">UNPAID</option>
+                            </select>
+                        </div>
+                        <div class="w-full">
+                            <label class="block text-xs font-medium mb-1" for="filter_type">Type</label>
+                            <select id="filter_type" class="w-full"></select>
+                        </div>
+                        <div class="w-full">
+                            <label class="block text-xs font-medium mb-1" for="payment_search_filter">Search</label>
+                            <input id="payment_search_filter"
+                                   type="text"
+                                   value="${searchValue}"
+                                   class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   placeholder="Search by student name / NIS..." />
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
+                        <button type="button"
+                                id="apply-payment-filter-btn"
+                                class="px-5 py-2 rounded-full text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 transition">
+                            Filter
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `);
+
+        $('#list-limit').val(String(pageState.limit));
+        $('#list-limit').off('change').on('change', function () {
+            const next = Number($(this).val() || 10);
+            if (pageState.limit === next) return;
+            pageState.limit = next;
+            pageState.page = 1;
+            lastRequestKey = '';
+            fetchPayments();
+        });
+
+        const $dropdown = $('#paymentFilterDropdown');
+        $('#paymentFilterToggleBtn').off('click').on('click', function () {
+            $dropdown.toggleClass('hidden');
+        });
+        $('#paymentFilterCloseBtn').off('click').on('click', function () {
+            $dropdown.addClass('hidden');
+        });
+
+        $('#apply-payment-filter-btn').off('click').on('click', function () {
+            applyPaymentFilter();
+        });
+
+        initFilterSelect2($dropdown);
+    }
+
+    function initFilterSelect2($dropdown) {
+        $('#filter_class').select2({
+            placeholder: "-- All Class --",
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $dropdown,
+            ajax: {
+                url: '/Select2/AcademicClasses',
+                dataType: 'json',
+                delay: 250,
+                data: params => ({ q: params.term || '', page: params.page || 1 }),
+                processResults: data => ({ results: data.results, pagination: data.pagination }),
+                cache: true
+            },
+            minimumInputLength: 0
+        });
+
+        $('#filter_status').select2({
+            placeholder: "-- All Status --",
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $dropdown,
+            minimumResultsForSearch: 0
+        });
+
+        $('#filter_type').select2({
+            placeholder: "-- All Type --",
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $dropdown,
+            ajax: {
+                url: '/Select2/PaymentTypes',
+                dataType: 'json',
+                delay: 250,
+                data: params => ({ q: params.term || '', page: params.page || 1 }),
+                processResults: data => ({ results: data.results, pagination: data.pagination }),
+                cache: true
+            },
+            minimumInputLength: 0
+        });
+
+        if (pageState.filters.academicClassId) {
+            const option = new Option(pageState.filters.academicClassId, pageState.filters.academicClassId, true, true);
+            $('#filter_class').append(option).trigger('change');
+        }
+        $('#filter_status').val(pageState.filters.status || '').trigger('change');
+        if (pageState.filters.paymentType) {
+            const optionType = new Option(pageState.filters.paymentType, pageState.filters.paymentType, true, true);
+            $('#filter_type').append(optionType).trigger('change');
+        }
+    }
+
     function applyPaymentFilter() {
-        currentAcademicClassId = $('#filter_class').val() || '';
-        currentPaymentStatus = $('#filter_status').val() || '';
-        currentPaymentType = $('#filter_type').val() || '';
-        const searchKeyword = ($('#payment_search_filter').val() || '').trim();
-        paymentTable.search(searchKeyword);
-        paymentTable.ajax.reload(null, true);
-        toggleFilter();
+        pageState.filters.academicClassId = $('#filter_class').val() || '';
+        pageState.filters.status = $('#filter_status').val() || '';
+        pageState.filters.paymentType = $('#filter_type').val() || '';
+        pageState.filters.search = ($('#payment_search_filter').val() || '').trim();
+        pageState.page = 1;
+        lastRequestKey = '';
+        fetchPayments();
+        $('#paymentFilterDropdown').addClass('hidden');
     }
 
-    function stylePagination() {
-        const wrapper = $('#payment-table_wrapper');
-
-        let $info = wrapper.find('.dataTables_info').first();
-        if ($info.length === 0) $info = wrapper.find('.dt-info').first();
-
-        let $paginate = wrapper.find('.dataTables_paginate').first();
-        if ($paginate.length === 0) $paginate = wrapper.find('.dt-paging').first();
-
-        if ($info.length > 0) {
-            $('#table-info-container').empty().append($info);
-            $info.removeClass().addClass('text-sm text-gray-600');
+    function renderRows(items) {
+        const $tbody = $('#payment-table tbody');
+        if (!items || !items.length) {
+            $tbody.html(`<tr><td colspan="9" class="px-4 py-8 text-center text-gray-500">No data found.</td></tr>`);
+            return;
         }
 
-        if ($paginate.length > 0) {
-            $('#table-pagination-container').empty().append($paginate);
-        }
+        let html = '';
+        items.forEach(row => {
+            const src = row.profile_photo && row.profile_photo.trim() !== ''
+                ? row.profile_photo
+                : '/image/no-image.png';
+            const dueDate = formatDateId(row.due_date);
+            const dueHtml = isOverdueAndUnpaid(row)
+                ? `<span class="text-red-700 font-semibold">${dueDate} (Overdue)</span>`
+                : dueDate;
 
-        $('#table-pagination-container').addClass('w-full flex justify-end overflow-x-auto whitespace-nowrap');
-        if (typeof applyAdminPaginationStyle === 'function') {
-            applyAdminPaginationStyle($('#table-pagination-container'));
+            let badge = 'bg-gray-100 text-gray-700';
+            if (row.status === 'PAID') badge = 'bg-green-100 text-green-800';
+            else if (row.status === 'PARTIAL') badge = 'bg-yellow-100 text-yellow-800';
+            else if (row.status === 'UNPAID') badge = 'bg-red-100 text-red-800';
+
+            const isPaid = (row.status || '').toUpperCase() === 'PAID';
+            const editUrl = `/Payment/Edit?id=${encodeURIComponent(row.payment_id)}&returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+
+            html += `
+                <tr class="bg-white divide-y divide-gray-100 ${isOverdueAndUnpaid(row) ? 'bg-red-50' : ''}">
+                    <td class="px-4 py-3 font-medium text-gray-900">${dueHtml}</td>
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-3">
+                            <img src="${src}" class="w-10 h-10 rounded-full object-cover border-2 border-gray-200 flex-shrink-0" alt="Photo" loading="lazy">
+                            <div class="min-w-0 flex-1">
+                                <div class="font-medium text-gray-900 truncate">${row.student_name || '-'}</div>
+                                <div class="text-xs text-gray-500 truncate">NIS: ${row.nis || '-'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 text-gray-700">${row.class_name || '-'}</td>
+                    <td class="px-4 py-3 text-gray-700">${row.payment_type || '-'}</td>
+                    <td class="px-4 py-3 text-right text-gray-700">${formatCurrencyCell(row.total_price)}</td>
+                    <td class="px-4 py-3 text-right text-gray-700">${formatCurrencyCell(row.total_payment)}</td>
+                    <td class="px-4 py-3 text-right text-gray-700">${formatCurrencyCell(row.remaining_payment)}</td>
+                    <td class="px-4 py-3 text-center">
+                        <span class="inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${badge}">${row.status || 'UNKNOWN'}</span>
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        ${isPaid
+                            ? `<button type="button" class="inline-flex items-center justify-center p-2 rounded-md bg-gray-100 text-gray-400 cursor-not-allowed" title="Fully paid" disabled>
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a5 5 0 00-10 0v2m-2 0h14a1 1 0 011 1v9a1 1 0 01-1 1H5a1 1 0 01-1-1v-9a1 1 0 011-1z" />
+                                    </svg>
+                               </button>`
+                            : `<a href="${editUrl}" class="inline-flex items-center justify-center p-2 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors" title="Pay">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m3 0h6M5 6h14a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z" />
+                                    </svg>
+                               </a>`
+                        }
+                    </td>
+                </tr>
+            `;
+        });
+        $tbody.html(html);
+    }
+
+    function renderPagination(currentCount) {
+        const start = currentCount === 0 ? 0 : ((pageState.page - 1) * pageState.limit) + 1;
+        const end = ((pageState.page - 1) * pageState.limit) + currentCount;
+        $('#table-info-container').html(`<span class="text-sm text-gray-600">Showing ${start} to ${end}</span>`);
+
+        const prevDisabled = pageState.page <= 1;
+        const nextDisabled = !pageState.hasNextPage;
+        $('#table-pagination-container').html(`
+            <div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                <button id="page-prev" class="px-3 py-2 text-sm border-r border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Prev</button>
+                <span class="px-3 py-2 text-sm bg-blue-900 text-white font-semibold">${pageState.page}</span>
+                <button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Next</button>
+            </div>
+        `);
+
+        $('#page-prev').off('click').on('click', function () {
+            if (pageState.page <= 1) return;
+            pageState.page -= 1;
+            lastRequestKey = '';
+            fetchPayments();
+        });
+        $('#page-next').off('click').on('click', function () {
+            if (!pageState.hasNextPage) return;
+            pageState.page += 1;
+            lastRequestKey = '';
+            fetchPayments();
+        });
+    }
+
+    async function fetchPayments() {
+        const payload = {
+            page: pageState.page,
+            limit: pageState.limit,
+            filters: { ...pageState.filters },
+            sort: { ...pageState.sort }
+        };
+        const requestKey = JSON.stringify(payload);
+        if (requestKey === lastRequestKey) return;
+        lastRequestKey = requestKey;
+
+        syncStateToUrl();
+        renderSortIndicators();
+
+        try {
+            const res = await $.ajax({
+                url: '/Payment/GetAll',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(payload)
+            });
+
+            if (!res.success) {
+                lastRequestKey = '';
+                tailwindMessageModal('Failed', res.message || 'Failed to load payment data.');
+                return;
+            }
+
+            const result = res.data || {};
+            const items = result.data || [];
+            pageState.hasNextPage = !!result.hasNextPage;
+            renderRows(items);
+            renderPagination(items.length);
+        } catch {
+            lastRequestKey = '';
+            tailwindMessageModal('Error', 'Failed to load payment data.');
         }
     }
 
+    $(document).ready(function () {
+        hydrateStateFromUrl();
+        renderToolbar();
+        renderSortIndicators();
+        fetchPayments();
+
+        $(document).on('click', function (e) {
+            const $dropdown = $('#paymentFilterDropdown');
+            const isToggle = $(e.target).closest('#paymentFilterToggleBtn').length > 0;
+            const isInsideDropdown = $(e.target).closest('#paymentFilterDropdown').length > 0;
+            const isSelect2 = $(e.target).closest('.select2-container, .select2-dropdown').length > 0;
+            if (!isToggle && !isInsideDropdown && !isSelect2) {
+                $dropdown.addClass('hidden');
+            }
+        });
+
+        $('#payment-table thead').on('click', 'th[data-sort]', function () {
+            const field = $(this).data('sort');
+            if (!field) return;
+            if (pageState.sort.field === field) {
+                pageState.sort.order = pageState.sort.order === 'asc' ? 'desc' : 'asc';
+            } else {
+                pageState.sort.field = field;
+                pageState.sort.order = 'asc';
+            }
+            pageState.page = 1;
+            lastRequestKey = '';
+            fetchPayments();
+        });
+
+        $(document).on('input', '#payment_search_filter', function () {
+            const val = ($(this).val() || '').trim();
+            if ((pageState.filters.search || '') === val) return;
+            clearTimeout(searchDebounce);
+            searchDebounce = setTimeout(() => {
+                pageState.filters.search = val;
+                pageState.page = 1;
+                lastRequestKey = '';
+                fetchPayments();
+            }, 300);
+        });
+    });
 </script>
 }

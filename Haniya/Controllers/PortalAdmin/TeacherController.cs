@@ -45,125 +45,99 @@ namespace Haniya.Controllers.PortalAdmin
 
         /* ===================== API ===================== */
 
-        private (int draw, int start, int length, string searchValue, string orderColumn, string orderDir)
-            ParseDataTablesQuery(string[] columns)
+        public class ListSort
         {
-            var q = Request.Query;
-
-            int.TryParse(q["draw"], out var draw);
-            if (draw <= 0) draw = 1;
-
-            int.TryParse(q["start"], out var start);
-            if (start < 0) start = 0;
-
-            int.TryParse(q["length"], out var length);
-            if (length <= 0) length = 10;
-
-            var searchValue = q["search[value]"].ToString() ?? string.Empty;
-
-            var orderColumn = "full_name";
-            var orderDir = "ASC";
-
-            var orderColIdxStr = q["order[0][column]"].ToString();
-            if (int.TryParse(orderColIdxStr, out var orderColIdx))
-            {
-                if (orderColIdx >= 0 && orderColIdx < columns.Length)
-                    orderColumn = columns[orderColIdx];
-            }
-
-            var dir = q["order[0][dir]"].ToString();
-            if (!string.IsNullOrWhiteSpace(dir) &&
-                (dir.Equals("asc", StringComparison.OrdinalIgnoreCase) ||
-                 dir.Equals("desc", StringComparison.OrdinalIgnoreCase)))
-            {
-                orderDir = dir.ToUpper();
-            }
-
-            return (draw, start, length, searchValue, orderColumn, orderDir);
+            public string field { get; set; } = "teacher";
+            public string order { get; set; } = "asc";
         }
 
-        [HttpGet]
-        public IActionResult GetAll()
+        public class ListRequest
+        {
+            public int page { get; set; } = 1;
+            public int limit { get; set; } = 10;
+            public Dictionary<string, string>? filters { get; set; }
+            public ListSort? sort { get; set; }
+        }
+
+        [HttpPost]
+        public IActionResult GetAll([FromBody] ListRequest? req)
         {
             try
             {
-                var columns = new[]
-                {
-            "full_name",
-            "gender",
-            "birth_date",
-            "birth_place",
-            "address",
-            "phone",
-            "entry_date",
-            "level"
-        };
+                req ??= new ListRequest();
+                var page = req.page <= 0 ? 1 : req.page;
+                var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
+                var offset = (page - 1) * limit;
+                var take = limit + 1;
 
-                var (draw, start, length, searchValue, orderColumn, orderDir)
-                    = ParseDataTablesQuery(columns);
+                var filters = req.filters ?? new Dictionary<string, string>();
+                filters.TryGetValue("search", out var search);
+                filters.TryGetValue("gender", out var gender);
+                filters.TryGetValue("employment", out var employment);
+
+                var sortMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["teacher"] = "t.first_name",
+                    ["gender"] = "dg.item_desc",
+                    ["birthDate"] = "t.birth_date",
+                    ["birthPlace"] = "t.birth_place",
+                    ["address"] = "t.address",
+                    ["phone"] = "t.phone",
+                    ["entryDate"] = "t.entry_date",
+                    ["employment"] = "t.level"
+                };
+                var sort = req.sort ?? new ListSort();
+                var orderBy = sortMap.TryGetValue(sort.field ?? "", out var mapped) ? mapped : "t.first_name";
+                var orderDir = string.Equals(sort.order, "desc", StringComparison.OrdinalIgnoreCase) ? "DESC" : "ASC";
 
                 using var conn = GetConn();
                 conn.Open();
 
-                var totalCmd = new SqlCommand(
-                    "SELECT COUNT(*) FROM mst_teachers",
-                    conn
-                );
-                var recordsTotal = (int)totalCmd.ExecuteScalar();
-
-                string whereSearch = "";
-                if (!string.IsNullOrWhiteSpace(searchValue))
+                var where = new List<string> { "t.status = 'ACTIVE'" };
+                if (!string.IsNullOrWhiteSpace(search))
                 {
-                    whereSearch = @" AND (
-                npk LIKE @search OR
-                first_name LIKE @search OR
-                last_name LIKE @search OR
-                address LIKE @search OR
-                phone LIKE @search OR
-                level LIKE @search
-            )";
+                    where.Add(@"(
+                        t.npk LIKE @search OR
+                        t.first_name LIKE @search OR
+                        t.last_name LIKE @search OR
+                        t.address LIKE @search OR
+                        t.phone LIKE @search OR
+                        t.level LIKE @search
+                    )");
                 }
-
-                var filteredCmd = new SqlCommand(
-                    "SELECT COUNT(*) FROM mst_teachers WHERE 1=1" + whereSearch,
-                    conn
-                );
-
-                if (!string.IsNullOrWhiteSpace(searchValue))
-                    filteredCmd.Parameters.AddWithValue("@search", $"%{searchValue}%");
-
-                var recordsFiltered = (int)filteredCmd.ExecuteScalar();
+                if (!string.IsNullOrWhiteSpace(gender)) where.Add("t.gender = @gender");
+                if (!string.IsNullOrWhiteSpace(employment)) where.Add("t.level = @employment");
+                var whereSql = "WHERE " + string.Join(" AND ", where);
 
                 var sql = $@"
-            SELECT
-                t.teacher_id,
-                t.npk,
-                t.first_name,
-                t.last_name,
-                dg.item_desc AS gender,
-                t.birth_place,
-                t.birth_date,
-                t.profile_photo,
-                t.address,
-                t.phone,
-                t.entry_date,
-                t.level
-            FROM mst_teachers t
-            LEFT JOIN mst_detail_settings dg
-                ON dg.item_code = t.gender
-                AND dg.header_id = 'GENDER'
-                AND dg.status = 'ACTIVE'
-            WHERE 1=1
-                {whereSearch}
-            ORDER BY {orderColumn} {orderDir}
-            OFFSET @start ROWS FETCH NEXT @length ROWS ONLY";
+                    SELECT
+                        t.teacher_id,
+                        t.npk,
+                        t.first_name,
+                        t.last_name,
+                        dg.item_desc AS gender,
+                        t.birth_place,
+                        t.birth_date,
+                        t.profile_photo,
+                        t.address,
+                        t.phone,
+                        t.entry_date,
+                        t.level
+                    FROM mst_teachers t
+                    LEFT JOIN mst_detail_settings dg
+                        ON dg.item_code = t.gender
+                        AND dg.header_id = 'GENDER'
+                        AND dg.status = 'ACTIVE'
+                    {whereSql}
+                    ORDER BY {orderBy} {orderDir}
+                    OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY";
 
                 using var cmd = new SqlCommand(sql, conn);
-                cmd.Parameters.AddWithValue("@start", start);
-                cmd.Parameters.AddWithValue("@length", length);
-
-                if (!string.IsNullOrWhiteSpace(searchValue))
-                    cmd.Parameters.AddWithValue("@search", $"%{searchValue}%");
+                cmd.Parameters.AddWithValue("@offset", offset);
+                cmd.Parameters.AddWithValue("@take", take);
+                if (!string.IsNullOrWhiteSpace(search)) cmd.Parameters.AddWithValue("@search", $"%{search.Trim()}%");
+                if (!string.IsNullOrWhiteSpace(gender)) cmd.Parameters.AddWithValue("@gender", gender.Trim());
+                if (!string.IsNullOrWhiteSpace(employment)) cmd.Parameters.AddWithValue("@employment", employment.Trim());
 
                 var list = new List<object>();
                 using var rd = cmd.ExecuteReader();
@@ -188,13 +162,10 @@ namespace Haniya.Controllers.PortalAdmin
                     });
                 }
 
-                return Json(new
-                {
-                    draw,
-                    recordsTotal,
-                    recordsFiltered,
-                    data = list
-                });
+                var hasNextPage = list.Count > limit;
+                if (hasNextPage) list = list.Take(limit).ToList();
+
+                return Json(DTOResponse.ok(new { data = list, hasNextPage }));
             }
             catch (Exception ex)
             {

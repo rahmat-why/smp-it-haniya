@@ -1,0 +1,128 @@
+<div id="tw-modal" class="hidden fixed inset-0 z-50" aria-hidden="true">
+    <div class="absolute inset-0 bg-black/40" data-modal-close></div>
+    <div class="relative min-h-full flex items-center justify-center p-4">
+        <div id="tw-modal-panel"
+             class="w-full max-w-md rounded-xl bg-white shadow-xl"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="tw-modal-title"
+             tabindex="-1">
+            <div class="px-5 py-4 border-b border-gray-100">
+                <h3 id="tw-modal-title" class="text-base font-semibold text-gray-900"></h3>
+            </div>
+            <div class="px-5 py-4">
+                <p id="tw-modal-message" class="text-sm text-gray-600"></p>
+            </div>
+            <div class="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
+                <button id="tw-modal-cancel" type="button" class="px-4 py-2 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300">Cancel</button>
+                <button id="tw-modal-confirm" type="button" class="px-4 py-2 text-sm rounded-md bg-blue-900 text-white hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        if (window.tailwindConfirmModal && window.tailwindMessageModal) return;
+
+        const modal = document.getElementById('tw-modal');
+        const panel = document.getElementById('tw-modal-panel');
+        const titleEl = document.getElementById('tw-modal-title');
+        const messageEl = document.getElementById('tw-modal-message');
+        const confirmBtn = document.getElementById('tw-modal-confirm');
+        const cancelBtn = document.getElementById('tw-modal-cancel');
+        const overlay = modal ? modal.querySelector('[data-modal-close]') : null;
+        let lastFocusedElement = null;
+
+        function getFocusableElements() {
+            if (!panel) return [];
+            return Array.from(panel.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])'))
+                .filter(el => !el.hasAttribute('disabled') && el.offsetParent !== null);
+        }
+
+        function trapFocus(event) {
+            if (event.key !== 'Tab') return;
+            const focusables = getFocusableElements();
+            if (!focusables.length) {
+                event.preventDefault();
+                return;
+            }
+            const first = focusables[0];
+            const last = focusables[focusables.length - 1];
+
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        }
+
+        function openModal({ title, message, confirmText, cancelText, hideCancel }, resolve) {
+            if (!modal || !panel || !titleEl || !messageEl || !confirmBtn || !cancelBtn || !overlay) {
+                resolve(false);
+                return;
+            }
+
+            lastFocusedElement = document.activeElement;
+            titleEl.textContent = title || 'Confirm';
+            messageEl.textContent = message || '';
+            confirmBtn.textContent = confirmText || 'Confirm';
+            cancelBtn.textContent = cancelText || 'Cancel';
+
+            if (hideCancel) {
+                cancelBtn.classList.add('hidden');
+            } else {
+                cancelBtn.classList.remove('hidden');
+            }
+
+            modal.classList.remove('hidden');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('overflow-hidden');
+            confirmBtn.focus();
+
+            const close = (result) => {
+                modal.classList.add('hidden');
+                modal.setAttribute('aria-hidden', 'true');
+                document.body.classList.remove('overflow-hidden');
+                confirmBtn.removeEventListener('click', onConfirm);
+                cancelBtn.removeEventListener('click', onCancel);
+                overlay.removeEventListener('click', onCancel);
+                document.removeEventListener('keydown', onKeydown);
+                if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+                    lastFocusedElement.focus();
+                }
+                resolve(result);
+            };
+
+            const onConfirm = () => close(true);
+            const onCancel = () => close(false);
+            const onKeydown = (e) => {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    close(false);
+                    return;
+                }
+                trapFocus(e);
+            };
+
+            confirmBtn.addEventListener('click', onConfirm);
+            cancelBtn.addEventListener('click', onCancel);
+            overlay.addEventListener('click', onCancel);
+            document.addEventListener('keydown', onKeydown);
+        }
+
+        window.tailwindConfirmModal = function ({ title, message, confirmText = 'Confirm', cancelText = 'Cancel' }) {
+            return new Promise((resolve) => {
+                openModal({ title, message, confirmText, cancelText, hideCancel: false }, resolve);
+            });
+        };
+
+        window.tailwindMessageModal = function (title, message) {
+            return new Promise((resolve) => {
+                openModal({ title, message, confirmText: 'OK', cancelText: '', hideCancel: true }, () => resolve(true));
+            });
+        };
+    })();
+</script>

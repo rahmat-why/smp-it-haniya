@@ -25,38 +25,65 @@ namespace Haniya.Controllers.PortalAdmin
             return View("~/Views/PortalAdmin/Payment/Edit.cshtml");
         }
 
-        public IActionResult GetAll(string academic_class_id = null, string status = null, string payment_type = null)
+        public class ListSort
         {
-            var (draw, start, length, searchValue, _, _) = ParseDataTablesQuery();
-            var searchKeyword = string.IsNullOrWhiteSpace(searchValue) ? null : searchValue.Trim();
+            public string field { get; set; } = "dueDate";
+            public string order { get; set; } = "desc";
+        }
+
+        public class ListRequest
+        {
+            public int page { get; set; } = 1;
+            public int limit { get; set; } = 10;
+            public Dictionary<string, string>? filters { get; set; }
+            public ListSort? sort { get; set; }
+        }
+
+        [HttpPost]
+        public IActionResult GetAll([FromBody] ListRequest? req)
+        {
+            req ??= new ListRequest();
+            var page = req.page <= 0 ? 1 : req.page;
+            var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
+            var offset = (page - 1) * limit;
+            var take = limit + 1;
+
+            var filters = req.filters ?? new Dictionary<string, string>();
+            filters.TryGetValue("search", out var search);
+            filters.TryGetValue("academicClassId", out var academicClassId);
+            filters.TryGetValue("status", out var status);
+            filters.TryGetValue("paymentType", out var paymentType);
+
+            var sortMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["dueDate"] = "p.due_date",
+                ["student"] = "s.full_name",
+                ["class"] = "c.class_name",
+                ["type"] = "pt.item_desc",
+                ["bill"] = "p.total_price",
+                ["paid"] = "p.total_payment",
+                ["remaining"] = "p.remaining_payment",
+                ["status"] = "p.status"
+            };
+            var sort = req.sort ?? new ListSort();
+            var orderBy = sortMap.TryGetValue(sort.field ?? "", out var mapped) ? mapped : "p.due_date";
+            var orderDir = string.Equals(sort.order, "asc", StringComparison.OrdinalIgnoreCase) ? "ASC" : "DESC";
 
             using var conn = GetConn();
             conn.Open();
 
-            var totalSql = @"
-        SELECT COUNT(*) 
-        FROM txn_payments p
-        LEFT JOIN mst_student_classes sc ON p.student_class_id = sc.student_class_id
-        LEFT JOIN mst_students s ON sc.student_id = s.student_id
-        WHERE (@classId IS NULL OR sc.academic_class_id = @classId)
-          AND (@status IS NULL OR p.status = @status)
-          AND (@paymentType IS NULL OR p.payment_type = @paymentType)
-          AND (
-                @search IS NULL
-                OR COALESCE(s.full_name, CONCAT(s.first_name, ' ', s.last_name)) LIKE @searchPattern
-                OR s.nis LIKE @searchPattern
-              )";
-
-            int recordsTotal;
-            using (var cmd = new SqlCommand(totalSql, conn))
+            var where = new List<string> { "1=1" };
+            if (!string.IsNullOrWhiteSpace(academicClassId)) where.Add("sc.academic_class_id = @classId");
+            if (!string.IsNullOrWhiteSpace(status)) where.Add("p.status = @status");
+            if (!string.IsNullOrWhiteSpace(paymentType)) where.Add("p.payment_type = @paymentType");
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                cmd.Parameters.AddWithValue("@classId", (object)academic_class_id ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@status", (object)status ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@paymentType", (object)payment_type ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@search", (object)searchKeyword ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@searchPattern", $"%{searchKeyword ?? ""}%");
-                recordsTotal = (int)cmd.ExecuteScalar();
+                where.Add(@"(
+                    COALESCE(s.full_name, CONCAT(s.first_name, ' ', s.last_name)) LIKE @searchPattern
+                    OR s.nis LIKE @searchPattern
+                )");
             }
+            var whereSql = "WHERE " + string.Join(" AND ", where);
 
             var sql = @"
         SELECT 
@@ -85,33 +112,28 @@ namespace Haniya.Controllers.PortalAdmin
         LEFT JOIN mst_detail_settings pt ON p.payment_type = pt.detail_id AND pt.header_id = 'PAYMENT_TYPE'
         LEFT JOIN mst_detail_settings pm ON pm.header_id = 'PAYMENT_METHOD'
                                         AND (p.payment_method = pm.detail_id OR p.payment_method = pm.item_code)
-        WHERE (@classId IS NULL OR sc.academic_class_id = @classId)
-          AND (@status IS NULL OR p.status = @status)
-          AND (@paymentType IS NULL OR p.payment_type = @paymentType)
-          AND (
-                @search IS NULL
-                OR COALESCE(s.full_name, CONCAT(s.first_name, ' ', s.last_name)) LIKE @searchPattern
-                OR s.nis LIKE @searchPattern
-              )
+        {WHERE_SQL}
         GROUP BY 
             p.payment_id, p.student_class_id, p.payment_type, p.payment_method,
             p.total_price, p.total_payment, p.remaining_payment,
             p.status, p.due_date, s.student_id, s.full_name, 
             s.first_name, s.last_name, s.nis, s.profile_photo, c.class_name,
             pt.item_desc, pm.item_desc
-        ORDER BY p.due_date DESC
-        OFFSET @start ROWS FETCH NEXT @length ROWS ONLY";
+        ORDER BY {ORDER_BY} {ORDER_DIR}
+        OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY"
+                .Replace("{WHERE_SQL}", whereSql)
+                .Replace("{ORDER_BY}", orderBy)
+                .Replace("{ORDER_DIR}", orderDir);
 
             var list = new List<object>();
             using (var cmd = new SqlCommand(sql, conn))
             {
-                cmd.Parameters.AddWithValue("@classId", (object)academic_class_id ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@status", (object)status ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@paymentType", (object)payment_type ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@search", (object)searchKeyword ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@searchPattern", $"%{searchKeyword ?? ""}%");
-                cmd.Parameters.AddWithValue("@start", start);
-                cmd.Parameters.AddWithValue("@length", length);
+                cmd.Parameters.AddWithValue("@offset", offset);
+                cmd.Parameters.AddWithValue("@take", take);
+                if (!string.IsNullOrWhiteSpace(academicClassId)) cmd.Parameters.AddWithValue("@classId", academicClassId.Trim());
+                if (!string.IsNullOrWhiteSpace(status)) cmd.Parameters.AddWithValue("@status", status.Trim());
+                if (!string.IsNullOrWhiteSpace(paymentType)) cmd.Parameters.AddWithValue("@paymentType", paymentType.Trim());
+                if (!string.IsNullOrWhiteSpace(search)) cmd.Parameters.AddWithValue("@searchPattern", $"%{search.Trim()}%");
 
                 using var r = cmd.ExecuteReader();
                 while (r.Read())
@@ -136,19 +158,9 @@ namespace Haniya.Controllers.PortalAdmin
                 }
             }
 
-            return Json(new { draw, recordsTotal, recordsFiltered = recordsTotal, data = list });
-        }
-
-        private (int draw, int start, int length, string searchValue, int orderColumnIndex, string orderDir) ParseDataTablesQuery()
-        {
-            var q = Request.Query;
-            int.TryParse(q["draw"], out var draw); draw = draw > 0 ? draw : 1;
-            int.TryParse(q["start"], out var start);
-            int.TryParse(q["length"], out var length); length = length > 0 ? length : 10;
-            var searchValue = q["search[value]"].ToString() ?? "";
-            int.TryParse(q["order[0][column]"], out var orderColumnIndex);
-            var orderDir = q["order[0][dir]"].ToString().ToUpper() is "ASC" or "DESC" ? q["order[0][dir]"].ToString().ToUpper() : "ASC";
-            return (draw, start, length, searchValue, orderColumnIndex, orderDir);
+            var hasNextPage = list.Count > limit;
+            if (hasNextPage) list = list.Take(limit).ToList();
+            return Json(DTOResponse.ok(new { data = list, hasNextPage }));
         }
 
         [HttpGet]

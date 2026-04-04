@@ -257,10 +257,9 @@
                     </div>
 
                     <div class="pt-4 flex items-center justify-end space-x-2">
-                        <button type="button"
-                                onclick="goBack()"
-                                class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
-                                data-testid="student-back-button">
+                        <a id="student-back-link" href="/Student"
+                           class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
+                           data-testid="student-back-button">
                             <svg class="w-4 h-4 mr-2 text-gray-600"
                                  fill="none"
                                  viewBox="0 0 24 24"
@@ -271,7 +270,7 @@
                                       d="M15 19l-7-7 7-7" />
                             </svg>
                             <span>Back</span>
-                        </button>
+                        </a>
 
                         <button type="button"
                                 onclick="save()"
@@ -297,23 +296,7 @@
     </form>
 </div>
 
-<div id="tw-modal" class="hidden fixed inset-0 z-50" aria-hidden="true">
-    <div class="absolute inset-0 bg-black/40" data-modal-close></div>
-    <div class="relative min-h-full flex items-center justify-center p-4">
-        <div class="w-full max-w-md rounded-xl bg-white shadow-xl" role="dialog" aria-modal="true" aria-labelledby="tw-modal-title">
-            <div class="px-5 py-4 border-b border-gray-100">
-                <h3 id="tw-modal-title" class="text-base font-semibold text-gray-900"></h3>
-            </div>
-            <div class="px-5 py-4">
-                <p id="tw-modal-message" class="text-sm text-gray-600"></p>
-            </div>
-            <div class="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
-                <button id="tw-modal-cancel" type="button" class="px-4 py-2 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">Cancel</button>
-                <button id="tw-modal-confirm" type="button" class="px-4 py-2 text-sm rounded-md bg-blue-900 text-white hover:bg-blue-800">Confirm</button>
-            </div>
-        </div>
-    </div>
-</div>
+@await Html.PartialAsync("_TailwindConfirmModal")
 
 @section Scripts {
     <script>
@@ -487,7 +470,7 @@
             if (!validateForm()) {
                 return;
             }
-            const confirmed = await confirmModal({
+            const confirmed = await tailwindConfirmModal({
                 title: 'Create Confirmation',
                 message: 'Are you sure you want to create this data?',
                 confirmText: 'Create',
@@ -514,53 +497,11 @@
                 processData: false,
                 contentType: false,
                 success: res => {
-                    if (res.success) goBack();
-                    else showMessageModal('Failed', res.message || 'Failed to create student');
+                    if (res.success) window.location.href = "/Student";
+                    else tailwindMessageModal('Failed', res.message || 'Failed to create student');
                 },
-                error: () => showMessageModal('Error', 'An error occurred while creating student data.')
+                error: () => tailwindMessageModal('Error', 'An error occurred while creating student data.')
             });
-        }
-
-        function goBack() {
-            const returnUrl = new URLSearchParams(window.location.search).get('returnUrl');
-            window.location.href = returnUrl || "../";
-        }
-
-        function confirmModal({ title, message, confirmText = 'Confirm', cancelText = 'Cancel' }) {
-            return new Promise((resolve) => {
-                const $modal = $('#tw-modal');
-                const $title = $('#tw-modal-title');
-                const $msg = $('#tw-modal-message');
-                const $confirm = $('#tw-modal-confirm');
-                const $cancel = $('#tw-modal-cancel');
-
-                $title.text(title || 'Confirm');
-                $msg.text(message || '');
-                $confirm.text(confirmText);
-                $cancel.text(cancelText);
-                $modal.removeClass('hidden').attr('aria-hidden', 'false');
-                $confirm.trigger('focus');
-
-                const close = (result) => {
-                    $modal.addClass('hidden').attr('aria-hidden', 'true');
-                    $confirm.off('click');
-                    $cancel.off('click');
-                    $modal.find('[data-modal-close]').off('click');
-                    $(document).off('keydown.modalEsc');
-                    resolve(result);
-                };
-
-                $confirm.on('click', () => close(true));
-                $cancel.on('click', () => close(false));
-                $modal.find('[data-modal-close]').on('click', () => close(false));
-                $(document).on('keydown.modalEsc', function (e) {
-                    if (e.key === 'Escape') close(false);
-                });
-            });
-        }
-
-        function showMessageModal(title, message) {
-            return confirmModal({ title, message, confirmText: 'OK', cancelText: 'Close' });
         }
     </script>
 }
