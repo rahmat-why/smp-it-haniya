@@ -21,63 +21,59 @@ namespace Haniya.Controllers.PortalAdmin
             return new SqlConnection(_config.GetConnectionString("DefaultConnection"));
         }
 
+        private static int SafeToInt(object? value)
+        {
+            if (value == null || value == DBNull.Value) return 0;
+            return Convert.ToInt32(value);
+        }
+
         public IActionResult Index()
         {
             return View("~/Views/PortalAdmin/E-Raport/Index.cshtml");
         }
 
-        private (int draw, int start, int length, string searchValue, string orderColumn, string orderDir)
-            ParseDataTablesQuery(string[] columns)
+        public class ListSort
         {
-            var q = Request.Query;
-
-            int.TryParse(q["draw"], out var draw);
-            if (draw <= 0) draw = 1;
-
-            int.TryParse(q["start"], out var start);
-            if (start < 0) start = 0;
-
-            int.TryParse(q["length"], out var length);
-            if (length <= 0) length = 10;
-
-            var searchValue = q["search[value]"].ToString() ?? string.Empty;
-
-            var orderColumn = "full_name";
-            var orderDir = "DESC";
-
-            var orderColIdxStr = q["order[0][column]"].ToString();
-            if (int.TryParse(orderColIdxStr, out var orderColIdx))
-            {
-                if (orderColIdx >= 0 && orderColIdx < columns.Length)
-                    orderColumn = columns[orderColIdx];
-            }
-
-            var dir = q["order[0][dir]"].ToString();
-            if (!string.IsNullOrWhiteSpace(dir) &&
-                (dir.Equals("asc", StringComparison.OrdinalIgnoreCase) ||
-                 dir.Equals("desc", StringComparison.OrdinalIgnoreCase)))
-            {
-                orderDir = dir.ToUpper();
-            }
-
-            return (draw, start, length, searchValue, orderColumn, orderDir);
+            public string field { get; set; } = "student";
+            public string order { get; set; } = "asc";
         }
 
-        [HttpGet]
-        public IActionResult GetAll(string academicYearId = "", string classLevel = "")
+        public class ListRequest
+        {
+            public int page { get; set; } = 1;
+            public int limit { get; set; } = 10;
+            public Dictionary<string, string>? filters { get; set; }
+            public ListSort? sort { get; set; }
+        }
+
+        [HttpPost]
+        public IActionResult GetAll([FromBody] ListRequest? req)
         {
             try
             {
-                var columns = new[]
-                {
-                    "s.full_name",
-                    "ay.start_date",
-                    "ay.semester",
-                    "c.class_name"
-                };
+                req ??= new ListRequest();
+                var page = req.page <= 0 ? 1 : req.page;
+                var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
+                var offset = (page - 1) * limit;
+                var take = limit + 1;
 
-                var (draw, start, length, searchValue, orderColumn, orderDir) =
-                    ParseDataTablesQuery(columns);
+                var filters = req.filters ?? new Dictionary<string, string>();
+                filters.TryGetValue("search", out var search);
+                filters.TryGetValue("academicYearId", out var academicYearId);
+                filters.TryGetValue("classLevel", out var classLevel);
+
+                var sortMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["student"] = "s.full_name",
+                    ["academicYears"] = "ay.start_date",
+                    ["semester"] = "ay.semester",
+                    ["class"] = "c.class_name",
+                    ["summaryAttendance"] = "attendance_summary.present",
+                    ["summaryGrade"] = "grade_summary.passed"
+                };
+                var sort = req.sort ?? new ListSort();
+                var orderBy = sortMap.TryGetValue(sort.field ?? "", out var mapped) ? mapped : "s.full_name";
+                var orderDir = string.Equals(sort.order, "desc", StringComparison.OrdinalIgnoreCase) ? "DESC" : "ASC";
 
                 using var conn = GetConn();
                 conn.Open();
@@ -135,8 +131,7 @@ namespace Haniya.Controllers.PortalAdmin
                 ";
 
                 var conditions = new List<string>();
-
-                if (!string.IsNullOrWhiteSpace(searchValue))
+                if (!string.IsNullOrWhiteSpace(search))
                     conditions.Add(@"(s.nis LIKE @search OR s.full_name LIKE @search OR c.class_name LIKE @search)");
 
                 if (!string.IsNullOrEmpty(academicYearId))
@@ -149,33 +144,6 @@ namespace Haniya.Controllers.PortalAdmin
                     ? " AND " + string.Join(" AND ", conditions)
                     : "";
 
-                // TOTAL
-                var totalCmd = new SqlCommand(
-                    "SELECT COUNT(DISTINCT s.student_id) " + baseQuery,
-                    conn
-                );
-                var recordsTotal = Convert.ToInt32(totalCmd.ExecuteScalar());
-
-                // FILTERED
-                var filteredCmd = new SqlCommand(
-                    "SELECT COUNT(DISTINCT s.student_id) " + baseQuery + whereSearch,
-                    conn
-                );
-
-                if (!string.IsNullOrWhiteSpace(searchValue))
-                    filteredCmd.Parameters.AddWithValue("@search", $"%{searchValue}%");
-
-                if (!string.IsNullOrEmpty(academicYearId))
-                    filteredCmd.Parameters.Add("@academicYearId", SqlDbType.NVarChar)
-                        .Value = academicYearId;
-
-                if (!string.IsNullOrEmpty(classLevel))
-                    filteredCmd.Parameters.Add("@classLevel", SqlDbType.NVarChar)
-                        .Value = $"%{classLevel}%";
-
-                var recordsFiltered = (int)filteredCmd.ExecuteScalar();
-
-                // DATA
                 var sql = $@"
                     SELECT 
                         s.student_id,
@@ -200,17 +168,17 @@ namespace Haniya.Controllers.PortalAdmin
                     {baseQuery}
                     {whereSearch}
 
-                    ORDER BY {orderColumn} {orderDir}
-                    OFFSET @start ROWS FETCH NEXT @length ROWS ONLY
+                    ORDER BY {orderBy} {orderDir}
+                    OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY
                 ";
 
                 using var cmd = new SqlCommand(sql, conn);
-                cmd.Parameters.AddWithValue("@start", start);
-                cmd.Parameters.AddWithValue("@length", length);
+                cmd.Parameters.AddWithValue("@offset", offset);
+                cmd.Parameters.AddWithValue("@take", take);
 
-                if (!string.IsNullOrWhiteSpace(searchValue))
+                if (!string.IsNullOrWhiteSpace(search))
                     cmd.Parameters.Add("@search", SqlDbType.NVarChar, 100)
-                        .Value = $"%{searchValue}%";
+                        .Value = $"%{search.Trim()}%";
 
                 if (!string.IsNullOrEmpty(academicYearId))
                     cmd.Parameters.Add("@academicYearId", SqlDbType.NVarChar)
@@ -247,13 +215,10 @@ namespace Haniya.Controllers.PortalAdmin
                     });
                 }
 
-                return Json(new
-                {
-                    draw,
-                    recordsTotal,
-                    recordsFiltered,
-                    data = list
-                });
+                var hasNextPage = list.Count > limit;
+                if (hasNextPage) list = list.Take(limit).ToList();
+
+                return Json(DTOResponse.ok(new { data = list, hasNextPage }));
             }
             catch (Exception ex)
             {
@@ -261,8 +226,14 @@ namespace Haniya.Controllers.PortalAdmin
             }
         }
 
+        [HttpGet]
         public IActionResult ExportPdf(string id, string classId)
         {
+            if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(classId))
+            {
+                return BadRequest("Parameter id/classId wajib diisi.");
+            }
+
             Dictionary<string, object> data = new Dictionary<string, object>();
 
             using (var conn = GetConn())
@@ -317,7 +288,7 @@ namespace Haniya.Controllers.PortalAdmin
                 }
                 else
                 {
-                    return Content("DATA STUDENT TIDAK DITEMUKAN");
+                    return NotFound("Data student tidak ditemukan.");
                 }
 
                 reader.Close();
@@ -341,9 +312,15 @@ namespace Haniya.Controllers.PortalAdmin
 
                 if (attReader.Read())
                 {
-                    data["sick"] = Convert.ToInt32(attReader["sick"]);
-                    data["permit"] = Convert.ToInt32(attReader["permit"]);
-                    data["alpha"] = Convert.ToInt32(attReader["alpha"]);
+                    data["sick"] = SafeToInt(attReader["sick"]);
+                    data["permit"] = SafeToInt(attReader["permit"]);
+                    data["alpha"] = SafeToInt(attReader["alpha"]);
+                }
+                else
+                {
+                    data["sick"] = 0;
+                    data["permit"] = 0;
+                    data["alpha"] = 0;
                 }
 
                 attReader.Close();
@@ -433,6 +410,11 @@ namespace Haniya.Controllers.PortalAdmin
         [HttpGet]
         public IActionResult Preview(string id, string classId)
         {
+            if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(classId))
+            {
+                return BadRequest("Parameter id/classId wajib diisi.");
+            }
+
             Dictionary<string, object> data = new Dictionary<string, object>();
 
             using (var conn = GetConn())
@@ -485,6 +467,10 @@ namespace Haniya.Controllers.PortalAdmin
 
                     classId = reader["academic_class_id"].ToString();
                 }
+                else
+                {
+                    return NotFound("Data student tidak ditemukan.");
+                }
 
                 reader.Close();
 
@@ -508,9 +494,15 @@ namespace Haniya.Controllers.PortalAdmin
 
                 if (attReader.Read())
                 {
-                    data["sick"] = Convert.ToInt32(attReader["sick"]);
-                    data["permit"] = Convert.ToInt32(attReader["permit"]);
-                    data["alpha"] = Convert.ToInt32(attReader["alpha"]);
+                    data["sick"] = SafeToInt(attReader["sick"]);
+                    data["permit"] = SafeToInt(attReader["permit"]);
+                    data["alpha"] = SafeToInt(attReader["alpha"]);
+                }
+                else
+                {
+                    data["sick"] = 0;
+                    data["permit"] = 0;
+                    data["alpha"] = 0;
                 }
 
                 attReader.Close();

@@ -17,13 +17,13 @@
             <table id="student-grade-table"class="w-full text-sm text-left text-gray-700 border-collapse">
                 <thead class="bg-gray-50 text-gray-600 border-b border-gray-200">
                     <tr>
-                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Date</th>
-                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Class</th>
-                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Subject</th>
-                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Teacher</th>
-                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Type</th>
-                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Min</th>
-                        <th class="px-5 py-3 text-xs font-semibold uppercase text-left tracking-wider">Score</th>
+                        <th data-sort="date" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Date</th>
+                        <th data-sort="class" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Class</th>
+                        <th data-sort="subject" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Subject</th>
+                        <th data-sort="teacher" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Teacher</th>
+                        <th data-sort="type" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Type</th>
+                        <th data-sort="min" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Min</th>
+                        <th data-sort="score" class="px-5 py-3 text-xs font-semibold uppercase text-left tracking-wider cursor-pointer select-none">Score</th>
                         <th class="px-5 py-3 text-xs font-semibold uppercase text-left tracking-wider">Notes</th>
                     </tr>
                 </thead>
@@ -38,6 +38,8 @@
         </div>
     </div>
 </div>
+
+@await Html.PartialAsync("_TailwindConfirmModal")
 
 <style>
     #student-grade-table thead th:nth-child(1),
@@ -56,9 +58,15 @@
 @section Scripts {
 
     <script>
-        $(document).ready(function () {
-            initStudentGradeTable();
-        });
+        const pageState = {
+            page: 1,
+            limit: 10,
+            filters: { search: '' },
+            sort: { field: 'date', order: 'desc' },
+            hasNextPage: false
+        };
+        let lastRequestKey = '';
+        let searchDebounce = null;
 
         function formatDateId(dateValue) {
             const d = new Date(dateValue);
@@ -66,136 +74,217 @@
             return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
         }
 
-        function initStudentGradeTable() {
-            const studentId = '@User.FindFirst("StudentId")?.Value';
+        function getStateQuery() {
+            return `page=${pageState.page}&limit=${pageState.limit}&search=${encodeURIComponent(pageState.filters.search || '')}&sortField=${encodeURIComponent(pageState.sort.field)}&sortOrder=${encodeURIComponent(pageState.sort.order)}`;
+        }
 
-            $('#student-grade-table').DataTable({
-                processing: true,
-                serverSide: false,
-                searching: true,
-                lengthChange: true,
-                ordering: true,
-                order: [[0, 'desc']],
-                dom: 'lftip',
-                ajax: {
-                    url: '/StGrade/GetMyGrade',
-                    type: 'GET',
-                    data: { student_id: studentId },
-                    dataSrc: function (res) {
-                        if (!res.success) {
-                            alert(res.message);
-                            return [];
-                        }
-                        return res.data;
-                    }
-                },
-                columns: [
-                    {
-                        data: 'grade_date',
-                        className: 'px-5 py-3 whitespace-nowrap',
-                        render: data => data
-                            ? formatDateId(data)
-                            : '-',
-                        type: 'date'
-                    },
-                    { data: 'class_name', className: 'px-5 py-3 whitespace-nowrap' },
-                    { data: 'subject_name', className: 'px-5 py-3 whitespace-nowrap' },
-                    { data: 'teacher_name', className: 'px-5 py-3 whitespace-nowrap' },
-                    { data: 'grade_type_desc', className: 'px-5 py-3 whitespace-nowrap' },
-                    {
-                        data: 'minimum_value',
-                        className: 'px-5 py-3',
-                        render: data => data ?? '-',
-                        type: 'num'
-                    },
-                    {
-                        data: 'grade_value',
-                        className: 'px-5 py-3 text-left',
-                        render: data => data ?? '-',
-                        type: 'num'
-                    },
-                    {
-                        data: 'notes',
-                        className: 'px-5 py-3 text-left text-gray-600',
-                        render: data => data || '-',
-                        orderable: false
-                    }
-                ],
-                initComplete: function () {
-                    styleStudentGradeTable();
-                },
-                drawCallback: function () {
-                    styleStudentGradeTable();
-                }
+        function syncStateToUrl() {
+            history.replaceState({ ...pageState }, '', `?${getStateQuery()}`);
+        }
+
+        function hydrateStateFromUrl() {
+            const q = new URLSearchParams(window.location.search);
+            const page = Number(q.get('page') || 1);
+            const limit = Number(q.get('limit') || 10);
+            pageState.page = Number.isFinite(page) && page > 0 ? page : 1;
+            pageState.limit = Number.isFinite(limit) && limit > 0 ? limit : 10;
+            pageState.filters.search = q.get('search') || '';
+            pageState.sort.field = q.get('sortField') || 'date';
+            pageState.sort.order = q.get('sortOrder') || 'desc';
+        }
+
+        function renderToolbar() {
+            $('#grade-toolbar').html(`
+                <div class="flex items-center gap-2 text-sm text-gray-600">
+                    Show
+                    <select id="list-limit" class="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                    </select> rows
+                </div>
+                <div class="flex items-center gap-2 text-sm text-gray-600 w-full md:w-auto justify-end">
+                    <input id="list-search" type="text" class="border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full md:w-72" placeholder="Search grade..." />
+                </div>
+            `);
+
+            $('#list-limit').val(String(pageState.limit));
+            $('#list-search').val(pageState.filters.search || '');
+
+            $('#list-limit').off('change').on('change', function () {
+                const next = Number($(this).val() || 10);
+                if (pageState.limit === next) return;
+                pageState.limit = next;
+                pageState.page = 1;
+                lastRequestKey = '';
+                fetchGrades();
+            });
+
+            $('#list-search').off('input').on('input', function () {
+                const val = ($(this).val() || '').toString().trim();
+                if ((pageState.filters.search || '') === val) return;
+                clearTimeout(searchDebounce);
+                searchDebounce = setTimeout(() => {
+                    pageState.filters.search = val;
+                    pageState.page = 1;
+                    lastRequestKey = '';
+                    fetchGrades();
+                }, 300);
             });
         }
 
-        function styleStudentGradeTable() {
-            const wrapper = $('#student-grade-table_wrapper');
-            const $length = wrapper.find('.dataTables_length, .dt-length');
-            const $filter = wrapper.find('.dataTables_filter, .dt-search');
-
-            $('#grade-toolbar').empty().append($length).append($filter);
-
-            $length.addClass('flex items-center gap-2 text-sm text-gray-600');
-            $length.find('label').addClass('flex items-center gap-2');
-            $length.find('select').addClass(
-                'border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 ' +
-                'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-            );
-
-            $filter.addClass('flex items-center gap-2 text-sm text-gray-600 w-full md:w-auto justify-end');
-            $filter.find('label').addClass('flex items-center gap-2');
-            $filter.find('input')
-                .addClass(
-                    'border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 ' +
-                    'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full md:w-72'
-                )
-                .attr('placeholder', 'Search grade...');
-
-            let $info = wrapper.find('.dataTables_info').first();
-            if ($info.length === 0) $info = wrapper.find('.dt-info').first();
-
-            let $paginate = wrapper.find('.dataTables_paginate').first();
-            if ($paginate.length === 0) $paginate = wrapper.find('.dt-paging').first();
-
-            if ($info.length > 0) {
-                $('#table-info').empty().append($info);
-                $info.removeClass().addClass('text-sm text-gray-600');
-            }
-
-            if ($paginate.length > 0) {
-                $('#table-pagination').empty().append($paginate);
-            }
-
-            $('#table-pagination').addClass('w-full flex justify-end overflow-x-auto whitespace-nowrap');
-            applyStudentPaginationStyle($('#table-pagination'));
+        function renderSortIndicators() {
+            $('#student-grade-table thead th[data-sort]').each(function () {
+                const field = $(this).data('sort');
+                const isActive = field === pageState.sort.field;
+                const icon = isActive ? (pageState.sort.order === 'asc' ? ' ▲' : ' ▼') : '';
+                const base = $(this).text().replace(/ [▲▼]$/, '');
+                $(this).text(base + icon);
+            });
         }
 
-        function applyStudentPaginationStyle($scope) {
-            const $root = $scope && $scope.length ? $scope : $(document);
-            $root.find('.dataTables_paginate, .dt-paging').each(function () {
-                const $paginate = $(this);
-                $paginate.addClass('inline-flex items-center border border-gray-300 rounded-md overflow-hidden min-w-max');
+        function renderRows(items) {
+            const $tbody = $('#student-grade-table tbody');
+            if (!items || !items.length) {
+                $tbody.html(`<tr><td colspan="8" class="px-5 py-8 text-center text-gray-500">No data found.</td></tr>`);
+                return;
+            }
 
-                $paginate.find('a, span, button, .paginate_button, .dt-paging-button').each(function () {
-                    const $btn = $(this);
-                    const isCurrent = $btn.hasClass('current') || $btn.hasClass('active') || $btn.attr('aria-current') === 'page';
-                    const isDisabled = $btn.hasClass('disabled') || $btn.prop('disabled') || $btn.attr('aria-disabled') === 'true';
-                    const baseClasses = 'inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 last:border-r-0 min-w-[40px] transition-colors duration-150';
+            let html = '';
+            items.forEach(row => {
+                html += `
+                    <tr class="border-b border-gray-100">
+                        <td class="px-5 py-3 whitespace-nowrap">${row.grade_date ? formatDateId(row.grade_date) : '-'}</td>
+                        <td class="px-5 py-3 whitespace-nowrap">${row.class_name || '-'}</td>
+                        <td class="px-5 py-3 whitespace-nowrap">${row.subject_name || '-'}</td>
+                        <td class="px-5 py-3 whitespace-nowrap">${row.teacher_name || '-'}</td>
+                        <td class="px-5 py-3 whitespace-nowrap">${row.grade_type_desc || '-'}</td>
+                        <td class="px-5 py-3">${row.minimum_value ?? '-'}</td>
+                        <td class="px-5 py-3 text-left">${row.grade_value ?? '-'}</td>
+                        <td class="px-5 py-3 text-left text-gray-600">${row.notes || '-'}</td>
+                    </tr>
+                `;
+            });
+            $tbody.html(html);
+        }
 
-                    $btn.addClass(baseClasses);
-                    $btn.removeClass('bg-blue-900 text-white cursor-default bg-gray-50 text-gray-400 cursor-not-allowed bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900 cursor-pointer');
+        function renderPagination(currentCount) {
+            const start = currentCount === 0 ? 0 : ((pageState.page - 1) * pageState.limit) + 1;
+            const end = ((pageState.page - 1) * pageState.limit) + currentCount;
+            $('#table-info').html(`<span class="text-sm text-gray-600">Showing ${start} to ${end}</span>`);
 
-                    if (isCurrent) {
-                        $btn.addClass('bg-blue-900 text-white cursor-default');
-                    } else if (isDisabled) {
-                        $btn.addClass('bg-gray-50 text-gray-400 cursor-not-allowed');
+            const prevDisabled = pageState.page <= 1;
+            const nextDisabled = !pageState.hasNextPage;
+            $('#table-pagination').html(`
+                <div class="inline-flex items-center border border-gray-300 rounded-md overflow-hidden min-w-max">
+                    <button id="page-prev" class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900'}" ${prevDisabled ? 'disabled' : ''}>Prev</button>
+                    <span class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 bg-blue-900 text-white">${pageState.page}</span>
+                    <button id="page-next" class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900'}" ${nextDisabled ? 'disabled' : ''}>Next</button>
+                </div>
+            `);
+
+            $('#page-prev').off('click').on('click', function () {
+                if (pageState.page <= 1) return;
+                pageState.page -= 1;
+                lastRequestKey = '';
+                fetchGrades();
+            });
+            $('#page-next').off('click').on('click', function () {
+                if (!pageState.hasNextPage) return;
+                pageState.page += 1;
+                lastRequestKey = '';
+                fetchGrades();
+            });
+        }
+
+        async function fetchGrades() {
+            const payload = {
+                page: pageState.page,
+                limit: pageState.limit,
+                filters: { ...pageState.filters },
+                sort: { ...pageState.sort }
+            };
+            const requestKey = JSON.stringify(payload);
+            if (requestKey === lastRequestKey) return;
+            lastRequestKey = requestKey;
+
+            syncStateToUrl();
+            renderSortIndicators();
+
+            try {
+                let res = null;
+                try {
+                    res = await $.ajax({
+                        url: '/StGrade/GetMyGrade',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(payload)
+                    });
+                } catch (postErr) {
+                    const status = postErr && postErr.status ? postErr.status : 0;
+                    if (status === 404 || status === 405 || status === 415) {
+                        const fallbackRes = await $.ajax({
+                            url: '/StGrade/GetMyGrade',
+                            type: 'GET',
+                            data: { student_id: '@User.FindFirst("StudentId")?.Value' }
+                        });
+                        res = fallbackRes;
                     } else {
-                        $btn.addClass('bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900 cursor-pointer');
+                        throw postErr;
                     }
-                });
-            });
+                }
+
+                if (!res.success) {
+                    lastRequestKey = '';
+                    await tailwindMessageModal('Failed', res.message || 'Failed to load grades.');
+                    return;
+                }
+
+                if (Array.isArray(res.data)) {
+                    const allItems = res.data;
+                    const startIdx = (pageState.page - 1) * pageState.limit;
+                    const endIdx = startIdx + pageState.limit;
+                    const pagedItems = allItems.slice(startIdx, endIdx);
+                    pageState.hasNextPage = allItems.length > endIdx;
+                    renderRows(pagedItems);
+                    renderPagination(pagedItems.length);
+                    return;
+                }
+
+                const result = res.data || {};
+                const items = result.data || [];
+                pageState.hasNextPage = !!result.hasNextPage;
+                renderRows(items);
+                renderPagination(items.length);
+            } catch (err) {
+                lastRequestKey = '';
+                const message =
+                    (err && err.responseJSON && err.responseJSON.message)
+                    || (err && err.responseText ? String(err.responseText).slice(0, 200) : '')
+                    || 'An error occurred while loading grades.';
+                await tailwindMessageModal('Error', message);
+            }
         }
+
+        $(document).ready(function () {
+            hydrateStateFromUrl();
+            renderToolbar();
+            renderSortIndicators();
+            fetchGrades();
+
+            $('#student-grade-table thead').on('click', 'th[data-sort]', function () {
+                const field = $(this).data('sort');
+                if (!field) return;
+                if (pageState.sort.field === field) {
+                    pageState.sort.order = pageState.sort.order === 'asc' ? 'desc' : 'asc';
+                } else {
+                    pageState.sort.field = field;
+                    pageState.sort.order = 'asc';
+                }
+                pageState.page = 1;
+                lastRequestKey = '';
+                fetchGrades();
+            });
+        });
         </script>
 }

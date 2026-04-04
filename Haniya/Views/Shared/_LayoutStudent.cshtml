@@ -39,7 +39,6 @@
     <script src="~/lib/jquery/jquery-3.6.0.min.js"></script>
     <script src="~/lib/datatables/datatables.min.js"></script>
     <script src="~/lib/select2/select2.min.js"></script>
-    <script src="~/lib/sweetalert2/sweetalert2.all.min.js"></script>
     <script src="~/lib/chartjs/chart.umd.js"></script>
 
     <style>
@@ -312,16 +311,22 @@
         function handleLogout(event) {
             const btn = event.target.closest('button');
 
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "You will be logged out",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Yes, logout',
-                cancelButtonText: 'Cancel',
-                reverseButtons: true
-            }).then((result) => {
-                if (result.isConfirmed) {
+            const askLogoutConfirmation = () => {
+                if (typeof window.tailwindConfirmModal !== 'function') {
+                    console.error('tailwindConfirmModal is not available.');
+                    return Promise.resolve(false);
+                }
+
+                return window.tailwindConfirmModal({
+                    title: 'Logout Confirmation',
+                    message: 'Are you sure you want to logout?',
+                    confirmText: 'Yes, logout',
+                    cancelText: 'Cancel'
+                });
+            };
+
+            askLogoutConfirmation().then((isConfirmed) => {
+                if (isConfirmed) {
                     if (btn) {
                         btn.disabled = true;
                         btn.innerHTML = `
@@ -342,6 +347,7 @@
         });
     </script>
 
+    @await Html.PartialAsync("_TailwindConfirmModal")
     @RenderSection("Scripts", required: false)
 </body>
 </html>
