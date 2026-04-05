@@ -2,19 +2,13 @@
 @using System.Data
 
 @{
-    int no = 1;
+    int noPri = 1;
+    int noLoc = 1;
+    int noIsl = 1;
 
     var data = (Dictionary<string, object>)Model;
     var report = (System.Data.DataTable)data["report"];
 
-    var startYear = "";
-    var endYear = "";
-
-    if (data["start_date"] != null && data["end_date"] != null)
-    {
-        startYear = Convert.ToDateTime(data["start_date"]).Year.ToString();
-        endYear = Convert.ToDateTime(data["end_date"]).Year.ToString();
-    }
 }
 
 @functions {
@@ -40,6 +34,12 @@
     table {
         border-collapse: collapse;
         width: 100%;
+        page-break-inside: auto;
+    }
+
+    tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
     }
 
     td, th {
@@ -59,10 +59,6 @@
         font-weight: bold;
     }
 
-    .page-break {
-        page-break-after: always;
-    }
-
     .signature td {
         border: none;
         height: 80px;
@@ -78,8 +74,23 @@
         box-shadow: 0 0 10px rgba(0,0,0,0.15);
     }
 
+    .page-break {
+        page-break-before: always;
+    }
+
+    #exkulTable tr {
+        page-break-inside: avoid;
+    }
+
     /* PRINT MODE */
     @@media print {
+        #btnDownload,
+        #btnAdd,
+        #exkulTable td:last-child,
+        #exkulTable th:last-child,
+        #exkulTable button {
+            display: none !important;
+        }
 
         body {
             background: white;
@@ -88,22 +99,11 @@
         .paper {
             box-shadow: none;
             margin: 0;
-            width: 210mm;
-            min-height: 297mm;
         }
 
         button {
-            display:none;
+            display: none;
         }
-    }
-
-    [contenteditable="true"] {
-        background: #fffbe6;
-        cursor: text;
-    }
-
-    [contenteditable="true"]:focus {
-        outline: 2px solid #3b82f6;
     }
 
     @@page {
@@ -111,125 +111,290 @@
         margin: 0;
     }
 
+    .download-container {
+        width: 250mm;
+        margin: 30px auto;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .nt {
+        background: #fffbe6;
+        padding: 0;
+    }
+
+        .nt input {
+            display: block;
+            width: 100%;
+            border: none;
+            background: transparent;
+            text-align: center;
+            font-family: "Times New Roman";
+            font-size: 14px;
+        }
+
+            .nt input:focus {
+                outline: 2px solid #3b82f6;
+            }
+
+    textarea.desc,
+    textarea.kokurikuler,
+    textarea.wali-notes,
+    textarea.parent-notes,
+    textarea.wali-notes-2,
+    textarea.exkul-desc {
+        width: 100%;
+        border: none;
+        resize: none;
+        overflow: hidden;
+        font-family: "Times New Roman";
+        font-size: 14px;
+        line-height: 1.4;
+        background: #fffbe6;
+        padding: 4px;
+    }
+
+    textarea.parent-notes,
+    textarea.wali-notes,
+    textarea.wali-notes-2,
+    textarea.kokurikuler {
+        text-align: center;
+    }
+
+    .desc-preview {
+        display: none;
+        width: 100%;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        font-family: "Times New Roman";
+        font-size: 14px;
+        text-align: center;
+    }
+
+    .walas,
+    .walas2,
+    .parent {
+        min-height: 100px;
+    }
+
+    /* remove spinner */
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    input[type="number"] {
+        -moz-appearance: textfield;
+    }
+
+    input {
+        width: 100%;
+        border: none;
+        line-height: 1.4;
+        background: #fffbe6;
+        padding: 4px;
+    }
+
 </style>
 
 <!-- ========================= -->
 <!-- HALAMAN 1 -->
 <!-- ========================= -->
-<button onclick="downloadPdf()">Download PDF</button>
 
 <div class="paper">
     <table class="no-border">
-    <tr>
-        <td width="15%">Nama</td>
-        <td width="35%">: @data["full_name"]</td>
-
-        <td width="15%">Kelas</td>
-        <td width="35%">: @data["class_name"]</td>
-    </tr>
-
-    <tr>
-        <td>NISN / NIS</td>
-        <td>: @data["nis"]</td>
-
-        <td>Fase</td>
-        <td>: D</td>
-    </tr>
-
-    <tr>
-        <td>Nama Sekolah</td>
-        <td>: SMP IT HANIYA</td>
-
-        <td>Semester</td>
-        <td>: @data["semester"] ( @TerbilangSemester(data["semester"].ToString()) )</td>
-    </tr>
-
-    <tr>
-        <td>Alamat</td>
-        <td>: @data["address"]</td>
-
-        <td>Tahun Pelajaran</td>
-        <td>: @startYear/@endYear</td>
-    </tr>
-</table>
-
-<br>
-
-<h3 class="center">LAPORAN HASIL BELAJAR</h3>
-
-<table>
-
-    <tr class="bold center">
-        <th width="5%">NO</th>
-        <th width="30%">MATA PELAJARAN</th>
-        <th width="15%">NILAI AKHIR</th>
-        <th>CAPAIAN KOMPETENSI</th>
-    </tr>
-
-    @foreach (DataRow row in report.Rows)
-    {
         <tr>
-            <td class="center">@no</td>
-            <td>@row["subject_name"]</td>
-            <td class="center">@Math.Round(Convert.ToDecimal(row["final_score"]), 0)</td>
-            <td>
-                @data["full_name"] membutuhkan bimbingan dalam pembelajaran @row["subject_name"].
-            </td>
+            <td width="15%">Nama</td>
+            <td width="35%">: @data["full_name"]</td>
+
+            <td width="15%">Kelas</td>
+            <td width="35%">: @data["class_name"]</td>
         </tr>
 
-        no++;
-    }
+        <tr>
+            <td>NISN / NIS</td>
+            <td>: @data["nis"]</td>
 
-</table>
+            <td>Fase</td>
+            <td>: D</td>
+        </tr>
 
-<br>
+        <tr>
+            <td>Nama Sekolah</td>
+            <td>: @data["school_name"]</td>
 
-<table>
-    <tr class="bold center">
-        <th width="100%">KOKURIKULER</th>
-    </tr>
-    <tr>
-        <td contenteditable="true">
-            Ananda @data["full_name"] sudah sangat menghargai sesama teman berdasarkan yang terlihat dari beberapa proyek pembelajaran interdisipliner. Ananda mulai terlihat memelihara kesadaran akan kesehatan.
-        </td>
-    </tr>
-</table>
+            <td>Semester</td>
+            <td>: @data["semester"] ( @TerbilangSemester(data["semester"].ToString()) )</td>
+        </tr>
 
-<br>
+        <tr>
+            <td>Alamat</td>
+            <td>: @data["school_address"]</td>
 
-<h4>EKSTRAKURIKULER</h4>
+            <td>Tahun Pelajaran</td>
+            <td>: @data["academic_year_name"]</td>
+        </tr>
+    </table>
 
-<table>
+    <br>
 
-    <tr class="bold center">
-        <th width="5%">NO</th>
-        <th>KEGIATAN</th>
-        <th width="15%">PREDIKAT</th>
-        <th>KETERANGAN</th>
-    </tr>
+    <h3 class="center">LAPORAN HASIL BELAJAR</h3>
 
-    <tr>
-        <td class="center">1</td>
-        <td>Pramuka</td>
-        <td class="center">0</td>
-        <td></td>
-    </tr>
+    <table>
 
-    <tr>
-        <td class="center">2</td>
-        <td>-</td>
-        <td class="center">-</td>
-        <td></td>
-    </tr>
+        <tr class="bold center">
+            <th width="5%">NO</th>
+            <th width="31%">MATA PELAJARAN</th>
+            <th width="7%">NILAI AKHIR</th>
+            <th width="7%">NILAI TAMBAH</th>
+            <th>CAPAIAN KOMPETENSI</th>
+        </tr>
 
-    <tr>
-        <td class="center">3</td>
-        <td>-</td>
-        <td class="center">-</td>
-        <td></td>
-    </tr>
+        @foreach (DataRow row in report.Rows)
+        {
+            if (row["subject_type"].ToString() == "SUBJ_PRIMARY")
+            {
+                <tr class="row-grade">
+                    <td class="center">@noPri</td>
+                    <td class="subject-name">
+                        @row["subject_name"]
+                        <input type="hidden" class="subject-id" value="@row["subject_id"]" />
+                        <input type="hidden" class="subject-type-id" value="@row["subject_code"]" />
+                        <input type="hidden" class="subject-type-name" value="@row["subject_type"]" />
+                    </td>
+                    <td class="final-score-rps center">
+                        @Math.Round(Convert.ToDecimal(row["final_score"] == DBNull.Value ? 0 : row["final_score"]), 0)
+                    </td>
+                    <td class="center nt">
+                        <input type="number"
+                               class="final-score-adjustment"
+                               value="0"
+                               onfocus="clearZero(this)"
+                               onblur="restoreZero(this)">
+                    </td>
+                    <td>
+                        <textarea class="desc">@data["full_name"] membutuhkan bimbingan dalam pembelajaran @row["subject_name"].</textarea>
+                        <div class="desc-preview"></div>
+                    </td>
+                </tr>
 
-</table>
+                noPri++;
+            }
+
+        }
+
+    </table>
+
+    <br>
+
+    <h3>MUATAN LOKAL</h3>
+
+    <table>
+        <tr class="bold center">
+            <th width="5%">NO</th>
+            <th width="31%">MATA PELAJARAN</th>
+            <th width="7%">NILAI AKHIR</th>
+            <th width="7%">NILAI TAMBAH</th>
+            <th>CAPAIAN KOMPETENSI</th>
+        </tr>
+
+        @foreach (DataRow row in report.Rows)
+        {
+            if (row["subject_type"].ToString() == "SUBJ_LOCAL")
+            {
+                <tr class="row-grade">
+                    <td class="center">@noLoc</td>
+                    <td class="subject-name">
+                        @row["subject_name"]
+                        <input type="hidden" class="subject-id" value="@row["subject_id"]" />
+                        <input type="hidden" class="subject-type-id" value="@row["subject_code"]" />
+                        <input type="hidden" class="subject-type-name" value="@row["subject_type"]" />
+                    </td>
+                    <td class="final-score-rps center">
+                        @Math.Round(Convert.ToDecimal(row["final_score"] == DBNull.Value ? 0 : row["final_score"]), 0)
+                    </td>
+                    <td class="center nt">
+                        <input type="number"
+                               class="final-score-adjustment"
+                               value="0"
+                               onfocus="clearZero(this)"
+                               onblur="restoreZero(this)">
+                    </td>
+                    <td>
+                        <textarea class="desc">@data["full_name"] membutuhkan bimbingan dalam pembelajaran @row["subject_name"].</textarea>
+                        <div class="desc-preview"></div>
+                    </td>
+                </tr>
+
+                noLoc++;
+            }
+        }
+
+    </table>
+
+    <br>
+
+    <table>
+        <tr class="bold center">
+            <th width="100%">KOKURIKULER</th>
+        </tr>
+        <tr>
+            <td>
+                <textarea class="kokurikuler">Ananda @data["full_name"] sudah sangat menghargai sesama teman berdasarkan yang terlihat dari beberapa proyek pembelajaran interdisipliner.</textarea>
+                <div class="desc-preview"></div>
+            </td>
+        </tr>
+    </table>
+
+
+
+    <br>
+
+    <div>
+        <h3>EKSTRAKURIKULER</h3>
+
+        <button id="btnAdd" type="button" onclick="addEkskulRow()">+ Tambah</button>
+
+        <table id="exkulTable">
+
+            <tr class="bold center">
+                <th width="5%">NO</th>
+                <th>KEGIATAN</th>
+                <th width="15%">PREDIKAT</th>
+                <th>KETERANGAN</th>
+                <th width="5%">Aksi</th>
+            </tr>
+
+            <tr class="row-extra">
+                <td class="center">1</td>
+                <td>
+                    <input class="exkul-name" value="-"
+                           onfocus="clearDash(this)"
+                           onblur="restoreDash(this)" />
+                    <div class="input-preview"></div>
+                </td>
+
+                <td class="center">
+                    <input class="exkul-predicate" value="-"
+                           onfocus="clearDash(this)"
+                           onblur="restoreDash(this)" />
+                    <div class="input-preview"></div>
+                </td>
+                <td>
+                    <textarea class="exkul-desc"
+                              onfocus="clearDash(this)"
+                              onblur="restoreDash(this)">-</textarea>
+                    <div class="desc-preview"></div>
+                </td>
+
+                <td class="center">
+                    <button onclick="removeRow(this)">X</button>
+                </td>
+            </tr>
+
+        </table>
+    </div>
 
 </div>
 
@@ -240,111 +405,116 @@
 <!-- ========================= -->
 
 <div class="paper">
+
     <table width="100%" style="border:none;border-collapse:collapse;">
 
-    <tr>
+        <tr>
 
-        <!-- KETIDAKHADIRAN -->
-        <td width="50%" valign="top" style="border:none;">
-            <table width="100%">
-                <tr class="bold center">
-                    <th width="10%">NO</th>
-                    <th>KETIDAKHADIRAN</th>
-                    <th width="20%">JUMLAH</th>
-                </tr>
+            <!-- KETIDAKHADIRAN -->
+            <td width="50%" valign="top" style="border:none;">
+                <table width="100%">
+                    <tr class="bold center">
+                        <th width="10%">NO</th>
+                        <th>KETIDAKHADIRAN</th>
+                        <th width="20%">JUMLAH</th>
+                    </tr>
 
-                <tr>
-                    <td class="center">1</td>
-                    <td>Sakit</td>
-                    <td class="center">@data["sick"] hari</td>
-                </tr>
+                    <tr>
+                        <td class="center">1</td>
+                        <td>Sakit</td>
+                        <td class="center">@data["sick"] hari</td>
+                    </tr>
 
-                <tr>
-                    <td class="center">2</td>
-                    <td>Izin</td>
-                    <td class="center">@data["permit"] hari</td>
-                </tr>
+                    <tr>
+                        <td class="center">2</td>
+                        <td>Izin</td>
+                        <td class="center">@data["permit"] hari</td>
+                    </tr>
 
-                <tr>
-                    <td class="center">3</td>
-                    <td>Tanpa Keterangan</td>
-                    <td class="center">@data["alpha"] hari</td>
-                </tr>
-            </table>
-        </td>
+                    <tr>
+                        <td class="center">3</td>
+                        <td>Tanpa Keterangan</td>
+                        <td class="center">@data["alpha"] hari</td>
+                    </tr>
+                </table>
+            </td>
 
-        <!-- CATATAN WALI -->
-        <td width="50%" valign="top" style="border:none;">
-            <table width="100%">
-                <tr>
-                    <td class="bold center">CATATAN WALI KELAS</td>
-                </tr>
+            <!-- CATATAN WALI -->
+            <td width="50%" valign="top" style="border:none;">
+                <table width="100%">
+                    <tr>
+                        <td class="bold center">CATATAN WALI KELAS</td>
+                    </tr>
 
-                <tr>
-                    <td style="height:120px;text-align:center;">
-                        Prestasinya sangat baik, perlu dipertahankan.
-                    </td>
-                </tr>
-            </table>
-        </td>
+                    <tr>
+                        <td>
+                            <textarea class="wali-notes">Prestasinya sangat baik, perlu dipertahankan.</textarea>
+                            <div class="desc-preview walas"></div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
 
-    </tr>
+        </tr>
 
-</table>
+    </table>
 
 
-<br>
+    <br>
 
-<table>
-    <tr>
-        <td class="bold center">TANGGAPAN ORANG TUA / WALI MURID</td>
-    </tr>
+    <table>
+        <tr>
+            <td class="bold center">TANGGAPAN ORANG TUA / WALI MURID</td>
+        </tr>
 
-    <tr>
-        <td style="height:120px"></td>
-    </tr>
-</table>
+        <tr>
+            <td>
+                <textarea class="parent-notes"></textarea>
+                <div class="desc-preview parent"></div>
+            </td>
+        </tr>
+    </table>
 
-<br>
-<br>
+    <br>
+    <br>
 
-<table class="signature">
+    <table class="signature">
 
-    <tr>
-        <td class="center">
-            Mengetahui,<br>
-            Orang Tua/Wali
-        </td>
+        <tr>
+            <td class="center">
+                Mengetahui,<br>
+                Orang Tua/Wali
+            </td>
 
-        <td></td>
+            <td></td>
 
-        <td class="center">
-            Bekasi, @DateTime.Now.ToString("dd MMMM yyyy", new CultureInfo("id-ID"))<br>
-            Wali Kelas
-        </td>
-    </tr>
+            <td class="center">
+                Bekasi, @DateTime.Now.ToString("dd MMMM yyyy", new CultureInfo("id-ID"))<br>
+                Wali Kelas
+            </td>
+        </tr>
 
-    <tr>
-        <td class="center"><br><br>(.......................)</td>
-        <td></td>
-        <td class="center"><br><br><b>@data["teacher_name"]</b></td>
-    </tr>
+        <tr>
+            <td class="center"><br><br>(.......................)</td>
+            <td></td>
+            <td class="center"><br><br><b>@data["teacher_name"]</b></td>
+        </tr>
 
-</table>
+    </table>
 
-<br>
-<br>
+    <br>
+    <br>
 
-<table class="signature">
-    <tr>
-        <td class="center">
-            Mengetahui,<br>
-            Kepala SMP IT Haniya
-            <br><br><br><br><br>
-            <b>Cholil Saputra, S.Pd.I</b>
-        </td>
-    </tr>
-</table>
+    <table class="signature">
+        <tr>
+            <td class="center">
+                Mengetahui,<br>
+                Kepala SMP IT Haniya
+                <br><br><br><br><br>
+                <b>@data["headschool_name"]</b>
+            </td>
+        </tr>
+    </table>
 
 </div>
 
@@ -356,135 +526,423 @@
 
 <div class="paper">
     <table class="no-border">
-    <tr>
-        <td width="15%">Nama</td>
-        <td width="35%">: @data["full_name"]</td>
+        <tr>
+            <td width="15%">Nama</td>
+            <td width="35%">: @data["full_name"]</td>
 
-        <td width="15%">Kelas</td>
-        <td width="35%">: @data["class_name"]</td>
-    </tr>
+            <td width="15%">Kelas</td>
+            <td width="35%">: @data["class_name"]</td>
+        </tr>
 
-    <tr>
-        <td>NISN / NIS</td>
-        <td>: @data["nis"]</td>
+        <tr>
+            <td>NISN / NIS</td>
+            <td>: @data["nis"]</td>
 
-        <td>Fase</td>
-        <td>: D</td>
-    </tr>
+            <td>Fase</td>
+            <td>: D</td>
+        </tr>
 
-    <tr>
-        <td>Nama Sekolah</td>
-        <td>: SMP IT HANIYA</td>
+        <tr>
+            <td>Nama Sekolah</td>
+            <td>: @data["school_name"]</td>
 
-        <td>Semester</td>
-        <td>: @data["semester"] ( @TerbilangSemester(data["semester"].ToString()) )</td>
-    </tr>
+            <td>Semester</td>
+            <td>: @data["semester"] ( @TerbilangSemester(data["semester"].ToString()) )</td>
+        </tr>
 
-    <tr>
-        <td>Alamat</td>
-        <td>: @data["address"]</td>
+        <tr>
+            <td>Alamat</td>
+            <td>: @data["school_address"]</td>
 
-        <td>Tahun Pelajaran</td>
-        <td>: @startYear/@endYear</td>
-    </tr>
-</table>
+            <td>Tahun Pelajaran</td>
+            <td>: @data["academic_year_name"]</td>
+        </tr>
+    </table>
 
-<br>
+    <br>
 
-<h3 class="center">LAPORAN HASIL BELAJAR</h3>
+    <h3 class="center">LAPORAN HASIL BELAJAR</h3>
 
-<table>
+    <table>
 
-    <tr class="bold center">
-        <th width="5%">NO</th>
-        <th>MATA PELAJARAN</th>
-        <th width="15%">NILAI AKHIR</th>
-        <th>CAPAIAN KOMPETENSI</th>
-    </tr>
+        <tr class="bold center">
+            <th width="5%">NO</th>
+            <th width="31%">MATA PELAJARAN</th>
+            <th width="7%">NILAI AKHIR</th>
+            <th width="7%">NILAI TAMBAH</th>
+            <th>CAPAIAN KOMPETENSI</th>
+        </tr>
 
-    <tr>
-        <td class="center">1</td>
-        <td>Bahasa Arab</td>
-        <td class="center">0</td>
-        <td>@data["full_name"] membutuhkan bimbingan dalam pembelajaran Bahasa Arab</td>
-    </tr>
+        @foreach (DataRow row in report.Rows)
+        {
+            if (row["subject_type"].ToString() == "SUBJ_ISLAMIC")
+            {
+                <tr class="row-grade">
+                    <td class="center">@noIsl</td>
+                    <td class="subject-name">
+                        @row["subject_name"]
+                        <input type="hidden" class="subject-id" value="@row["subject_id"]" />
+                        <input type="hidden" class="subject-type-id" value="@row["subject_code"]" />
+                        <input type="hidden" class="subject-type-name" value="@row["subject_type"]" />
+                    </td>
+                    <td class="final-score-rps center">
+                        @Math.Round(Convert.ToDecimal(row["final_score"] == DBNull.Value ? 0 : row["final_score"]), 0)
+                    </td>
+                    <td class="center nt">
+                        <input type="number"
+                               class="final-score-adjustment"
+                               value="0"
+                               onfocus="clearZero(this)"
+                               onblur="restoreZero(this)">
+                    </td>
+                    <td>
+                        <textarea class="desc">@data["full_name"] membutuhkan bimbingan dalam pembelajaran @row["subject_name"].</textarea>
+                        <div class="desc-preview"></div>
+                    </td>
+                </tr>
 
-    <tr>
-        <td class="center">2</td>
-        <td>Tahsin</td>
-        <td class="center">0</td>
-        <td>@data["full_name"] membutuhkan bimbingan dalam pembelajaran Tahsin</td>
-    </tr>
+                noIsl++;
+            }
 
-    <tr>
-        <td class="center">3</td>
-        <td>Tahfidz</td>
-        <td class="center">0</td>
-        <td>@data["full_name"] membutuhkan bimbingan dalam pembelajaran Tahfidz</td>
-    </tr>
+        }
 
-</table>
+    </table>
 
-<br>
+    <br>
 
-<table>
+    <table width="100%">
 
-    <tr>
-        <td class="bold">CATATAN WALI KELAS</td>
-    </tr>
+        <tr>
+            <td class="bold center">CATATAN WALI KELAS</td>
+        </tr>
 
-    <tr>
-        <td style="height:100px;text-align:center;">
-            Catatan Walas manual LOKAL
-        </td>
-    </tr>
+        <tr>
+            <td>
+                <textarea class="wali-notes-2"></textarea>
+                <div class="desc-preview walas2"></div>
+            </td>
+        </tr>
 
-</table>
+    </table>
 
-<br>
-<br>
+    <br>
+    <br>
 
-<table class="signature">
+    <table class="signature">
 
-    <tr>
-        <td class="center">
-            Mengetahui,<br>
-            Orang Tua/Wali
-        </td>
+        <tr>
+            <td class="center">
+                Mengetahui,<br>
+                Orang Tua/Wali
+            </td>
 
-        <td></td>
+            <td></td>
 
-        <td class="center">
-            Bekasi, @DateTime.Now.ToString("dd MMMM yyyy", new CultureInfo("id-ID"))<br>
-            Wali Kelas
-        </td>
-    </tr>
+            <td class="center">
+                Bekasi, @DateTime.Now.ToString("dd MMMM yyyy", new CultureInfo("id-ID"))<br>
+                Wali Kelas
+            </td>
+        </tr>
 
-    <tr>
-        <td class="center"><br><br>(.......................)</td>
-        <td></td>
-        <td class="center"><br><br><b>@data["teacher_name"]</b></td>
-    </tr>
+        <tr>
+            <td class="center"><br><br>(.......................)</td>
+            <td></td>
+            <td class="center"><br><br><b>@data["teacher_name"]</b></td>
+        </tr>
 
-</table>
+    </table>
 
-<br>
-<br>
+    <br>
+    <br>
 
-<table class="signature">
-    <tr>
-        <td class="center">
-            Mengetahui,<br>
-            Kepala SMP IT Haniya
-            <br><br><br><br><br>
-            <b>Cholil Saputra, S.Pd.I</b>
-        </td>
-    </tr>
-</table>
+    <table class="signature">
+        <tr>
+            <td class="center">
+                Mengetahui,<br>
+                Kepala SMP IT Haniya
+                <br><br><br><br><br>
+                <b>@data["headschool_name"]</b>
+            </td>
+        </tr>
+    </table>
 
 </div>
+<div class="download-container">
+    <button id="btnDownload" onclick="downloadPdf()">Download PDF</button>
+
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    function downloadPdf(){
-        window.print();
+
+    function downloadPdf() {
+        preparePrint();
+        saveHeader(() => {
+            setTimeout(() => {
+                window.print();
+            }, 100);
+        });
     }
+
+    function autoResize() {
+        document.querySelectorAll("textarea").forEach(el => {
+            el.style.height = "auto";
+            el.style.height = el.scrollHeight + "px";
+
+            el.addEventListener("input", function () {
+                this.style.height = "auto";
+                this.style.height = this.scrollHeight + "px";
+            });
+        });
+    }
+
+    function preparePrint() {
+        // HANDLE INPUT → pindahin ke preview
+        document.querySelectorAll("input.exkul-name, input.exkul-predicate").forEach(el => {
+            let preview = el.nextElementSibling;
+
+            if (preview && preview.classList.contains("input-preview")) {
+                let value = el.value.trim();
+                preview.innerText = value === "" ? "-" : value;
+
+                el.style.display = "none";
+                preview.style.display = "block";
+            }
+        });
+
+        // HANDLE TEXTAREA
+        document.querySelectorAll("textarea").forEach(el => {
+            const preview = el.nextElementSibling;
+
+            if (preview && preview.classList.contains("desc-preview")) {
+                let value = el.value.trim();
+                if (el.classList.contains("exkul-desc")) {
+                    preview.innerText = value === "" ? "-" : value;
+                } else {
+                    preview.innerText = value;
+                }
+
+                el.style.display = "none";
+                preview.style.display = "block";
+            }
+        });
+    }
+
+    function restoreEdit() {
+        // BALIKIN INPUT
+        document.querySelectorAll("input.exkul-name, input.exkul-predicate").forEach(el => {
+            let preview = el.nextElementSibling;
+
+            if (preview && preview.classList.contains("input-preview")) {
+                el.style.display = "block";
+                preview.style.display = "none";
+            }
+        });
+
+        // BALIKIN TEXTAREA
+        document.querySelectorAll("textarea").forEach(el => {
+            const preview = el.nextElementSibling;
+
+            if (preview && preview.classList.contains("desc-preview")) {
+                el.style.display = "block";
+                preview.style.display = "none";
+            }
+        });
+    }
+
+    window.onafterprint = function () {
+        restoreEdit();
+    };
+    window.onload = autoResize;
+    window.addEventListener("focus", () => {
+        restoreEdit();
+    });
+
+    function addEkskulRow() {
+
+        let table = document.getElementById("exkulTable");
+        let btn = document.getElementById("btnAdd");
+
+        let maxRow = 3;
+        let rowCount = table.rows.length - 1; // minus header
+
+        if (rowCount >= maxRow) return;
+
+        let row = table.insertRow();
+        row.classList.add("row-extra");
+
+        row.innerHTML = `
+                <td class="center">${rowCount + 1}</td>
+
+                <td>
+                    <input class="exkul-name" value="-"
+                    onfocus="clearDash(this)"
+                    onblur="restoreDash(this)" />
+                </td>
+
+                <td class="center">
+                    <input class="exkul-predicate" value="-"
+                    onfocus="clearDash(this)"
+                    onblur="restoreDash(this)" />
+                </td>
+
+                <td>
+                    <textarea class="exkul-desc"
+                    onfocus="clearDash(this)"
+                    onblur="restoreDash(this)">-</textarea>
+                    <div class="desc-preview"></div>
+                </td>
+
+                <td class="center">
+                    <button onclick="removeRow(this)">X</button>
+                </td>
+            `;
+
+        checkButton();
+    }
+
+    function removeRow(btn) {
+
+        let row = btn.parentNode.parentNode;
+        row.remove();
+
+        renumber();
+        checkButton();
+    }
+
+    function renumber() {
+
+        let table = document.getElementById("exkulTable");
+
+        for (let i = 1; i < table.rows.length; i++) {
+
+            table.rows[i].cells[0].innerText = i;
+
+        }
+
+    }
+
+    function checkButton() {
+
+        let table = document.getElementById("exkulTable");
+        let btn = document.getElementById("btnAdd");
+
+        let maxRow = 3;
+        let rowCount = table.rows.length - 1;
+
+        if (rowCount >= maxRow) {
+            btn.style.display = "none";
+        } else {
+            btn.style.display = "inline-block";
+        }
+    }
+
+    function clearZero(el) {
+        if (el.value === "0") {
+            el.value = "";
+        }
+    }
+
+    function restoreZero(el) {
+        if (el.value === "") {
+            el.value = "0";
+        }
+    }
+
+    function clearDash(el) {
+        if (el.value === "-") {
+            el.value = "";
+        }
+    }
+
+    function restoreDash(el) {
+        if (el.value.trim() === "") {
+            el.value = "-";
+        }
+    }
+
+    function getPredicate(score) {
+        score = parseInt(score) || 0;
+
+        if (score <= 24) return "D";
+        if (score <= 50) return "C";
+        if (score <= 75) return "B";
+        return "A";
+    }
+
+    function saveHeader(callback) {
+
+        let parent_notes = $('.parent-notes').val() || "";
+        let wali_notes = $('.wali-notes').val() || "";
+        let kokurikuler = $('.kokurikuler').val() || "";
+
+        let grades = [];
+        $('.row-grade').each(function () {
+
+            let adjustment = $(this).find('.final-score-adjustment').val();
+            let predicate = getPredicate(adjustment);
+            grades.push({
+                subject_id: $(this).find('.subject-id').val(),
+                subject_name: $(this).find('.subject-name').text().trim(),
+                subject_type_id: $(this).find('.subject-type-id').val(),
+                subject_type_name: $(this).find('.subject-type-name').val(),
+                final_score_rps: $(this).find('.final-score-rps').text().trim(),
+                final_score_adjustment: adjustment,
+                predicate: predicate,
+                competency_description: $(this).find('.desc').val()
+            });
+        });
+
+        let extracurriculars = [];
+        $('.row-extra').each(function () {
+            extracurriculars.push({
+                extracurricular_id: null,
+                extracurricular_name: $(this).find('.exkul-name').val(),
+                predicate: $(this).find('.exkul-predicate').val(),
+                description: $(this).find('.exkul-desc').val()
+            });
+        });
+
+        let data = {
+            student_id: "@data["student_id"]",
+            student_name: "@data["full_name"]",
+            nis: "@data["nis"]",
+            class_id: "@data["class_id"]",
+            academic_class_id: "@data["academic_class_id"]",
+            class_name: "@data["class_name"]",
+            semester: "@data["semester"]",
+            academic_year_id: "@data["academic_year_id"]",
+            academic_year_name: "@data["academic_year_name"]",
+            school_name: "@data["school_name"]",
+            school_address: "@data["school_address"]",
+            teacher_npk: "@data["teacher_npk"]",
+            teacher_name: "@data["teacher_name"]",
+            headschool_name: "@data["headschool_name"]",
+            headschool_npk: "@data["headschool_npk"]",
+            parent_name: "@data["parent_name"]",
+            parent_notes: parent_notes,
+            wali_notes: wali_notes,
+            kokurikuler: kokurikuler,
+
+            grades: JSON.stringify(grades),
+            extracurriculars: JSON.stringify(extracurriculars),
+            // attendances: JSON.stringify(attendances)
+        };
+
+        $.ajax({
+            url: '/Eraport/SaveHeader',
+            type: 'POST',
+            data: data, // ⬅️ ini form biasa (bukan JSON dulu biar simple)
+            success: function (res) {
+                alert("Header saved ✅");
+
+                if (callback) callback(); // ⬅️ lanjut ke print
+            },
+            error: function (err) {
+                console.log(err.responseText);
+                alert("Error 😢");
+            }
+        });
+    }
+
 </script>
