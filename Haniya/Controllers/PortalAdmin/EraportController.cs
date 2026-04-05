@@ -226,6 +226,233 @@ namespace Haniya.Controllers.PortalAdmin
             }
         }
 
+        public DataTable GetStudentReport(string studentId, string classId)
+        {
+            using var conn = GetConn();
+            conn.Open();
+
+            string query = @"
+                SELECT 
+                s.subject_id,
+                s.subject_name,
+                s.subject_code,
+                s.subject_type,
+                a.attendance_score,
+
+                (
+                    (ISNULL(a.attendance_score,0) * ISNULL(r.weight_attendance,0) / 100.0) +
+                    (ISNULL(AVG(CASE WHEN g.grade_type='GRADE_TASK' THEN gd.grade_value END),0) * ISNULL(r.weight_task,0) / 100.0) +
+                    (ISNULL(AVG(CASE WHEN g.grade_type='GRADE_TEST' THEN gd.grade_value END),0) * ISNULL(r.weight_uh,0) / 100.0) +
+                    (ISNULL(AVG(CASE WHEN g.grade_type='GRADE_MID' THEN gd.grade_value END),0) * ISNULL(r.weight_pts,0) / 100.0) +
+                    (ISNULL(AVG(CASE WHEN g.grade_type='GRADE_FINAL' THEN gd.grade_value END),0) * ISNULL(r.weight_pas,0) / 100.0)
+                ) AS final_score
+
+            FROM mst_subjects s
+
+            JOIN mst_academic_classes ac 
+               ON ac.academic_class_id = @classId
+
+            JOIN mst_classes c
+                ON c.class_id = ac.class_id
+
+            LEFT JOIN txn_grades g
+                ON g.subject_id = s.subject_id
+                AND g.academic_class_id = @classId
+
+            LEFT JOIN txn_grade_details gd
+                ON g.grade_id = gd.grade_id
+                AND gd.student_id = @studentId
+
+            OUTER APPLY (
+                SELECT TOP 1 *
+                FROM mst_rps r
+                WHERE r.subject_id = s.subject_id
+                AND r.academic_class_id = @classId
+                ORDER BY r.created_at DESC
+            ) r
+
+            LEFT JOIN
+            (
+                SELECT 
+                    d.student_id,
+                    a.academic_class_id,
+                    (SUM(CASE WHEN d.status='PRESENT' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) AS attendance_score
+                FROM txn_attendance_details d
+                JOIN txn_attendances a 
+                    ON a.attendance_id = d.attendance_id
+                GROUP BY d.student_id, a.academic_class_id
+            ) a
+            ON a.student_id = @studentId
+            AND a.academic_class_id = @classId
+            WHERE 
+                s.status = 'ACTIVE'
+                AND s.class_level = LEFT(c.class_name, 1)
+
+            GROUP BY 
+                s.subject_id,
+                s.subject_name,
+                s.subject_code,
+                s.subject_type,
+                a.attendance_score,
+                r.weight_attendance,
+                r.weight_task,
+                r.weight_uh,
+                r.weight_pts,
+                r.weight_pas
+
+            ORDER BY s.subject_name";
+
+            using var cmd = new SqlCommand(query, conn);
+            cmd.Parameters.AddWithValue("@studentId", studentId);
+            cmd.Parameters.AddWithValue("@classId", classId);
+
+            SqlDataAdapter da = new SqlDataAdapter(cmd);
+            DataTable dt = new DataTable();
+            da.Fill(dt);
+
+            return dt;
+        }
+
+        public IActionResult ExportPdf(string id, string classId)
+        {
+            Dictionary<string, object> data = new Dictionary<string, object>();
+
+            using (var conn = GetConn())
+            {
+                conn.Open();
+
+                var cmd = new SqlCommand(@"
+                    SELECT 
+                        s.student_id,
+                        s.nis,
+                        s.full_name,
+                        s.address AS school_address,
+                        s.father_name AS parent_name,
+                        c.class_id,
+                        c.class_name,
+                        ac.academic_class_id,
+                        ay.academic_year_id,
+                        ay.semester,
+                        ay.start_date,
+                        ay.end_date,
+                        (CAST(YEAR(ay.start_date) AS VARCHAR) + '/' + CAST(YEAR(ay.end_date) AS VARCHAR)) AS academic_year_name,
+                        t.full_name AS teacher_name,
+                        t.npk AS teacher_npk
+                        
+                    FROM mst_students s
+                    LEFT JOIN mst_student_classes sc 
+                        ON sc.student_id = s.student_id
+                    LEFT JOIN mst_academic_classes ac 
+                        ON ac.academic_class_id = sc.academic_class_id
+                    LEFT JOIN mst_classes c 
+                        ON c.class_id = ac.class_id
+                    LEFT JOIN mst_academic_years ay
+                        ON ay.academic_year_id = ac.academic_year_id
+                    LEFT JOIN mst_teachers t
+                        ON t.teacher_id = ac.homeroom_teacher_id
+                    WHERE s.student_id = @id
+                    AND ac.academic_class_id = @classId
+                ", conn);
+
+                cmd.Parameters.AddWithValue("@id", id);
+                cmd.Parameters.AddWithValue("@classId", classId);
+
+                var reader = cmd.ExecuteReader();
+
+                if (reader.Read())
+                {
+                    data["student_id"] = reader["student_id"];
+                    data["nis"] = reader["nis"];
+                    data["full_name"] = reader["full_name"];
+                    data["class_name"] = reader["class_name"];
+                    data["school_address"] = reader["school_address"];
+                    data["semester"] = reader["semester"];
+                    data["start_date"] = reader["start_date"];
+                    data["end_date"] = reader["end_date"];
+                    data["teacher_name"] = reader["teacher_name"];
+
+                    data["class_id"] = reader["class_id"];
+                    data["academic_year_id"] = reader["academic_year_id"];
+                    data["academic_year_name"] = reader["academic_year_name"];
+                    data["teacher_npk"] = reader["teacher_npk"];
+                    data["parent_name"] = reader["parent_name"];
+                    data["academic_class_id"] = reader["academic_class_id"];
+
+
+                    classId = reader["academic_class_id"].ToString();
+                }
+                else
+                {
+                    return Content("DATA STUDENT TIDAK DITEMUKAN");
+                }
+
+                reader.Close();
+
+                var attendanceCmd = new SqlCommand(@"
+                    SELECT 
+                        SUM(CASE WHEN d.status='SICK' THEN 1 ELSE 0 END) AS sick,
+                        SUM(CASE WHEN d.status='EXCUSED' THEN 1 ELSE 0 END) AS permit,
+                        SUM(CASE WHEN d.status='NOINFO' THEN 1 ELSE 0 END) AS alpha
+                    FROM txn_attendance_details d
+                    JOIN txn_attendances a 
+                        ON a.attendance_id = d.attendance_id
+                    WHERE d.student_id = @studentId
+                    AND a.academic_class_id = @classId
+                ", conn);
+
+                attendanceCmd.Parameters.AddWithValue("@studentId", id);
+                attendanceCmd.Parameters.AddWithValue("@classId", classId);
+
+                var attReader = attendanceCmd.ExecuteReader();
+
+                if (attReader.Read())
+                {
+                    data["sick"] = Convert.ToInt32(attReader["sick"]);
+                    data["permit"] = Convert.ToInt32(attReader["permit"]);
+                    data["alpha"] = Convert.ToInt32(attReader["alpha"]);
+                }
+
+                attReader.Close();
+
+                var headCmd = new SqlCommand(@"
+                    SELECT detail_id, item_desc
+                    FROM mst_detail_setting_landingpages
+                    WHERE detail_id IN ('ABOUT_HEADSC_NAME1', 'HOME_SCHOOL_TITLE1', 'ABOUT_HEADSC_NPK1')
+                ", conn);
+
+                var headReader = headCmd.ExecuteReader();
+
+                while (headReader.Read())
+                {
+                    var key = headReader["detail_id"].ToString();
+                    var value = headReader["item_desc"]?.ToString() ?? "";
+
+                    if (key == "ABOUT_HEADSC_NAME1")
+                        data["headschool_name"] = value;
+
+                    if (key == "HOME_SCHOOL_TITLE1")
+                        data["school_name"] = value;
+
+                    if (key == "ABOUT_HEADSC_NPK1")
+                        data["headschool_npk"] = value;
+
+
+                }
+
+                headReader.Close();
+
+                // ambil nilai raport
+                data["report"] = GetStudentReport(id, classId);
+            }
+
+            return new ViewAsPdf("~/Views/PortalAdmin/E-Raport/EraportPdf.cshtml", data)
+            {
+                PageSize = Rotativa.AspNetCore.Options.Size.A4,
+                CustomSwitches = "--print-media-type --disable-smart-shrinking"
+
+            };
+        }
+
         [HttpGet]
         public IActionResult Preview(string id, string classId)
         {
