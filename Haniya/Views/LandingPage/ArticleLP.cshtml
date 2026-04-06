@@ -1,19 +1,28 @@
 @{
     Layout = "~/Views/Shared/_LayoutLandingPage.cshtml";
+    ViewData["Title"] = "Articles";
 }
 
-<section class="pt-24 pb-10 px-4 sm:px-6 lg:px-10">
-    <div class="max-w-7xl mx-auto">
-        <div class="mb-8">
-            <p class="text-xs uppercase tracking-[0.25em] text-blue-700">School Insights</p>
-            <h1 class="text-3xl sm:text-4xl font-bold text-slate-900 mt-2">Latest Articles</h1>
-        </div>
+<section id="articleHero" class="relative overflow-hidden bg-slate-900 pt-28 sm:pt-32">
+    <div class="absolute inset-0">
+        <img id="articleHeroImage" src="/image/landingpage/default.jpg" alt="Article Hero" class="h-full w-full object-cover">
+        <div class="absolute inset-0 bg-gradient-to-r from-brand-900/85 via-brand-800/75 to-brand-700/65"></div>
+    </div>
+    <div class="relative mx-auto max-w-7xl px-4 py-16 text-white sm:px-6 sm:py-20 lg:px-8">
+        <p class="text-xs font-semibold uppercase tracking-[0.24em] text-brand-100">School Insights</p>
+        <h1 class="mt-3 text-4xl font-black sm:text-5xl">Latest Articles</h1>
+        <p class="mt-3 max-w-2xl text-blue-50">Temukan kabar terbaru, informasi kegiatan, dan wawasan pendidikan dari SMP IT Haniya.</p>
+    </div>
+</section>
 
-        <div id="articleContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+<section class="pb-16 pt-10 sm:pb-20">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
-        <div class="flex justify-center gap-4 mt-10">
-            <button id="prevBtn" onclick="prevPage()" class="px-4 py-2 bg-gray-300 rounded">Prev</button>
-            <button id="nextBtn" onclick="nextPage()" class="px-4 py-2 bg-blue-600 text-white rounded">Next</button>
+        <div id="articleContainer" class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3"></div>
+
+        <div class="mt-10 flex justify-center gap-3">
+            <button id="prevBtn" onclick="prevPage()" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Previous</button>
+            <button id="nextBtn" onclick="nextPage()" class="rounded-xl bg-brand-800 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">Next</button>
         </div>
     </div>
 </section>
@@ -31,33 +40,41 @@
             .then(res => res.json())
             .then(data => {
                 currentData = Array.isArray(data) ? data : [];
+                setHeroImage(currentData);
                 const container = document.getElementById("articleContainer");
                 container.innerHTML = "";
 
                 if (currentData.length === 0) {
-                    container.innerHTML = "<p class='col-span-3 text-center text-gray-500'>No data available</p>";
+                    container.innerHTML = "<p class='col-span-3 text-center text-slate-500'>No data available</p>";
                     updatePagerState();
                     return;
                 }
 
                 currentData.forEach(item => {
                     container.innerHTML += `
-                        <a href="/news-article/${encodeURIComponent(item.id)}"
-                           class="relative rounded-2xl overflow-hidden shadow-lg group cursor-pointer">
-                            <img src="${item.image ? '/image/landingpage/' + item.image : '/image/landingpage/default.jpg'}"
-                                 class="w-full h-[420px] object-cover group-hover:scale-105 transition duration-500"
-                                 alt="${escapeHtml(item.name || 'Article')}">
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
-                            <div class="absolute bottom-0 p-6 text-white">
-                                <h3 class="text-xl font-semibold leading-snug">${escapeHtml(item.name || "-")}</h3>
-                                <p class="mt-2 text-sm opacity-80">${escapeHtml(item.date || "-")}</p>
+                        <a href="/news-article/${encodeURIComponent(item.id)}" class="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+                            <div class="relative">
+                                <img src="${item.image ? '/image/landingpage/' + item.image : '/image/landingpage/default.jpg'}" class="h-64 w-full object-cover transition duration-500 group-hover:scale-105" alt="${escapeHtml(item.name || 'Article')}">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent"></div>
                             </div>
-                        </a>
-                    `;
+                            <div class="p-5">
+                                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">Article</p>
+                                <h3 class="mt-2 text-xl font-bold leading-snug text-slate-900">${escapeHtml(item.name || "-")}</h3>
+                                <p class="mt-3 text-sm text-slate-500">${escapeHtml(item.date || "-")}</p>
+                                <p class="mt-4 text-sm font-semibold text-brand-700">Read More</p>
+                            </div>
+                        </a>`;
                 });
 
                 updatePagerState();
             });
+    }
+
+    function setHeroImage(data) {
+        const heroImage = document.getElementById("articleHeroImage");
+        if (!heroImage) return;
+        const firstImage = Array.isArray(data) && data.length > 0 ? data[0].image : "";
+        heroImage.src = firstImage ? `/image/landingpage/${firstImage}` : "/image/landingpage/default.jpg";
     }
 
     function nextPage() {

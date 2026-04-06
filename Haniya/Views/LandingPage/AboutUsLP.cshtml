@@ -1,104 +1,76 @@
-﻿@{
+@{
     Layout = "~/Views/Shared/_LayoutLandingPage.cshtml";
+    ViewData["Title"] = "About Us";
 }
 
-<!-- HERO ABOUT -->
-<section class="relative h-[70vh] flex items-center justify-center
-                bg-gradient-to-r from-blue-900 to-blue-600 text-white">
-
-    <div class="max-w-4xl mx-auto px-8">
-
-        <!-- Title -->
-        <h1 id="about1Name"
-            class="text-4xl md:text-5xl font-bold tracking-wide mb-8 text-center">
-        </h1>
-
-        <!-- Subtitle -->
-        <p id="about1Desc"
-           class="text-lg md:text-xl leading-relaxed text-justify indent-8 space-y-4">
-        </p>
-
-    </div>
-
-</section>
-
-<!-- VISION & MISSION -->
-<section class="py-20 bg-white">
-    <div class="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12">
-
-        <div>
-            <h3 id="missionName" class="text-2xl font-bold text-blue-700 mb-4"></h3>
-            <p id="missionDesc" class="text-gray-600 leading-relaxed">pp</p>
-        </div>
-
-        <div>
-            <h3 id="visionName" class="text-2xl font-bold text-blue-700 mb-4"></h3>
-            <p id="visionDesc" class="text-gray-600 leading-relaxed"></p>
-
-        </div>
-
+<section class="relative overflow-hidden pt-28 sm:pt-32">
+    <div class="absolute inset-0 bg-gradient-to-r from-brand-900 via-brand-800 to-brand-700"></div>
+    <div class="relative mx-auto max-w-5xl px-4 py-16 text-center text-white sm:px-6 sm:py-20 lg:px-8">
+        <p class="text-xs font-semibold uppercase tracking-[0.24em] text-brand-100">Who We Are</p>
+        <h1 id="about1Name" class="mt-4 text-4xl font-black sm:text-5xl"></h1>
+        <p id="about1Desc" class="mx-auto mt-6 max-w-4xl text-base leading-relaxed text-blue-50 sm:text-lg"></p>
     </div>
 </section>
 
-<!-- PRINCIPAL MESSAGE -->
-<section class="py-20 bg-gray-100">
-    <div class="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
-
-        <div class="overflow-hidden rounded-2xl shadow-lg">
-            <img id="headschoolImage" class="w-full h-80 object-cover rounded-2xl">
-        </div>
-
-        <div>
-            <h3 id="headschoolName" class="text-2xl font-bold text-blue-700 mb-4"></h3>
-            <p id="headschoolDesc" class="text-gray-600 leading-relaxed mb-4"></p>
-        </div>
-
+<section class="bg-white py-16 sm:py-20">
+    <div class="mx-auto grid max-w-7xl gap-6 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
+        <article class="rounded-3xl border border-slate-200 bg-slate-50 p-8 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">Mission</p>
+            <h2 id="missionName" class="mt-3 text-3xl font-black text-slate-900"></h2>
+            <p id="missionDesc" class="mt-4 leading-relaxed text-slate-600"></p>
+        </article>
+        <article class="rounded-3xl border border-slate-200 bg-slate-50 p-8 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">Vision</p>
+            <h2 id="visionName" class="mt-3 text-3xl font-black text-slate-900"></h2>
+            <p id="visionDesc" class="mt-4 leading-relaxed text-slate-600"></p>
+        </article>
     </div>
 </section>
 
-<!-- CORE VALUES -->
-<section class="py-20 bg-white">
-    <div class="max-w-6xl mx-auto px-6 text-center">
+<section class="bg-slate-100 py-16 sm:py-20">
+    <div class="mx-auto grid max-w-7xl items-center gap-8 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
+        <div class="overflow-hidden rounded-3xl shadow-lg">
+            <img id="headschoolImage" class="h-96 w-full object-cover" alt="Principal Photo" />
+        </div>
+        <article class="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">Principal Message</p>
+            <h2 id="headschoolName" class="mt-3 text-3xl font-black text-slate-900"></h2>
+            <p id="headschoolDesc" class="mt-4 leading-relaxed text-slate-600"></p>
+        </article>
+    </div>
+</section>
 
-        <h2 class="text-3xl font-bold text-blue-700 mb-12">
-            Our Core Values
-        </h2>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-
-            <div class="relative rounded-xl overflow-hidden shadow-lg group">
-                <img id="values1Image" class="absolute inset-0 w-full h-full object-cover">
-
-                <div class="absolute inset-0 bg-black/60"></div>
-
-                <div class="relative p-6 text-white">
-                    <h4 id="values1Name" class="font-bold mb-3 text-lg"></h4>
-                    <p id="values1Desc" class="text-sm opacity-90"></p>
+<section class="bg-white py-16 sm:py-20">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="mb-8 text-center">
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">School Culture</p>
+            <h2 class="mt-3 text-3xl font-black text-slate-900 sm:text-4xl">Our Core Values</h2>
+        </div>
+        <div class="grid gap-6 md:grid-cols-3">
+            <article class="group relative overflow-hidden rounded-3xl shadow-lg">
+                <img id="values1Image" class="h-80 w-full object-cover transition duration-500 group-hover:scale-105" alt="Value 1" />
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-black/35"></div>
+                <div class="absolute bottom-0 p-6 text-white">
+                    <h3 id="values1Name" class="text-xl font-bold"></h3>
+                    <p id="values1Desc" class="mt-2 text-sm leading-relaxed text-slate-100"></p>
                 </div>
-            </div>
-
-            <div class="relative rounded-xl overflow-hidden shadow-lg group">
-                <img id="values2Image" class="absolute inset-0 w-full h-full object-cover">
-
-                <div class="absolute inset-0 bg-black/60"></div>
-
-                <div class="relative p-6 text-white">
-                    <h4 id="values2Name" class="font-bold mb-3 text-lg"></h4>
-                    <p id="values2Desc" class="text-sm opacity-90"></p>
+            </article>
+            <article class="group relative overflow-hidden rounded-3xl shadow-lg">
+                <img id="values2Image" class="h-80 w-full object-cover transition duration-500 group-hover:scale-105" alt="Value 2" />
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-black/35"></div>
+                <div class="absolute bottom-0 p-6 text-white">
+                    <h3 id="values2Name" class="text-xl font-bold"></h3>
+                    <p id="values2Desc" class="mt-2 text-sm leading-relaxed text-slate-100"></p>
                 </div>
-            </div>
-
-            <div class="relative rounded-xl overflow-hidden shadow-lg group">
-                <img id="values3Image" class="absolute inset-0 w-full h-full object-cover">
-
-                <div class="absolute inset-0 bg-black/60"></div>
-
-                <div class="relative p-6 text-white">
-                    <h4 id="values3Name" class="font-bold mb-3 text-lg"></h4>
-                    <p id="values3Desc" class="text-sm opacity-90"></p>
+            </article>
+            <article class="group relative overflow-hidden rounded-3xl shadow-lg">
+                <img id="values3Image" class="h-80 w-full object-cover transition duration-500 group-hover:scale-105" alt="Value 3" />
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-black/35"></div>
+                <div class="absolute bottom-0 p-6 text-white">
+                    <h3 id="values3Name" class="text-xl font-bold"></h3>
+                    <p id="values3Desc" class="mt-2 text-sm leading-relaxed text-slate-100"></p>
                 </div>
-            </div>
-
+            </article>
         </div>
     </div>
 </section>
@@ -107,44 +79,26 @@
     fetch('/LandingPage/GetAboutData')
         .then(response => response.json())
         .then(data => {
-
-            // About
             document.getElementById("about1Name").innerText = data["ABOUT_US1_NAME"] || "";
             document.getElementById("about1Desc").innerText = data["ABOUT_US1_DESC"] || "";
-           
-            // Mission & Vision
+
             document.getElementById("missionName").innerText = data["ABOUT_MISSION1_NAME"] || "";
             document.getElementById("missionDesc").innerText = data["ABOUT_MISSION1_DESC"] || "";
-
             document.getElementById("visionName").innerText = data["ABOUT_VISION1_NAME"] || "";
             document.getElementById("visionDesc").innerText = data["ABOUT_VISION1_DESC"] || "";
 
-             // Headschool
-            document.getElementById("headschoolImage").src =
-                "/image/landingpage/" + (data["ABOUT_HEADSC_IMAGE1_DESC"] || "");
-
+            document.getElementById("headschoolImage").src = "/image/landingpage/" + (data["ABOUT_HEADSC_IMAGE1_DESC"] || "");
             document.getElementById("headschoolName").innerText = data["ABOUT_HEADSCHOOL1_NAME"] || "";
             document.getElementById("headschoolDesc").innerText = data["ABOUT_HEADSCHOOL1_DESC"] || "";
 
-            // Core Values
-
-            document.getElementById("values1Image").src =
-                "/image/landingpage/" + (data["ABOUT_VALUES_IMAGE1_DESC"] || "");
-
-            document.getElementById("values2Image").src =
-                "/image/landingpage/" + (data["ABOUT_VALUES_IMAGE2_DESC"] || "");
-
-            document.getElementById("values3Image").src =
-                "/image/landingpage/" + (data["ABOUT_VALUES_IMAGE3_DESC"] || "");
-
+            document.getElementById("values1Image").src = "/image/landingpage/" + (data["ABOUT_VALUES_IMAGE1_DESC"] || "");
+            document.getElementById("values2Image").src = "/image/landingpage/" + (data["ABOUT_VALUES_IMAGE2_DESC"] || "");
+            document.getElementById("values3Image").src = "/image/landingpage/" + (data["ABOUT_VALUES_IMAGE3_DESC"] || "");
             document.getElementById("values1Name").innerText = data["ABOUT_VALUES_TITLE1_NAME"] || "";
             document.getElementById("values1Desc").innerText = data["ABOUT_VALUES_TITLE1_DESC"] || "";
-
             document.getElementById("values2Name").innerText = data["ABOUT_VALUES_TITLE2_NAME"] || "";
             document.getElementById("values2Desc").innerText = data["ABOUT_VALUES_TITLE2_DESC"] || "";
-
             document.getElementById("values3Name").innerText = data["ABOUT_VALUES_TITLE3_NAME"] || "";
             document.getElementById("values3Desc").innerText = data["ABOUT_VALUES_TITLE3_DESC"] || "";
-
         });
 </script>

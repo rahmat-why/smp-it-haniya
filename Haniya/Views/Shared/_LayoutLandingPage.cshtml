@@ -1,217 +1,169 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - PENABUR Intercultural School</title>
+    <title>@ViewData["Title"] - SMP IT Haniya</title>
+    <link rel="icon" href="~/image/logo-haniya.png" asp-append-version="true" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Merriweather:wght@700&display=swap" rel="stylesheet" />
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="icon" href="https://www.penabur-inter.sch.id/wp-content/uploads/2024/01/cropped-PIS-Logo-2-32x32.png" />
-</head>
-<body class="font-sans bg-gray-50 text-gray-800">
-
-    <!-- Header / Navbar -->
-    <header class="bg-white shadow-md fixed w-full z-50">
-        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-
-            <a href="/" class="text-2xl font-bold text-blue-700">HANIYA</a>
-
-            @{
-                var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
-                var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ["Plus Jakarta Sans", "sans-serif"],
+                        display: ["Merriweather", "serif"]
+                    },
+                    colors: {
+                        brand: {
+                            50: "#eff7ff",
+                            100: "#dbeeff",
+                            600: "#0f5fa8",
+                            700: "#0b4f8b",
+                            800: "#0a3f6f",
+                            900: "#072f53"
+                        }
+                    }
+                }
             }
+        };
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased">
+    @{
+        var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+        var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+    }
 
+    <header class="fixed inset-x-0 top-0 z-50 border-b border-white/30 bg-white/85 backdrop-blur">
+        <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+            <a asp-controller="LandingPage" asp-action="HomeLP" class="flex items-center gap-3">
+                <img src="~/image/logo-haniya.png" asp-append-version="true" alt="Logo Haniya" class="h-9 w-9 rounded-full object-cover ring-2 ring-brand-100" />
+                <div>
+                    <p class="font-display text-lg leading-none text-brand-800">HANIYA</p>
+                    <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Islamic School</p>
+                </div>
+            </a>
 
-            <nav class="hidden md:flex space-x-6 font-medium text-gray-700">
+            <button id="mobileMenuButton"
+                    type="button"
+                    class="inline-flex items-center justify-center rounded-lg border border-slate-300 p-2 text-slate-700 md:hidden"
+                    aria-label="Open navigation menu"
+                    aria-expanded="false">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm1 4a1 1 0 100 2h12a1 1 0 100-2H4z" clip-rule="evenodd" />
+                </svg>
+            </button>
 
-                <a asp-controller="LandingPage"
-                   asp-action="HomeLP"
-                   class="hover:text-blue-600 @(currentController == "LandingPage" && currentAction == "HomeLP" ? "border-b-2 border-blue-600 pb-1 text-blue-600" : "")">
-                    Home
-                </a>
-
-                <a asp-controller="LandingPage"
-                   asp-action="AboutUsLP"
-                   class="hover:text-blue-600 @(currentController == "LandingPage" && currentAction == "AboutUsLP" ? "border-b-2 border-blue-600 pb-1 text-blue-600" : "")">
-                    About Us
-                </a>
-
-                <a asp-controller="LandingPage"
-                   asp-action="AcademicLP"
-                   class="hover:text-blue-600 @(currentController == "LandingPage" && currentAction == "AcademicLP" ? "border-b-2 border-blue-600 pb-1 text-blue-600" : "")">
-                    Academic
-                </a>
-
-                <a asp-controller="LandingPage"
-                   asp-action="ContactLP"
-                   class="hover:text-blue-600 @(currentController == "LandingPage" && currentAction == "ContactLP" ? "border-b-2 border-blue-600 pb-1 text-blue-600" : "")">
-                    Contact Us
-                </a>
-
-                <a asp-controller="LandingPage"
-                   asp-action="EventLP"
-                   class="hover:text-blue-600 @(currentController == "LandingPage" && currentAction == "EventLP" ? "border-b-2 border-blue-600 pb-1 text-blue-600" : "")">
-                    Event
-                </a>
-
-                <a asp-controller="LandingPage"
-                   asp-action="ArticleLP"
-                   class="hover:text-blue-600 @(currentController == "LandingPage" && currentAction == "ArticleLP" ? "border-b-2 border-blue-600 pb-1 text-blue-600" : "")">
-                    Article
-                </a>
-
+            <nav class="hidden items-center gap-1 md:flex">
+                <a asp-controller="LandingPage" asp-action="HomeLP" class="rounded-lg px-3 py-2 text-sm font-semibold @(currentController == "LandingPage" && currentAction == "HomeLP" ? "bg-brand-100 text-brand-800" : "text-slate-700 hover:bg-slate-100")">Home</a>
+                <a asp-controller="LandingPage" asp-action="AboutUsLP" class="rounded-lg px-3 py-2 text-sm font-semibold @(currentController == "LandingPage" && currentAction == "AboutUsLP" ? "bg-brand-100 text-brand-800" : "text-slate-700 hover:bg-slate-100")">About</a>
+                <a asp-controller="LandingPage" asp-action="AcademicLP" class="rounded-lg px-3 py-2 text-sm font-semibold @(currentController == "LandingPage" && currentAction == "AcademicLP" ? "bg-brand-100 text-brand-800" : "text-slate-700 hover:bg-slate-100")">Academic</a>
+                <a asp-controller="LandingPage" asp-action="EventLP" class="rounded-lg px-3 py-2 text-sm font-semibold @(currentController == "LandingPage" && currentAction == "EventLP" ? "bg-brand-100 text-brand-800" : "text-slate-700 hover:bg-slate-100")">Event</a>
+                <a asp-controller="LandingPage" asp-action="ArticleLP" class="rounded-lg px-3 py-2 text-sm font-semibold @(currentController == "LandingPage" && currentAction == "ArticleLP" ? "bg-brand-100 text-brand-800" : "text-slate-700 hover:bg-slate-100")">Article</a>
+                <a asp-controller="LandingPage" asp-action="ContactLP" class="rounded-lg px-3 py-2 text-sm font-semibold @(currentController == "LandingPage" && currentAction == "ContactLP" ? "bg-brand-100 text-brand-800" : "text-slate-700 hover:bg-slate-100")">Contact</a>
             </nav>
+        </div>
 
-
+        <div id="mobileMenu" class="hidden border-t border-slate-200 bg-white md:hidden">
+            <nav class="mx-auto grid max-w-7xl grid-cols-2 gap-2 px-4 py-4 sm:px-6">
+                <a asp-controller="LandingPage" asp-action="HomeLP" class="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Home</a>
+                <a asp-controller="LandingPage" asp-action="AboutUsLP" class="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">About</a>
+                <a asp-controller="LandingPage" asp-action="AcademicLP" class="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Academic</a>
+                <a asp-controller="LandingPage" asp-action="EventLP" class="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Event</a>
+                <a asp-controller="LandingPage" asp-action="ArticleLP" class="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Article</a>
+                <a asp-controller="LandingPage" asp-action="ContactLP" class="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Contact</a>
+            </nav>
         </div>
     </header>
 
-    <!-- Content -->
     <main>
         @RenderBody()
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-blue-800 text-white py-10">
-        <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-8 text-sm">
-
-            <div>
-                <div class="flex items-center gap-4 opacity-90">
-                    <!-- Icon -->
-                    <svg xmlns="http://www.w3.org/2000/svg"
-                         class="w-8 h-8 flex-shrink-0"
-                         fill="currentColor"
-                         viewBox="0 0 24 24">
-                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1112 6a2.5 2.5 0 010 5.5z" />
-                    </svg>
-                    <!-- Text Wrapper -->
-                    <div>
-                        <h5 id="contactLayout3Name" class="font-bold mb-2"></h5>
-                        <p id="contactLayout3Desc" ></p>
-                    </div>
+    <footer class="mt-16 bg-brand-900 text-white">
+        <div class="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-4 lg:px-8">
+            <div class="lg:col-span-2">
+                <p class="text-xs uppercase tracking-[0.24em] text-brand-100">SMP IT Haniya</p>
+                <h3 id="layoutContactBannerDesc" class="mt-2 text-xl font-bold leading-snug"></h3>
+                <div class="mt-6 space-y-4 text-sm text-slate-100">
+                    <p><span class="font-semibold">Phone:</span> <span id="contactLayout2Desc"></span></p>
+                    <p><span class="font-semibold">Office:</span> <span id="contactLayout3Desc"></span></p>
+                    <p><span class="font-semibold">Campus:</span> <span id="contactLayout4Desc"></span></p>
                 </div>
             </div>
 
             <div>
-                <div class="flex items-center gap-4 opacity-90">
-                    <!-- Icon -->
-                    <svg xmlns="http://www.w3.org/2000/svg"
-                         class="w-8 h-8 flex-shrink-0"
-                         fill="currentColor"
-                         viewBox="0 0 24 24">
-                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1112 6a2.5 2.5 0 010 5.5z" />
-                    </svg>
-                    <div>
-                        <h5 id="contactLayout4Name" class="font-bold mb-2"></h5>
-                        <p id="contactLayout4Desc" ></p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="opacity-90">
-                <!-- Main Title -->
-                <h5 id="contact1Desc" class="font-bold mb-4"></h5>
-                <!-- Phone Section -->
-                <div class="flex items-start gap-4">
-                    <!-- Phone Icon -->
-                    <svg xmlns="http://www.w3.org/2000/svg"
-                         class="w-8 h-8 mt-1 text-green-500"
-                         fill="currentColor"
-                         viewBox="0 0 24 24">
-                        <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011-.24c1.12.37 2.33.57 3.59.57a1 1 0 011 1v3.5a1 1 0 01-1 1C10.07 21 3 13.93 3 5a1 1 0 011-1H7.5a1 1 0 011 1c0 1.26.2 2.47.57 3.59a1 1 0 01-.24 1l-2.21 2.2z" />
-                    </svg>
-                    <!-- Text -->
-                    <div>
-                        <h5 id="contactLayout2Name" class="font-bold mb-1"></h5>
-                        <p id="contactLayout2Desc"></p>
-                    </div>
-                </div>
+                <h4 class="text-sm font-semibold uppercase tracking-[0.2em] text-brand-100">Quick Links</h4>
+                <ul class="mt-4 space-y-2 text-sm">
+                    <li><a asp-controller="LandingPage" asp-action="HomeLP" class="hover:text-brand-100">Home</a></li>
+                    <li><a asp-controller="LandingPage" asp-action="AboutUsLP" class="hover:text-brand-100">About Us</a></li>
+                    <li><a asp-controller="LandingPage" asp-action="AcademicLP" class="hover:text-brand-100">Academic</a></li>
+                    <li><a asp-controller="LandingPage" asp-action="ContactLP" class="hover:text-brand-100">Contact</a></li>
+                </ul>
             </div>
 
-            <div class="opacity-90">
-                <h5 class="font-bold mb-4">Follow Us</h5>
-
-                <div class="flex items-center gap-6">
-
-                    <!-- Instagram -->
-                    <a id="instagramLink" target="_blank">
-                        <svg xmlns="http://www.w3.org/2000/svg"
-                             class="w-8 h-8 hover:scale-110 transition"
-                             fill="currentColor"
-                             viewBox="0 0 24 24">
-                            <path d="M7 2C4.24 2 2 4.24 2 7v10c0 2.76 2.24 5 5 5h10c2.76
-                                0 5-2.24 5-5V7c0-2.76-2.24-5-5-5H7zm10 2a1 1 0
-                                110 2 1 1 0 010-2zM12 7a5 5 0 110 10 5 5 0
-                                010-10zm0 2a3 3 0 100 6 3 3 0 000-6z" />
+            <div>
+                <h4 class="text-sm font-semibold uppercase tracking-[0.2em] text-brand-100">Follow Us</h4>
+                <div class="mt-4 flex items-center gap-4">
+                    <a id="instagramLink" target="_blank" rel="noopener noreferrer" class="rounded-full bg-white/10 p-3 transition hover:bg-white/20" aria-label="Instagram">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M7 2C4.24 2 2 4.24 2 7v10c0 2.76 2.24 5 5 5h10c2.76 0 5-2.24 5-5V7c0-2.76-2.24-5-5-5H7zm10 2a1 1 0 110 2 1 1 0 010-2zM12 7a5 5 0 110 10 5 5 0 010-10zm0 2a3 3 0 100 6 3 3 0 000-6z" />
                         </svg>
                     </a>
-
-                    <!-- TikTok -->
-                    <a id="tiktokLink" target="_blank">
-                        <svg xmlns="http://www.w3.org/2000/svg"
-                             class="w-8 h-8 hover:scale-110 transition"
-                             fill="currentColor"
-                             viewBox="0 0 24 24">
-                            <path d="M12.5 2v12.25a2.75 2.75 0 11-2.75-2.75c.25
-                                0 .5.03.75.1V9.5a5.75 5.75 0 105.75 5.75V7.25c1.1
-                                1.05 2.5 1.75 4 1.75V6.5c-1.5 0-3-.75-4-2V2h-3.75z" />
+                    <a id="tiktokLink" target="_blank" rel="noopener noreferrer" class="rounded-full bg-white/10 p-3 transition hover:bg-white/20" aria-label="TikTok">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12.5 2v12.25a2.75 2.75 0 11-2.75-2.75c.25 0 .5.03.75.1V9.5a5.75 5.75 0 105.75 5.75V7.25c1.1 1.05 2.5 1.75 4 1.75V6.5c-1.5 0-3-.75-4-2V2h-3.75z" />
                         </svg>
                     </a>
-
                 </div>
             </div>
-
-
         </div>
-
-        <div class="text-center mt-8 text-xs opacity-90">
-            © 2026 PENABUR Intercultural School. All rights reserved.
+        <div class="border-t border-white/20 py-4 text-center text-xs text-brand-100">
+            © 2026 SMP IT Haniya. All rights reserved.
         </div>
     </footer>
 
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const menuButton = document.getElementById("mobileMenuButton");
+            const mobileMenu = document.getElementById("mobileMenu");
+
+            if (menuButton && mobileMenu) {
+                menuButton.addEventListener("click", function () {
+                    const isHidden = mobileMenu.classList.contains("hidden");
+                    mobileMenu.classList.toggle("hidden");
+                    menuButton.setAttribute("aria-expanded", String(isHidden));
+                });
+            }
+
+            fetch('/Layout/GetLayoutData')
+                .then(function (response) { return response.json(); })
+                .then(function (data) {
+                    const setText = function (id, value) {
+                        const element = document.getElementById(id);
+                        if (element) element.innerText = value || "";
+                    };
+
+                    setText("layoutContactBannerDesc", data["CONTACT_BANNER1_DESC"]);
+                    setText("contactLayout2Desc", data["CONTACT_PHONE1_DESC"]);
+                    setText("contactLayout3Desc", data["CONTACT_LOCATION1_DESC"]);
+                    setText("contactLayout4Desc", data["CONTACT_LOCATION2_DESC"]);
+
+                    const instagram = document.getElementById("instagramLink");
+                    const tiktok = document.getElementById("tiktokLink");
+
+                    if (instagram && data["CONTACT_SOCIAL1_DESC"]) {
+                        instagram.href = data["CONTACT_SOCIAL1_DESC"];
+                    }
+                    if (tiktok && data["CONTACT_SOCIAL2_DESC"]) {
+                        tiktok.href = data["CONTACT_SOCIAL2_DESC"];
+                    }
+                });
+        });
+    </script>
 </body>
 </html>
-<script>
-    fetch('/Layout/GetLayoutData')
-        .then(response => response.json())
-        .then(data => {
-
-            // About
-            //document.getElementById("contact1Name").innerText = data["CONTACT_BANNER1_NAME"] || "";
-            document.getElementById("contact1Desc").innerText = data["CONTACT_BANNER1_DESC"] || "";
-
-            document.getElementById("contactLayout2Name").innerText = data["CONTACT_PHONE1_NAME"] || "";
-            document.getElementById("contactLayout2Desc").innerText = data["CONTACT_PHONE1_DESC"] || "";
-
-            document.getElementById("contactLayout3Name").innerText = data["CONTACT_LOCATION1_NAME"] || "";
-            document.getElementById("contactLayout3Desc").innerText = data["CONTACT_LOCATION1_DESC"] || "";
-
-            document.getElementById("contactLayout4Name").innerText = data["CONTACT_LOCATION2_NAME"] || "";
-            document.getElementById("contactLayout4Desc").innerText = data["CONTACT_LOCATION2_DESC"] || "";
-
-            console.log(data);
-
-        });
-
-    document.addEventListener("DOMContentLoaded", function () {
-
-        fetch('/Layout/GetLayoutData')
-            .then(response => response.json())
-            .then(data => {
-
-                const igLink = document.getElementById("instagramLink");
-                const ttLink = document.getElementById("tiktokLink");
-
-                if (igLink && data["CONTACT_SOCIAL1_DESC"]) {
-                    igLink.href = data["CONTACT_SOCIAL1_DESC"];
-                }
-
-                if (ttLink && data["CONTACT_SOCIAL2_DESC"]) {
-                    ttLink.href = data["CONTACT_SOCIAL2_DESC"];
-                }
-
-            });
-
-    });
-
-</script>
-
