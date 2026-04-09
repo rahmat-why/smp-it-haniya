@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Rotativa.AspNetCore;
 using System.Data;
 using System.Data.SqlClient;
+using System.Globalization;
+using System.Text;
 
 
 namespace Haniya.Controllers.PortalAdmin
@@ -313,271 +315,449 @@ namespace Haniya.Controllers.PortalAdmin
             return dt;
         }
 
-        public IActionResult ExportPdf(string id, string classId)
+        private Dictionary<string, object>? BuildPreviewData(string id, string classId)
         {
             Dictionary<string, object> data = new Dictionary<string, object>();
+            using var conn = GetConn();
+            conn.Open();
 
-            using (var conn = GetConn())
+            using var cmd = new SqlCommand(@"
+                SELECT 
+                    s.student_id,
+                    s.nis,
+                    s.full_name,
+                    s.address AS school_address,
+                    s.father_name AS parent_name,
+                    c.class_id,
+                    c.class_name,
+                    ac.academic_class_id,
+                    ay.academic_year_id,
+                    ay.semester,
+                    ay.start_date,
+                    ay.end_date,
+                    (CAST(YEAR(ay.start_date) AS VARCHAR) + '/' + CAST(YEAR(ay.end_date) AS VARCHAR)) AS academic_year_name,
+                    t.full_name AS teacher_name,
+                    t.npk AS teacher_npk
+                FROM mst_students s
+                LEFT JOIN mst_student_classes sc 
+                    ON sc.student_id = s.student_id
+                LEFT JOIN mst_academic_classes ac 
+                    ON ac.academic_class_id = sc.academic_class_id
+                LEFT JOIN mst_classes c 
+                    ON c.class_id = ac.class_id
+                LEFT JOIN mst_academic_years ay
+                    ON ay.academic_year_id = ac.academic_year_id
+                LEFT JOIN mst_teachers t
+                    ON t.teacher_id = ac.homeroom_teacher_id
+                WHERE s.student_id = @id
+                AND ac.academic_class_id = @classId
+            ", conn);
+
+            cmd.Parameters.AddWithValue("@id", id);
+            cmd.Parameters.AddWithValue("@classId", classId);
+
+            using var reader = cmd.ExecuteReader();
+            if (!reader.Read())
             {
-                conn.Open();
-
-                var cmd = new SqlCommand(@"
-                    SELECT 
-                        s.student_id,
-                        s.nis,
-                        s.full_name,
-                        s.address AS school_address,
-                        s.father_name AS parent_name,
-                        c.class_id,
-                        c.class_name,
-                        ac.academic_class_id,
-                        ay.academic_year_id,
-                        ay.semester,
-                        ay.start_date,
-                        ay.end_date,
-                        (CAST(YEAR(ay.start_date) AS VARCHAR) + '/' + CAST(YEAR(ay.end_date) AS VARCHAR)) AS academic_year_name,
-                        t.full_name AS teacher_name,
-                        t.npk AS teacher_npk
-                        
-                    FROM mst_students s
-                    LEFT JOIN mst_student_classes sc 
-                        ON sc.student_id = s.student_id
-                    LEFT JOIN mst_academic_classes ac 
-                        ON ac.academic_class_id = sc.academic_class_id
-                    LEFT JOIN mst_classes c 
-                        ON c.class_id = ac.class_id
-                    LEFT JOIN mst_academic_years ay
-                        ON ay.academic_year_id = ac.academic_year_id
-                    LEFT JOIN mst_teachers t
-                        ON t.teacher_id = ac.homeroom_teacher_id
-                    WHERE s.student_id = @id
-                    AND ac.academic_class_id = @classId
-                ", conn);
-
-                cmd.Parameters.AddWithValue("@id", id);
-                cmd.Parameters.AddWithValue("@classId", classId);
-
-                var reader = cmd.ExecuteReader();
-
-                if (reader.Read())
-                {
-                    data["student_id"] = reader["student_id"];
-                    data["nis"] = reader["nis"];
-                    data["full_name"] = reader["full_name"];
-                    data["class_name"] = reader["class_name"];
-                    data["school_address"] = reader["school_address"];
-                    data["semester"] = reader["semester"];
-                    data["start_date"] = reader["start_date"];
-                    data["end_date"] = reader["end_date"];
-                    data["teacher_name"] = reader["teacher_name"];
-
-                    data["class_id"] = reader["class_id"];
-                    data["academic_year_id"] = reader["academic_year_id"];
-                    data["academic_year_name"] = reader["academic_year_name"];
-                    data["teacher_npk"] = reader["teacher_npk"];
-                    data["parent_name"] = reader["parent_name"];
-                    data["academic_class_id"] = reader["academic_class_id"];
-
-
-                    classId = reader["academic_class_id"].ToString();
-                }
-                else
-                {
-                    return Content("DATA STUDENT TIDAK DITEMUKAN");
-                }
-
-                reader.Close();
-
-                var attendanceCmd = new SqlCommand(@"
-                    SELECT 
-                        SUM(CASE WHEN d.status='SICK' THEN 1 ELSE 0 END) AS sick,
-                        SUM(CASE WHEN d.status='EXCUSED' THEN 1 ELSE 0 END) AS permit,
-                        SUM(CASE WHEN d.status='NOINFO' THEN 1 ELSE 0 END) AS alpha
-                    FROM txn_attendance_details d
-                    JOIN txn_attendances a 
-                        ON a.attendance_id = d.attendance_id
-                    WHERE d.student_id = @studentId
-                    AND a.academic_class_id = @classId
-                ", conn);
-
-                attendanceCmd.Parameters.AddWithValue("@studentId", id);
-                attendanceCmd.Parameters.AddWithValue("@classId", classId);
-
-                var attReader = attendanceCmd.ExecuteReader();
-
-                if (attReader.Read())
-                {
-                    data["sick"] = Convert.ToInt32(attReader["sick"]);
-                    data["permit"] = Convert.ToInt32(attReader["permit"]);
-                    data["alpha"] = Convert.ToInt32(attReader["alpha"]);
-                }
-
-                attReader.Close();
-
-                var headCmd = new SqlCommand(@"
-                    SELECT detail_id, item_desc
-                    FROM mst_detail_setting_landingpages
-                    WHERE detail_id IN ('ABOUT_HEADSC_NAME1', 'HOME_SCHOOL_TITLE1', 'ABOUT_HEADSC_NPK1')
-                ", conn);
-
-                var headReader = headCmd.ExecuteReader();
-
-                while (headReader.Read())
-                {
-                    var key = headReader["detail_id"].ToString();
-                    var value = headReader["item_desc"]?.ToString() ?? "";
-
-                    if (key == "ABOUT_HEADSC_NAME1")
-                        data["headschool_name"] = value;
-
-                    if (key == "HOME_SCHOOL_TITLE1")
-                        data["school_name"] = value;
-
-                    if (key == "ABOUT_HEADSC_NPK1")
-                        data["headschool_npk"] = value;
-
-
-                }
-
-                headReader.Close();
-
-                // ambil nilai raport
-                data["report"] = GetStudentReport(id, classId);
+                return null;
             }
 
-            return new ViewAsPdf("~/Views/PortalAdmin/E-Raport/EraportPdf.cshtml", data)
+            data["student_id"] = reader["student_id"];
+            data["nis"] = reader["nis"];
+            data["full_name"] = reader["full_name"];
+            data["class_name"] = reader["class_name"];
+            data["school_address"] = reader["school_address"];
+            data["semester"] = reader["semester"];
+            data["start_date"] = reader["start_date"];
+            data["end_date"] = reader["end_date"];
+            data["teacher_name"] = reader["teacher_name"];
+            data["class_id"] = reader["class_id"];
+            data["academic_year_id"] = reader["academic_year_id"];
+            data["academic_year_name"] = reader["academic_year_name"];
+            data["teacher_npk"] = reader["teacher_npk"];
+            data["parent_name"] = reader["parent_name"];
+            data["academic_class_id"] = reader["academic_class_id"];
+            classId = reader["academic_class_id"]?.ToString() ?? classId;
+
+            reader.Close();
+
+            using var attendanceCmd = new SqlCommand(@"
+                SELECT 
+                    SUM(CASE WHEN d.status='SICK' THEN 1 ELSE 0 END) AS sick,
+                    SUM(CASE WHEN d.status='EXCUSED' THEN 1 ELSE 0 END) AS permit,
+                    SUM(CASE WHEN d.status='NOINFO' THEN 1 ELSE 0 END) AS alpha
+                FROM txn_attendance_details d
+                JOIN txn_attendances a 
+                    ON a.attendance_id = d.attendance_id
+                WHERE d.student_id = @studentId
+                AND a.academic_class_id = @classId
+            ", conn);
+
+            attendanceCmd.Parameters.AddWithValue("@studentId", id);
+            attendanceCmd.Parameters.AddWithValue("@classId", classId);
+
+            using var attReader = attendanceCmd.ExecuteReader();
+            if (attReader.Read())
+            {
+                data["sick"] = SafeToInt(attReader["sick"]);
+                data["permit"] = SafeToInt(attReader["permit"]);
+                data["alpha"] = SafeToInt(attReader["alpha"]);
+            }
+            else
+            {
+                data["sick"] = 0;
+                data["permit"] = 0;
+                data["alpha"] = 0;
+            }
+
+            attReader.Close();
+
+            using var headCmd = new SqlCommand(@"
+                SELECT detail_id, item_desc
+                FROM mst_detail_setting_landingpages
+                WHERE detail_id IN ('ABOUT_HEADSC_NAME1', 'HOME_SCHOOL_TITLE1', 'ABOUT_HEADSC_NPK1')
+            ", conn);
+
+            using var headReader = headCmd.ExecuteReader();
+            while (headReader.Read())
+            {
+                var key = headReader["detail_id"]?.ToString() ?? "";
+                var value = headReader["item_desc"]?.ToString() ?? "";
+                if (key == "ABOUT_HEADSC_NAME1") data["headschool_name"] = value;
+                if (key == "HOME_SCHOOL_TITLE1") data["school_name"] = value;
+                if (key == "ABOUT_HEADSC_NPK1") data["headschool_npk"] = value;
+            }
+
+            if (!data.ContainsKey("headschool_name")) data["headschool_name"] = "";
+            if (!data.ContainsKey("school_name")) data["school_name"] = "";
+            if (!data.ContainsKey("headschool_npk")) data["headschool_npk"] = "";
+
+            data["report"] = GetStudentReport(id, classId);
+            return data;
+        }
+
+        public IActionResult ExportPdf(string id, string classId, bool download = false)
+        {
+            var data = BuildPreviewData(id, classId);
+            if (data == null) return Content("DATA STUDENT TIDAK DITEMUKAN");
+
+            var pdf = new ViewAsPdf("~/Views/PortalAdmin/E-Raport/EraportExcel.cshtml", data)
             {
                 PageSize = Rotativa.AspNetCore.Options.Size.A4,
                 CustomSwitches = "--print-media-type --disable-smart-shrinking"
-
             };
+
+            if (download)
+            {
+                var nis = data["nis"]?.ToString() ?? "student";
+                pdf.FileName = $"E-Raport-{nis}.pdf";
+            }
+
+            return pdf;
         }
 
         [HttpGet]
         public IActionResult Preview(string id, string classId)
         {
-            Dictionary<string, object> data = new Dictionary<string, object>();
-
-            using (var conn = GetConn())
+            var data = BuildPreviewData(id, classId);
+            if (data == null) return Content("DATA STUDENT TIDAK DITEMUKAN");
+            var saved = GetLatestSavedEraport(data["student_id"]?.ToString() ?? id, data["class_id"]?.ToString() ?? "");
+            data["saved_json"] = Newtonsoft.Json.JsonConvert.SerializeObject(new
             {
-                conn.Open();
-
-                var cmd = new SqlCommand(@"
-                    SELECT 
-                        s.student_id,
-                        s.nis,
-                        s.full_name,
-                        s.address AS school_address,
-                        s.father_name AS parent_name,
-                        c.class_id,
-                        c.class_name,
-                        ac.academic_class_id,
-                        ay.academic_year_id,
-                        ay.semester,
-                        ay.start_date,
-                        ay.end_date,
-                        (CAST(YEAR(ay.start_date) AS VARCHAR) + '/' + CAST(YEAR(ay.end_date) AS VARCHAR)) AS academic_year_name,
-                        t.full_name AS teacher_name,
-                        t.npk AS teacher_npk
-                    FROM mst_students s
-                    LEFT JOIN mst_student_classes sc 
-                        ON sc.student_id = s.student_id
-                    LEFT JOIN mst_academic_classes ac 
-                        ON ac.academic_class_id = sc.academic_class_id
-                    LEFT JOIN mst_classes c 
-                        ON c.class_id = ac.class_id
-                    LEFT JOIN mst_academic_years ay
-                        ON ay.academic_year_id = ac.academic_year_id
-                    LEFT JOIN mst_teachers t
-                        ON t.teacher_id = ac.homeroom_teacher_id
-                    WHERE s.student_id = @id
-                    AND ac.academic_class_id = @classId
-                ", conn);
-
-                cmd.Parameters.AddWithValue("@id", id);
-                cmd.Parameters.AddWithValue("@classId", classId);
-
-                var reader = cmd.ExecuteReader();
-
-                if (reader.Read())
+                grades = saved.Grades.Values.Select(g => new
                 {
-                    data["student_id"] = reader["student_id"];
-                    data["nis"] = reader["nis"];
-                    data["full_name"] = reader["full_name"];
-                    data["class_name"] = reader["class_name"];
-                    data["school_address"] = reader["school_address"];
-                    data["semester"] = reader["semester"];
-                    data["start_date"] = reader["start_date"];
-                    data["end_date"] = reader["end_date"];
-                    data["teacher_name"] = reader["teacher_name"];
-
-                    data["class_id"] = reader["class_id"];
-                    data["academic_year_id"] = reader["academic_year_id"];
-                    data["academic_year_name"] = reader["academic_year_name"];
-                    data["teacher_npk"] = reader["teacher_npk"];
-                    data["parent_name"] = reader["parent_name"];
-                    data["academic_class_id"] = reader["academic_class_id"];
-
-                    classId = reader["academic_class_id"].ToString();
-                }
-
-                reader.Close();
-
-                // attendance
-                var attendanceCmd = new SqlCommand(@"
-                    SELECT 
-                        SUM(CASE WHEN d.status='SICK' THEN 1 ELSE 0 END) AS sick,
-                        SUM(CASE WHEN d.status='EXCUSED' THEN 1 ELSE 0 END) AS permit,
-                        SUM(CASE WHEN d.status='NOINFO' THEN 1 ELSE 0 END) AS alpha
-                    FROM txn_attendance_details d
-                    JOIN txn_attendances a 
-                        ON a.attendance_id = d.attendance_id
-                    WHERE d.student_id = @studentId
-                    AND a.academic_class_id = @classId
-                ", conn);
-
-                attendanceCmd.Parameters.AddWithValue("@studentId", id);
-                attendanceCmd.Parameters.AddWithValue("@classId", classId);
-
-                var attReader = attendanceCmd.ExecuteReader();
-
-                if (attReader.Read())
+                    subject_id = g.SubjectId,
+                    final_score_adjustment = g.FinalScoreAdjustment,
+                    competency_description = g.CompetencyDescription
+                }),
+                extracurriculars = saved.Extracurriculars.Select(x => new
                 {
-                    data["sick"] = Convert.ToInt32(attReader["sick"]);
-                    data["permit"] = Convert.ToInt32(attReader["permit"]);
-                    data["alpha"] = Convert.ToInt32(attReader["alpha"]);
-                }
+                    extracurricular_name = x.Name,
+                    predicate = x.Predicate,
+                    description = x.Description
+                }),
+                kokurikuler = saved.Kokurikuler,
+                wali_notes = saved.WaliNotes,
+                parent_notes = saved.ParentNotes
+            });
+            return View("~/Views/PortalAdmin/E-Raport/EraportExcel.cshtml", data);
+        }
 
-                attReader.Close();
-                var headCmd = new SqlCommand(@"
-                    SELECT detail_id, item_desc
-                    FROM mst_detail_setting_landingpages
-                    WHERE detail_id IN ('ABOUT_HEADSC_NAME1', 'HOME_SCHOOL_TITLE1', 'ABOUT_HEADSC_NPK1')
-                ", conn);
+        private class SavedGrade
+        {
+            public string SubjectId { get; set; } = "";
+            public string FinalScoreRps { get; set; } = "0";
+            public string FinalScoreAdjustment { get; set; } = "0";
+            public string CompetencyDescription { get; set; } = "";
+        }
 
-                var headReader = headCmd.ExecuteReader();
+        private class SavedExtracurricular
+        {
+            public string Name { get; set; } = "";
+            public string Predicate { get; set; } = "";
+            public string Description { get; set; } = "";
+        }
 
-                while (headReader.Read())
+        private class SavedEraport
+        {
+            public bool Exists { get; set; }
+            public string Kokurikuler { get; set; } = "";
+            public string WaliNotes { get; set; } = "";
+            public string ParentNotes { get; set; } = "";
+            public Dictionary<string, SavedGrade> Grades { get; set; } = new();
+            public List<SavedExtracurricular> Extracurriculars { get; set; } = new();
+            public Dictionary<string, int> Attendances { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static string NormalizeNumericString(string? value, string fallback = "0")
+        {
+            var raw = (value ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(raw)) return fallback;
+            raw = raw.Replace(",", ".");
+            if (decimal.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed))
+            {
+                return parsed.ToString("0.##", CultureInfo.InvariantCulture);
+            }
+            return fallback;
+        }
+
+        private SavedEraport GetLatestSavedEraport(string studentId, string classId)
+        {
+            var result = new SavedEraport();
+            using var conn = GetConn();
+            conn.Open();
+
+            using var cmd = new SqlCommand(@"
+                SELECT TOP 1 eraport_id, kokurikuler, homeroom_teacher_notes, parent_notes
+                FROM txn_eraports
+                WHERE student_id = @student_id
+                  AND class_id = @class_id
+                ORDER BY created_at DESC, eraport_id DESC
+            ", conn);
+            cmd.Parameters.AddWithValue("@student_id", studentId);
+            cmd.Parameters.AddWithValue("@class_id", classId);
+
+            using var rd = cmd.ExecuteReader();
+            if (!rd.Read()) return result;
+
+            var eraportId = rd["eraport_id"]?.ToString() ?? "";
+            result.Exists = !string.IsNullOrWhiteSpace(eraportId);
+            result.Kokurikuler = rd["kokurikuler"]?.ToString() ?? "";
+            result.WaliNotes = rd["homeroom_teacher_notes"]?.ToString() ?? "";
+            result.ParentNotes = rd["parent_notes"]?.ToString() ?? "";
+            rd.Close();
+
+            if (!result.Exists) return result;
+
+            using (var cmdGrade = new SqlCommand(@"
+                SELECT subject_id, final_score_rps, final_score_adjustment, competency_description
+                FROM txn_eraport_grades
+                WHERE eraport_id = @eraport_id
+            ", conn))
+            {
+                cmdGrade.Parameters.AddWithValue("@eraport_id", eraportId);
+                using var rGrade = cmdGrade.ExecuteReader();
+                while (rGrade.Read())
                 {
-                    var key = headReader["detail_id"].ToString();
-                    var value = headReader["item_desc"]?.ToString() ?? "";
-
-                    if (key == "ABOUT_HEADSC_NAME1")
-                        data["headschool_name"] = value;
-
-                    if (key == "HOME_SCHOOL_TITLE1")
-                        data["school_name"] = value;
-
-                    if (key == "ABOUT_HEADSC_NPK1")
-                        data["headschool_npk"] = value;
+                    var sid = rGrade["subject_id"]?.ToString() ?? "";
+                    if (string.IsNullOrWhiteSpace(sid)) continue;
+                    result.Grades[sid] = new SavedGrade
+                    {
+                        SubjectId = sid,
+                        FinalScoreRps = NormalizeNumericString(rGrade["final_score_rps"]?.ToString()),
+                        FinalScoreAdjustment = NormalizeNumericString(rGrade["final_score_adjustment"]?.ToString()),
+                        CompetencyDescription = rGrade["competency_description"]?.ToString() ?? ""
+                    };
                 }
-
-                headReader.Close();
-
-                data["report"] = GetStudentReport(id, classId);
             }
 
-            return View("~/Views/PortalAdmin/E-Raport/EraportPdf.cshtml", data);
+            using (var cmdExtra = new SqlCommand(@"
+                SELECT extracurricular_name, predicate, description
+                FROM txn_eraport_extracurriculars
+                WHERE eraport_id = @eraport_id
+                ORDER BY eraport_extracurricular_id ASC
+            ", conn))
+            {
+                cmdExtra.Parameters.AddWithValue("@eraport_id", eraportId);
+                using var rExtra = cmdExtra.ExecuteReader();
+                while (rExtra.Read())
+                {
+                    result.Extracurriculars.Add(new SavedExtracurricular
+                    {
+                        Name = rExtra["extracurricular_name"]?.ToString() ?? "",
+                        Predicate = rExtra["predicate"]?.ToString() ?? "",
+                        Description = rExtra["description"]?.ToString() ?? ""
+                    });
+                }
+            }
+
+            using (var cmdAtt = new SqlCommand(@"
+                SELECT attendance_type_name, total_days
+                FROM txn_eraport_attendances
+                WHERE eraport_id = @eraport_id
+            ", conn))
+            {
+                cmdAtt.Parameters.AddWithValue("@eraport_id", eraportId);
+                using var rAtt = cmdAtt.ExecuteReader();
+                while (rAtt.Read())
+                {
+                    var key = rAtt["attendance_type_name"]?.ToString() ?? "";
+                    if (string.IsNullOrWhiteSpace(key)) continue;
+                    result.Attendances[key] = SafeToInt(rAtt["total_days"]);
+                }
+            }
+
+            return result;
+        }
+
+        [HttpGet]
+        public IActionResult ExportExcel(string id, string classId)
+        {
+            var data = BuildPreviewData(id, classId);
+            if (data == null) return Content("DATA STUDENT TIDAK DITEMUKAN");
+
+            var report = data["report"] as DataTable ?? new DataTable();
+            var saved = GetLatestSavedEraport(data["student_id"]?.ToString() ?? id, data["class_id"]?.ToString() ?? "");
+
+            string Encode(object? value) => System.Net.WebUtility.HtmlEncode(value?.ToString() ?? "-");
+            string ScoreAdjustCell(DataRow row)
+            {
+                var sid = row["subject_id"]?.ToString() ?? "";
+                if (!string.IsNullOrWhiteSpace(sid) && saved.Grades.TryGetValue(sid, out var g))
+                    return NormalizeNumericString(g.FinalScoreAdjustment, "0");
+                return "0";
+            }
+            string DescCell(DataRow row)
+            {
+                var sid = row["subject_id"]?.ToString() ?? "";
+                var subject = row["subject_name"]?.ToString() ?? "-";
+                if (!string.IsNullOrWhiteSpace(sid) && saved.Grades.TryGetValue(sid, out var g) && !string.IsNullOrWhiteSpace(g.CompetencyDescription))
+                    return g.CompetencyDescription;
+                return $"{data["full_name"]} membutuhkan bimbingan dalam pembelajaran {subject}.";
+            }
+
+            var html = new StringBuilder();
+            html.Append("<html><head><meta charset='UTF-8'><style>");
+            html.Append("body{font-family:'Times New Roman';font-size:12pt;}table{border-collapse:collapse;width:100%;margin-bottom:12px;}th,td{border:1px solid #000;padding:6px;}th{text-align:center;background:#f3f4f6;}h3{text-align:center;margin:14px 0 8px;} .nb td{border:none;padding:4px 0;} .center{text-align:center;} .signature td{border:none;height:80px;} .split td{border:none;vertical-align:top;} .paper{width:100%;}");
+            html.Append("</style></head><body>");
+
+            void AppendStudentInfo()
+            {
+                html.Append("<table class='nb'>");
+                html.Append($"<tr><td width='15%'>Nama</td><td width='35%'>: {Encode(data["full_name"])}</td><td width='15%'>Kelas</td><td width='35%'>: {Encode(data["class_name"])}</td></tr>");
+                html.Append($"<tr><td>NISN / NIS</td><td>: {Encode(data["nis"])}</td><td>Fase</td><td>: D</td></tr>");
+                html.Append($"<tr><td>Nama Sekolah</td><td>: {Encode(data["school_name"])}</td><td>Semester</td><td>: {Encode(data["semester"])}</td></tr>");
+                html.Append($"<tr><td>Alamat</td><td>: {Encode(data["school_address"])}</td><td>Tahun Pelajaran</td><td>: {Encode(data["academic_year_name"])}</td></tr>");
+                html.Append("</table>");
+            }
+
+            void AppendGradesSection(string title, string type)
+            {
+                html.Append($"<h3>{Encode(title)}</h3>");
+                html.Append("<table><tr><th width='3%'>NO</th><th width='37%'>MATA PELAJARAN</th><th width='10%'>NILAI AKHIR</th><th>CAPAIAN KOMPETENSI</th></tr>");
+                int no = 1;
+                foreach (DataRow row in report.Rows)
+                {
+                    if (!string.Equals(row["subject_type"]?.ToString(), type, StringComparison.OrdinalIgnoreCase)) continue;
+                    var subject = row["subject_name"]?.ToString() ?? "-";
+                    html.Append("<tr>");
+                    html.Append($"<td class='center'>{no++}</td>");
+                    html.Append($"<td>{Encode(subject)}</td>");
+                    html.Append($"<td class='center'>{Encode(ScoreAdjustCell(row))}</td>");
+                    html.Append($"<td>{Encode(DescCell(row))}</td>");
+                    html.Append("</tr>");
+                }
+                if (no == 1) html.Append("<tr><td colspan='4' class='center'>-</td></tr>");
+                html.Append("</table>");
+            }
+
+            string waliAll = saved.Exists ? (saved.WaliNotes ?? "") : "";
+            string waliPage2 = "Prestasinya sangat baik, perlu dipertahankan.";
+            string waliPage3 = "";
+            if (!string.IsNullOrWhiteSpace(waliAll))
+            {
+                var split = waliAll.Split('\n');
+                waliPage2 = split[0].Trim();
+                if (split.Length > 1)
+                    waliPage3 = string.Join("\n", split.Skip(1)).Trim();
+            }
+            var today = DateTime.Now.ToString("dd MMMM yyyy", new CultureInfo("id-ID"));
+
+            html.Append("<div class='paper'>");
+            AppendStudentInfo();
+            AppendGradesSection("LAPORAN HASIL BELAJAR", "SUBJ_PRIMARY");
+            AppendGradesSection("MUATAN LOKAL", "SUBJ_LOCAL");
+            html.Append("<table><tr><th>KOKURIKULER</th></tr>");
+            html.Append($"<tr><td>{Encode(saved.Exists ? saved.Kokurikuler : $"Ananda {data["full_name"]} sudah sangat menghargai sesama teman berdasarkan yang terlihat dari beberapa proyek pembelajaran interdisipliner.")}</td></tr></table>");
+
+            html.Append("<h3>EKSTRAKURIKULER</h3>");
+            html.Append("<table><tr><th width='3%'>NO</th><th>KEGIATAN</th><th width='15%'>PREDIKAT</th><th>KETERANGAN</th></tr>");
+            var extras = saved.Extracurriculars.Count > 0
+                ? saved.Extracurriculars
+                : new List<SavedExtracurricular> { new SavedExtracurricular { Name = "-", Predicate = "-", Description = "-" } };
+            for (int i = 0; i < extras.Count; i++)
+            {
+                html.Append("<tr>");
+                html.Append($"<td class='center'>{i + 1}</td>");
+                html.Append($"<td>{Encode(extras[i].Name)}</td>");
+                html.Append($"<td class='center'>{Encode(extras[i].Predicate)}</td>");
+                html.Append($"<td>{Encode(extras[i].Description)}</td>");
+                html.Append("</tr>");
+            }
+            html.Append("</table>");
+            html.Append("</div>");
+
+            html.Append("<div style='page-break-before:always;'></div>");
+            html.Append("<div class='paper'>");
+
+            int sick = saved.Attendances.TryGetValue("Sakit", out var sv1) ? sv1 : SafeToInt(data["sick"]);
+            int permit = saved.Attendances.TryGetValue("Izin", out var sv2) ? sv2 : SafeToInt(data["permit"]);
+            int alpha = saved.Attendances.TryGetValue("Tanpa Keterangan", out var sv3) ? sv3 : SafeToInt(data["alpha"]);
+
+            html.Append("<table class='split' style='margin-bottom:12px;'><tr>");
+            html.Append("<td width='50%'>");
+            html.Append("<table><tr><th width='10%'>NO</th><th>KETIDAKHADIRAN</th><th width='25%'>JUMLAH</th></tr>");
+            html.Append($"<tr><td class='center'>1</td><td>Sakit</td><td class='center'>{sick} hari</td></tr>");
+            html.Append($"<tr><td class='center'>2</td><td>Izin</td><td class='center'>{permit} hari</td></tr>");
+            html.Append($"<tr><td class='center'>3</td><td>Tanpa Keterangan</td><td class='center'>{alpha} hari</td></tr>");
+            html.Append("</table>");
+            html.Append("</td>");
+            html.Append("<td width='50%'>");
+            html.Append("<table><tr><th>CATATAN WALI KELAS</th></tr>");
+            html.Append($"<tr><td>{Encode(waliPage2)}</td></tr></table>");
+            html.Append("</td>");
+            html.Append("</tr></table>");
+
+            html.Append("<table><tr><th>TANGGAPAN ORANG TUA / WALI MURID</th></tr>");
+            html.Append($"<tr><td>{Encode(saved.ParentNotes)}</td></tr></table>");
+            html.Append("<table class='signature wfull'><tr>");
+            html.Append("<td class='center'>Mengetahui,<br>Orang Tua/Wali</td><td></td>");
+            html.Append($"<td class='center'>Bekasi, {Encode(today)}<br>Wali Kelas</td></tr>");
+            html.Append($"<tr><td class='center'><br><br>(.......................)</td><td></td><td class='center'><br><br><b>{Encode(data["teacher_name"])}</b></td></tr></table>");
+            html.Append("<table class='signature'><tr>");
+            html.Append($"<td class='center'>Mengetahui,<br>Kepala SMP IT Haniya<br><br><br><br><br><b>{Encode(data["headschool_name"])}</b></td>");
+            html.Append("</tr></table>");
+            html.Append("</div>");
+
+            html.Append("<div style='page-break-before:always;'></div>");
+            html.Append("<div class='paper'>");
+            AppendStudentInfo();
+            AppendGradesSection("LAPORAN HASIL BELAJAR ISLAMIC", "SUBJ_ISLAMIC");
+            html.Append("<table><tr><th>CATATAN WALI KELAS</th></tr>");
+            html.Append($"<tr><td>{Encode(waliPage3)}</td></tr></table>");
+            html.Append("<table class='signature wfull'><tr>");
+            html.Append("<td class='center'>Mengetahui,<br>Orang Tua/Wali</td><td></td>");
+            html.Append($"<td class='center'>Bekasi, {Encode(today)}<br>Wali Kelas</td></tr>");
+            html.Append($"<tr><td class='center'><br><br>(.......................)</td><td></td><td class='center'><br><br><b>{Encode(data["teacher_name"])}</b></td></tr></table>");
+            html.Append("<table class='signature'><tr>");
+            html.Append($"<td class='center'>Mengetahui,<br>Kepala SMP IT Haniya<br><br><br><br><br><b>{Encode(data["headschool_name"])}</b></td>");
+            html.Append("</tr></table>");
+            html.Append("</div>");
+            html.Append("</body></html>");
+
+            var bytes = Encoding.UTF8.GetBytes(html.ToString());
+            var fileName = $"E-Raport-{(data["nis"]?.ToString() ?? "student")}.xls";
+            return File(bytes, "application/vnd.ms-excel", fileName);
         }
 
         private int GetNextCounter(object lastIdObj, int prefixLength)
@@ -599,11 +779,20 @@ namespace Haniya.Controllers.PortalAdmin
         public IActionResult SaveHeader(string student_id, string student_name, string nis, string class_id, string academic_class_id,
             string class_name, string semester, string academic_year_id, string academic_year_name, string school_name,
             string school_address, string teacher_npk, string teacher_name, string headschool_name, string headschool_npk,
-            string parent_name, string wali_notes, string parent_notes, string kokurikuler, string grades, string extracurriculars)
+            string parent_name, string wali_notes, string parent_notes, string kokurikuler, string grades, string extracurriculars, string? wali_notes_2 = null)
         {
             using (var conn = GetConn())
             {
                 conn.Open();
+                var combinedWaliNotes = (wali_notes ?? "").Trim();
+                var secondWaliNotes = (wali_notes_2 ?? "").Trim();
+                if (!string.IsNullOrWhiteSpace(secondWaliNotes))
+                {
+                    combinedWaliNotes = string.IsNullOrWhiteSpace(combinedWaliNotes)
+                        ? secondWaliNotes
+                        : $"{combinedWaliNotes}\n{secondWaliNotes}";
+                }
+
                 var getLastIdCmdEr = new SqlCommand(@"
                     SELECT TOP 1 eraport_id 
                     FROM txn_eraports
@@ -661,7 +850,7 @@ namespace Haniya.Controllers.PortalAdmin
                     cmdHr.Parameters.AddWithValue("@headschool_name", headschool_name);
                     cmdHr.Parameters.AddWithValue("@headschool_npk", headschool_npk);
                     cmdHr.Parameters.AddWithValue("@parent_name", parent_name);
-                    cmdHr.Parameters.AddWithValue("@homeroom_teacher_notes", wali_notes ?? "");
+                    cmdHr.Parameters.AddWithValue("@homeroom_teacher_notes", combinedWaliNotes);
                     cmdHr.Parameters.AddWithValue("@parent_notes", parent_notes ?? "");
                     cmdHr.Parameters.AddWithValue("@kokurikuler", kokurikuler ?? "");
                     cmdHr.ExecuteNonQuery();
@@ -700,8 +889,8 @@ namespace Haniya.Controllers.PortalAdmin
                         cmd.Parameters.AddWithValue("@subject_name", (string)g.subject_name);
                         cmd.Parameters.AddWithValue("@subject_type_id", (string)g.subject_type_id);
                         cmd.Parameters.AddWithValue("@subject_type_name", (string)g.subject_type_name);
-                        cmd.Parameters.AddWithValue("@final_score_rps", g.final_score_rps?.ToString() ?? "0");
-                        cmd.Parameters.AddWithValue("@final_score_adjustment", g.final_score_adjustment?.ToString() ?? "0");
+                        cmd.Parameters.AddWithValue("@final_score_rps", NormalizeNumericString(g.final_score_rps?.ToString(), "0"));
+                        cmd.Parameters.AddWithValue("@final_score_adjustment", NormalizeNumericString(g.final_score_adjustment?.ToString(), "0"));
                         cmd.Parameters.AddWithValue("@predicate", g.predicate?.ToString() ?? "");
                         cmd.Parameters.AddWithValue("@competency_description", g.competency_description?.ToString() ?? "");
                         gradeCounter++;

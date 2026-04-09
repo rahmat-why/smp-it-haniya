@@ -70,13 +70,13 @@
                class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 250px;">Student</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 130px;">Academic Years</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 130px;">Semester</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 130px;">Class</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 130px;">Summary Attendance</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Summary Grade</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase !text-right" style="width: 70px;">Action</th>
+                    <th data-sort="student" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase align-middle whitespace-nowrap cursor-pointer select-none" style="width: 250px;">Student</th>
+                    <th data-sort="academicYears" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center align-middle whitespace-nowrap cursor-pointer select-none" style="width: 140px;">Academic Years</th>
+                    <th data-sort="semester" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center align-middle whitespace-nowrap cursor-pointer select-none" style="width: 120px;">Semester</th>
+                    <th data-sort="class" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase align-middle whitespace-nowrap cursor-pointer select-none" style="width: 140px;">Class</th>
+                    <th data-sort="summaryAttendance" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase align-middle whitespace-nowrap cursor-pointer select-none" style="width: 240px;">Summary Attendance</th>
+                    <th data-sort="summaryGrade" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center align-middle whitespace-nowrap cursor-pointer select-none">Summary Grade</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right align-middle whitespace-nowrap" style="width: 90px;">Action</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100"></tbody>
@@ -193,12 +193,11 @@
         items.forEach(row => {
             const id = row.student_id || '';
             const classId = row.academic_class_id || '';
-            const uniqueId = `${id}-${classId}`;
             const src = (typeof row.profile_photo === 'string' && row.profile_photo.trim() !== '')
                 ? row.profile_photo
                 : '/image/no-image.png';
             const previewUrl = `/Eraport/Preview?id=${encodeURIComponent(id)}&classId=${encodeURIComponent(classId)}`;
-            const exportPdfUrl = `/Eraport/ExportPdf?id=${encodeURIComponent(id)}&classId=${encodeURIComponent(classId)}`;
+            const exportExcelUrl = `/Eraport/ExportExcel?id=${encodeURIComponent(id)}&classId=${encodeURIComponent(classId)}`;
 
             const academicYears = (row.start_date && row.end_date)
                 ? `${new Date(row.start_date).getFullYear()} / ${new Date(row.end_date).getFullYear()}`
@@ -206,7 +205,7 @@
 
             html += `
                 <tr class="bg-white divide-y divide-gray-100">
-                    <td class="px-4 py-3">
+                    <td class="px-4 py-3 align-middle">
                         <div class="flex items-center gap-3">
                             <img src="${src}" class="w-10 h-10 rounded-full object-cover border-2 border-gray-200 flex-shrink-0">
                             <div class="min-w-0 flex-1">
@@ -215,10 +214,10 @@
                             </div>
                         </div>
                     </td>
-                    <td class="px-4 py-3">${academicYears}</td>
-                    <td class="px-4 py-3 text-center">${row.semester ? `Semester ${row.semester}` : '-'}</td>
-                    <td class="px-4 py-3">${row.class_name || '-'}</td>
-                    <td class="px-4 py-3">
+                    <td class="px-4 py-3 text-center align-middle whitespace-nowrap">${academicYears}</td>
+                    <td class="px-4 py-3 text-center align-middle whitespace-nowrap">${row.semester ? `Semester ${row.semester}` : '-'}</td>
+                    <td class="px-4 py-3 align-middle">${row.class_name || '-'}</td>
+                    <td class="px-4 py-3 align-middle">
                         <div class="flex flex-wrap gap-1.5">
                             <span class="inline-flex items-center rounded-full bg-green-100 text-green-700 text-[11px] font-semibold px-2 py-0.5">Hadir: ${row.present || 0}</span>
                             <span class="inline-flex items-center rounded-full bg-yellow-100 text-yellow-700 text-[11px] font-semibold px-2 py-0.5">Sakit: ${row.sick || 0}</span>
@@ -226,22 +225,22 @@
                             <span class="inline-flex items-center rounded-full bg-red-100 text-red-700 text-[11px] font-semibold px-2 py-0.5">Alpa: ${row.alpha || 0}</span>
                         </div>
                     </td>
-                    <td class="px-4 py-3">
+                    <td class="px-4 py-3 align-middle">
                         <div class="flex flex-wrap justify-center gap-1.5">
                             <span class="inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-semibold px-2 py-0.5">Pass: ${row.passed || 0}</span>
                             <span class="inline-flex items-center rounded-full bg-rose-100 text-rose-700 text-[11px] font-semibold px-2 py-0.5">Remedial: ${row.remedial || 0}</span>
                         </div>
                     </td>
-                    <td class="px-4 py-3 text-right overflow-visible">
-                        <div class="inline-flex justify-end eraport-actions-wrapper relative overflow-visible">
-                            <button type="button" class="eraport-action-toggle p-1.5 hover:bg-gray-100 rounded-md relative z-20">
+                    <td class="px-4 py-3 text-right align-middle overflow-visible">
+                        <div class="flex justify-center eraport-actions-wrapper relative overflow-visible">
+                            <button type="button" class="eraport-action-toggle p-1.5 hover:bg-gray-100 rounded-md transition-colors duration-150 relative z-20">
                                 <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
                                 </svg>
                             </button>
-                            <div class="eraport-actions-menu hidden absolute right-0 top-full mt-1 w-48 bg-white rounded-md shadow-lg z-30 border border-gray-100">
-                                <a href="${previewUrl}" target="_blank" class="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50">Preview PDF</a>
-                                <a href="${exportPdfUrl}" target="_blank" class="flex items-center px-4 py-2 text-sm text-green-600 hover:bg-green-50 border-t border-gray-100">Download PDF</a>
+                            <div class="eraport-actions-menu hidden absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-30 border border-gray-100">
+                                <a href="${previewUrl}" target="_blank" class="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">Preview</a>
+                                <a href="${exportExcelUrl}" class="flex items-center px-4 py-2 text-sm text-emerald-700 hover:bg-emerald-50 border-t border-gray-100">Download Excel</a>
                             </div>
                         </div>
                     </td>

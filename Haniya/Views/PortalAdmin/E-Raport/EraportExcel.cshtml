@@ -84,7 +84,7 @@
 
     /* PRINT MODE */
     @@media print {
-        #btnDownload,
+        #btnSubmit,
         #btnAdd,
         #exkulTable td:last-child,
         #exkulTable th:last-child,
@@ -194,6 +194,30 @@
         line-height: 1.4;
         background: #fffbe6;
         padding: 4px;
+    }
+
+    #btnAdd {
+        margin-bottom: 8px;
+        border: 1px solid #2563eb;
+        background: #eff6ff;
+        color: #1d4ed8;
+        border-radius: 6px;
+        padding: 6px 10px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .btn-remove-row {
+        border: 1px solid #dc2626;
+        background: #fef2f2;
+        color: #b91c1c;
+        border-radius: 9999px;
+        width: 26px;
+        height: 26px;
+        line-height: 20px;
+        cursor: pointer;
+        font-weight: 700;
     }
 
 </style>
@@ -389,7 +413,7 @@
                 </td>
 
                 <td class="center">
-                    <button onclick="removeRow(this)">X</button>
+                    <button type="button" class="btn-remove-row" onclick="removeRow(this)" title="Hapus baris">&times;</button>
                 </td>
             </tr>
 
@@ -668,20 +692,92 @@
 
 </div>
 <div class="download-container">
-    <button id="btnDownload" onclick="downloadPdf()">Download PDF</button>
+    <button id="btnSubmit" onclick="submitEraport()"
+            style="padding:10px 18px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-weight:600;cursor:pointer;">
+        Submit
+    </button>
 
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
+    const savedData = @Html.Raw(data.ContainsKey("saved_json") ? data["saved_json"]?.ToString() ?? "{}" : "{}");
 
-    function downloadPdf() {
-        preparePrint();
-        saveHeader(() => {
-            setTimeout(() => {
-                window.print();
-            }, 100);
+    function applySavedData() {
+        if (!savedData || typeof savedData !== 'object') return;
+
+        const gradeMap = new Map();
+        (savedData.grades || []).forEach(g => {
+            if (g && g.subject_id) gradeMap.set(String(g.subject_id), g);
         });
+
+        $('.row-grade').each(function () {
+            const subjectId = ($(this).find('.subject-id').val() || '').toString();
+            const savedGrade = gradeMap.get(subjectId);
+            if (!savedGrade) return;
+
+            const adjustment = (savedGrade.final_score_adjustment ?? '').toString().trim();
+            if (adjustment !== '') {
+                $(this).find('.final-score-adjustment').val(adjustment);
+            }
+
+            const desc = (savedGrade.competency_description ?? '').toString();
+            if (desc.trim() !== '') {
+                $(this).find('.desc').val(desc);
+            }
+        });
+
+        if ((savedData.kokurikuler || '').toString().trim() !== '') {
+            $('.kokurikuler').val(savedData.kokurikuler);
+        }
+        if ((savedData.wali_notes || '').toString().trim() !== '') {
+            const split = String(savedData.wali_notes).split('\n');
+            $('.wali-notes').val(split[0] || '');
+            if (split.length > 1) {
+                $('.wali-notes-2').val(split.slice(1).join('\n'));
+            }
+        }
+        if ((savedData.parent_notes || '').toString().trim() !== '') {
+            $('.parent-notes').val(savedData.parent_notes);
+        }
+
+        const extras = savedData.extracurriculars || [];
+        if (extras.length > 0) {
+            $('#exkulTable .row-extra').remove();
+            extras.slice(0, 3).forEach((x, idx) => {
+                appendEkskulRow({
+                    no: idx + 1,
+                    name: (x.extracurricular_name || '-'),
+                    predicate: (x.predicate || '-'),
+                    description: (x.description || '-')
+                });
+            });
+            checkButton();
+        }
+    }
+
+    function submitEraport() {
+        const $btn = $('#btnSubmit');
+        if ($btn.prop('disabled')) return;
+
+        $btn.prop('disabled', true).text('Submitting...');
+        saveHeader()
+            .done(function (res) {
+                if (!res || res.success !== true) {
+                    alert('Submit gagal.');
+                    return;
+                }
+
+                alert('Data e-raport berhasil disimpan.');
+                window.location.href = '/Eraport';
+            })
+            .fail(function (err) {
+                console.log(err.responseText);
+                alert('Terjadi kesalahan saat submit.');
+            })
+            .always(function () {
+                $btn.prop('disabled', false).text('Submit');
+            });
     }
 
     function autoResize() {
@@ -696,67 +792,46 @@
         });
     }
 
-    function preparePrint() {
-        // HANDLE INPUT → pindahin ke preview
-        document.querySelectorAll("input.exkul-name, input.exkul-predicate").forEach(el => {
-            let preview = el.nextElementSibling;
-
-            if (preview && preview.classList.contains("input-preview")) {
-                let value = el.value.trim();
-                preview.innerText = value === "" ? "-" : value;
-
-                el.style.display = "none";
-                preview.style.display = "block";
-            }
-        });
-
-        // HANDLE TEXTAREA
-        document.querySelectorAll("textarea").forEach(el => {
-            const preview = el.nextElementSibling;
-
-            if (preview && preview.classList.contains("desc-preview")) {
-                let value = el.value.trim();
-                if (el.classList.contains("exkul-desc")) {
-                    preview.innerText = value === "" ? "-" : value;
-                } else {
-                    preview.innerText = value;
-                }
-
-                el.style.display = "none";
-                preview.style.display = "block";
-            }
-        });
-    }
-
-    function restoreEdit() {
-        // BALIKIN INPUT
-        document.querySelectorAll("input.exkul-name, input.exkul-predicate").forEach(el => {
-            let preview = el.nextElementSibling;
-
-            if (preview && preview.classList.contains("input-preview")) {
-                el.style.display = "block";
-                preview.style.display = "none";
-            }
-        });
-
-        // BALIKIN TEXTAREA
-        document.querySelectorAll("textarea").forEach(el => {
-            const preview = el.nextElementSibling;
-
-            if (preview && preview.classList.contains("desc-preview")) {
-                el.style.display = "block";
-                preview.style.display = "none";
-            }
-        });
-    }
-
-    window.onafterprint = function () {
-        restoreEdit();
+    window.onload = function () {
+        applySavedData();
+        autoResize();
     };
-    window.onload = autoResize;
-    window.addEventListener("focus", () => {
-        restoreEdit();
-    });
+
+    function appendEkskulRow(item) {
+        const esc = (v) => String(v ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+        let table = document.getElementById("exkulTable");
+        let row = table.insertRow();
+        row.classList.add("row-extra");
+        row.innerHTML = `
+            <td class="center">${item.no}</td>
+            <td>
+                <input class="exkul-name" value="${esc(item.name)}"
+                onfocus="clearDash(this)"
+                onblur="restoreDash(this)" />
+                <div class="input-preview"></div>
+            </td>
+            <td class="center">
+                <input class="exkul-predicate" value="${esc(item.predicate)}"
+                onfocus="clearDash(this)"
+                onblur="restoreDash(this)" />
+                <div class="input-preview"></div>
+            </td>
+            <td>
+                <textarea class="exkul-desc"
+                onfocus="clearDash(this)"
+                onblur="restoreDash(this)">${esc(item.description)}</textarea>
+                <div class="desc-preview"></div>
+            </td>
+            <td class="center">
+                <button type="button" class="btn-remove-row" onclick="removeRow(this)" title="Hapus baris">&times;</button>
+            </td>
+        `;
+    }
 
     function addEkskulRow() {
 
@@ -768,35 +843,12 @@
 
         if (rowCount >= maxRow) return;
 
-        let row = table.insertRow();
-        row.classList.add("row-extra");
-
-        row.innerHTML = `
-                <td class="center">${rowCount + 1}</td>
-
-                <td>
-                    <input class="exkul-name" value="-"
-                    onfocus="clearDash(this)"
-                    onblur="restoreDash(this)" />
-                </td>
-
-                <td class="center">
-                    <input class="exkul-predicate" value="-"
-                    onfocus="clearDash(this)"
-                    onblur="restoreDash(this)" />
-                </td>
-
-                <td>
-                    <textarea class="exkul-desc"
-                    onfocus="clearDash(this)"
-                    onblur="restoreDash(this)">-</textarea>
-                    <div class="desc-preview"></div>
-                </td>
-
-                <td class="center">
-                    <button onclick="removeRow(this)">X</button>
-                </td>
-            `;
+        appendEkskulRow({
+            no: rowCount + 1,
+            name: '-',
+            predicate: '-',
+            description: '-'
+        });
 
         checkButton();
     }
@@ -870,16 +922,20 @@
         return "A";
     }
 
-    function saveHeader(callback) {
+    function saveHeader() {
 
         let parent_notes = $('.parent-notes').val() || "";
         let wali_notes = $('.wali-notes').val() || "";
+        let wali_notes_2 = $('.wali-notes-2').val() || "";
         let kokurikuler = $('.kokurikuler').val() || "";
 
         let grades = [];
         $('.row-grade').each(function () {
 
-            let adjustment = $(this).find('.final-score-adjustment').val();
+            let adjustmentRaw = $(this).find('.final-score-adjustment').val();
+            let adjustment = (adjustmentRaw ?? '').toString().trim();
+            if (adjustment === '') adjustment = '0';
+            adjustment = adjustment.replace(',', '.');
             let predicate = getPredicate(adjustment);
             grades.push({
                 subject_id: $(this).find('.subject-id').val(),
@@ -922,6 +978,7 @@
             parent_name: "@data["parent_name"]",
             parent_notes: parent_notes,
             wali_notes: wali_notes,
+            wali_notes_2: wali_notes_2,
             kokurikuler: kokurikuler,
 
             grades: JSON.stringify(grades),
@@ -929,19 +986,10 @@
             // attendances: JSON.stringify(attendances)
         };
 
-        $.ajax({
+        return $.ajax({
             url: '/Eraport/SaveHeader',
             type: 'POST',
-            data: data, // ⬅️ ini form biasa (bukan JSON dulu biar simple)
-            success: function (res) {
-                alert("Header saved ✅");
-
-                if (callback) callback(); // ⬅️ lanjut ke print
-            },
-            error: function (err) {
-                console.log(err.responseText);
-                alert("Error 😢");
-            }
+            data: data
         });
     }
 
