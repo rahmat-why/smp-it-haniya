@@ -65,7 +65,7 @@
     </div>
 
     <!-- Table -->
-    <div class="overflow-x-auto px-4 pt-4">
+    <div class="overflow-x-auto overflow-y-visible px-4 pt-4">
         <table id="eraport-table"
                class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
@@ -226,15 +226,20 @@
                             <span class="inline-flex items-center rounded-full bg-red-100 text-red-700 text-[11px] font-semibold px-2 py-0.5">Alpa: ${row.alpha || 0}</span>
                         </div>
                     </td>
-                    <td class="px-4 py-3 text-center">Pass: ${row.passed || 0} | Remedial: ${row.remedial || 0}</td>
-                    <td class="px-4 py-3 text-right">
-                        <div class="inline-flex justify-end eraport-actions-wrapper relative">
-                            <button type="button" onclick="toggleActionsMenu(event, '${uniqueId}')" class="p-1.5 hover:bg-gray-100 rounded-md">
+                    <td class="px-4 py-3">
+                        <div class="flex flex-wrap justify-center gap-1.5">
+                            <span class="inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-semibold px-2 py-0.5">Pass: ${row.passed || 0}</span>
+                            <span class="inline-flex items-center rounded-full bg-rose-100 text-rose-700 text-[11px] font-semibold px-2 py-0.5">Remedial: ${row.remedial || 0}</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 text-right overflow-visible">
+                        <div class="inline-flex justify-end eraport-actions-wrapper relative overflow-visible">
+                            <button type="button" class="eraport-action-toggle p-1.5 hover:bg-gray-100 rounded-md relative z-20">
                                 <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
                                 </svg>
                             </button>
-                            <div id="actions-menu-${uniqueId}" class="eraport-actions-menu hidden absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-100">
+                            <div class="eraport-actions-menu hidden absolute right-0 top-full mt-1 w-48 bg-white rounded-md shadow-lg z-30 border border-gray-100">
                                 <a href="${previewUrl}" target="_blank" class="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50">Preview PDF</a>
                                 <a href="${exportPdfUrl}" target="_blank" class="flex items-center px-4 py-2 text-sm text-green-600 hover:bg-green-50 border-t border-gray-100">Download PDF</a>
                             </div>
@@ -314,10 +319,16 @@
         }
     }
 
-    function toggleActionsMenu(event, id) {
+    function toggleActionsMenu(event, button) {
+        event.preventDefault();
         event.stopPropagation();
+        const $button = $(button);
+        const $menu = $button.siblings('.eraport-actions-menu');
+        const willShow = $menu.hasClass('hidden');
         $('.eraport-actions-menu').addClass('hidden');
-        $('#actions-menu-' + id).toggleClass('hidden');
+        if (willShow) {
+            $menu.removeClass('hidden');
+        }
     }
 
     function toggleEraportFilter() {
@@ -388,6 +399,10 @@
         $('#class_level_filter').val(pageState.filters.classLevel || '').trigger('change');
 
         fetchEraports();
+
+        $(document).on('click', '.eraport-action-toggle', function (e) {
+            toggleActionsMenu(e, this);
+        });
 
         $(document).on('click', function (e) {
             if (!$(e.target).closest('.eraport-actions-wrapper').length) {

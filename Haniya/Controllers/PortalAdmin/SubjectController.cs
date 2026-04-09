@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Data.SqlClient;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Haniya.Models;
 
 namespace Haniya.Controllers.PortalAdmin
@@ -18,6 +19,34 @@ namespace Haniya.Controllers.PortalAdmin
             return new SqlConnection(_config.GetConnectionString("DefaultConnection"));
         }
 
+        private List<SelectListItem> GetSubjectTypeOptions()
+        {
+            var items = new List<SelectListItem>();
+
+            using var conn = GetConn();
+            conn.Open();
+
+            var sql = @"
+                SELECT detail_id, item_desc
+                FROM mst_detail_settings
+                WHERE header_id = 'SUBJECT_TYPE'
+                  AND status = 'ACTIVE'
+                ORDER BY item_desc";
+
+            using var cmd = new SqlCommand(sql, conn);
+            using var rd = cmd.ExecuteReader();
+            while (rd.Read())
+            {
+                items.Add(new SelectListItem
+                {
+                    Value = rd["detail_id"]?.ToString(),
+                    Text = rd["item_desc"]?.ToString()
+                });
+            }
+
+            return items;
+        }
+
         /* ===================== PAGES ===================== */
 
         public IActionResult Index()
@@ -27,12 +56,14 @@ namespace Haniya.Controllers.PortalAdmin
 
         public IActionResult Create()
         {
+            ViewBag.SubjectTypes = GetSubjectTypeOptions();
             return View("~/Views/PortalAdmin/Subject/Create.cshtml");
         }
 
         public IActionResult Edit(string id)
         {
             ViewBag.subjectId = id;
+            ViewBag.SubjectTypes = GetSubjectTypeOptions();
             return View("~/Views/PortalAdmin/Subject/Edit.cshtml");
         }
 
@@ -193,6 +224,7 @@ namespace Haniya.Controllers.PortalAdmin
                     subject_id = rd["subject_id"]?.ToString(),
                     subject_name = rd["subject_name"]?.ToString(),
                     subject_code = rd["subject_code"]?.ToString(),
+                    subject_type = rd["subject_type"]?.ToString(),
                     class_level = rd["class_level"],
                     description = rd["description"]?.ToString(),
                     minimum_value = rd["minimum_value"]
@@ -212,10 +244,14 @@ namespace Haniya.Controllers.PortalAdmin
                 var f = Request.Form;
 
                 var subjectName = f["subject_name"].ToString();
+                var subjectType = f["subject_type"].ToString();
                 var classLevelStr = f["class_level"].ToString();
 
                 if (string.IsNullOrWhiteSpace(subjectName))
                     return Json(DTOResponse.fail("subject name is required", 400));
+
+                if (string.IsNullOrWhiteSpace(subjectType))
+                    return Json(DTOResponse.fail("subject type is required", 400));
 
                 if (string.IsNullOrWhiteSpace(classLevelStr))
                     return Json(DTOResponse.fail("class level is required", 400));
@@ -253,6 +289,7 @@ namespace Haniya.Controllers.PortalAdmin
                         subject_id,
                         subject_name,
                         subject_code,
+                        subject_type,
                         class_level,
                         description,
                         minimum_value,
@@ -262,6 +299,7 @@ namespace Haniya.Controllers.PortalAdmin
                         @id,
                         @name,
                         @code,
+                        @type,
                         @level,
                         @desc,
                         @minVal,
@@ -273,6 +311,7 @@ namespace Haniya.Controllers.PortalAdmin
                 cmd.Parameters.AddWithValue("@id", subjectId);
                 cmd.Parameters.AddWithValue("@name", subjectName);
                 cmd.Parameters.AddWithValue("@code", (object?)subjectCode ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@type", subjectType);
                 cmd.Parameters.AddWithValue("@level", classLevel);
                 cmd.Parameters.AddWithValue("@desc", (object?)description ?? DBNull.Value);
                 if (minimumValue.HasValue)
@@ -302,10 +341,14 @@ namespace Haniya.Controllers.PortalAdmin
                     return Json(DTOResponse.fail("invalid subject id", 400));
 
                 var subjectName = f["subject_name"].ToString();
+                var subjectType = f["subject_type"].ToString();
                 var classLevelStr = f["class_level"].ToString();
 
                 if (string.IsNullOrWhiteSpace(subjectName))
                     return Json(DTOResponse.fail("subject name is required", 400));
+
+                if (string.IsNullOrWhiteSpace(subjectType))
+                    return Json(DTOResponse.fail("subject type is required", 400));
 
                 if (string.IsNullOrWhiteSpace(classLevelStr))
                     return Json(DTOResponse.fail("class level is required", 400));
@@ -333,6 +376,7 @@ namespace Haniya.Controllers.PortalAdmin
                     UPDATE mst_subjects SET
                         subject_name = @name,
                         subject_code = @code,
+                        subject_type = @type,
                         class_level = @level,
                         description = @desc,
                         minimum_value = @minVal,
@@ -343,6 +387,7 @@ namespace Haniya.Controllers.PortalAdmin
                 cmd.Parameters.AddWithValue("@id", subjectId);
                 cmd.Parameters.AddWithValue("@name", subjectName);
                 cmd.Parameters.AddWithValue("@code", (object?)subjectCode ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@type", subjectType);
                 cmd.Parameters.AddWithValue("@level", classLevel);
                 cmd.Parameters.AddWithValue("@desc", (object?)description ?? DBNull.Value);
                 if (minimumValue.HasValue)
