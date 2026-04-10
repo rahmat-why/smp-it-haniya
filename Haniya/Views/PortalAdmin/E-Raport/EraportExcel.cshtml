@@ -1,13 +1,33 @@
 ﻿@using System.Globalization
 @using System.Data
+@using System.Linq
 
 @{
+    Layout = null;
     int noPri = 1;
     int noLoc = 1;
     int noIsl = 1;
 
     var data = (Dictionary<string, object>)Model;
     var report = (System.Data.DataTable)data["report"];
+    var savedGradeMap = data.ContainsKey("saved_grade_map")
+        ? data["saved_grade_map"] as Dictionary<string, Dictionary<string, string>> ?? new Dictionary<string, Dictionary<string, string>>()
+        : new Dictionary<string, Dictionary<string, string>>();
+    var savedExtracurriculars = data.ContainsKey("saved_extracurriculars")
+        ? data["saved_extracurriculars"] as List<Dictionary<string, string>> ?? new List<Dictionary<string, string>>()
+        : new List<Dictionary<string, string>>();
+    var savedKokurikuler = data.ContainsKey("saved_kokurikuler") ? data["saved_kokurikuler"]?.ToString() ?? "" : "";
+    var savedParentNotes = data.ContainsKey("saved_parent_notes") ? data["saved_parent_notes"]?.ToString() ?? "" : "";
+    var savedWaliNotesPage1 = data.ContainsKey("saved_wali_notes_page1") ? data["saved_wali_notes_page1"]?.ToString() ?? "" : "";
+    var savedWaliNotesPage2 = data.ContainsKey("saved_wali_notes_page2") ? data["saved_wali_notes_page2"]?.ToString() ?? "" : "";
+    var renderMode = data.ContainsKey("render_mode") ? data["render_mode"]?.ToString() ?? "preview" : "preview";
+    var isPreviewMode = renderMode == "preview";
+    var isExportMode = renderMode == "pdf" || renderMode == "excel";
+    var subjectTableColspan = isPreviewMode ? 5 : 4;
+    var primaryCount = report.AsEnumerable().Count(row => row["subject_type"].ToString() == "SUBJ_PRIMARY");
+    var localCount = report.AsEnumerable().Count(row => row["subject_type"].ToString() == "SUBJ_LOCAL");
+    var islamicCount = report.AsEnumerable().Count(row => row["subject_type"].ToString() == "SUBJ_ISLAMIC");
+    var targetSubjectRows = Math.Max(1, Math.Max(primaryCount, Math.Max(localCount, islamicCount)));
 
 }
 
@@ -21,6 +41,31 @@
             default: return "";
         }
     }
+
+    public string GetSavedGradeValue(Dictionary<string, Dictionary<string, string>> savedGradeMap, object subjectId, string key, string fallback = "")
+    {
+        var sid = subjectId?.ToString() ?? "";
+        if (!string.IsNullOrWhiteSpace(sid)
+            && savedGradeMap.TryGetValue(sid, out var item)
+            && item.TryGetValue(key, out var value)
+            && !string.IsNullOrWhiteSpace(value))
+        {
+            return value;
+        }
+
+        return fallback;
+    }
+
+    public string GetDisplayFinalScore(Dictionary<string, Dictionary<string, string>> savedGradeMap, DataRow row)
+    {
+        var adjustment = GetSavedGradeValue(savedGradeMap, row["subject_id"], "final_score_adjustment", "");
+        if (!string.IsNullOrWhiteSpace(adjustment) && adjustment != "0")
+        {
+            return adjustment;
+        }
+
+        return Math.Round(Convert.ToDecimal(row["final_score"] == DBNull.Value ? 0 : row["final_score"]), 0).ToString();
+    }
 }
 
 <style>
@@ -29,12 +74,18 @@
         font-family: "Times New Roman";
         font-size: 14px;
         background: #e5e7eb;
+        margin: 0;
+    }
+
+    body.output-mode {
+        background: white;
     }
 
     table {
         border-collapse: collapse;
         width: 100%;
         page-break-inside: auto;
+        table-layout: fixed;
     }
 
     tr {
@@ -45,6 +96,9 @@
     td, th {
         border: 1px solid black;
         padding: 6px;
+        vertical-align: top;
+        word-break: break-word;
+        overflow-wrap: anywhere;
     }
 
     .no-border td {
@@ -64,6 +118,10 @@
         height: 80px;
     }
 
+    .signature-spacer {
+        width: 20%;
+    }
+
     /* KERTAS A4 */
     .paper {
         width: 210mm;
@@ -71,11 +129,16 @@
         background: white;
         margin: 20px auto;
         padding: 20mm;
+        box-sizing: border-box;
         box-shadow: 0 0 10px rgba(0,0,0,0.15);
     }
 
     .page-break {
         page-break-before: always;
+    }
+
+    .page-break-spacer {
+        display: none;
     }
 
     #exkulTable tr {
@@ -99,6 +162,9 @@
         .paper {
             box-shadow: none;
             margin: 0;
+            width: 190mm;
+            min-height: 277mm;
+            padding: 0;
         }
 
         button {
@@ -108,7 +174,7 @@
 
     @@page {
         size: A4;
-        margin: 0;
+        margin: 10mm;
     }
 
     .download-container {
@@ -126,6 +192,7 @@
         .nt input {
             display: block;
             width: 100%;
+            box-sizing: border-box;
             border: none;
             background: transparent;
             text-align: center;
@@ -144,6 +211,7 @@
     textarea.wali-notes-2,
     textarea.exkul-desc {
         width: 100%;
+        box-sizing: border-box;
         border: none;
         resize: none;
         overflow: hidden;
@@ -190,6 +258,7 @@
 
     input {
         width: 100%;
+        box-sizing: border-box;
         border: none;
         line-height: 1.4;
         background: #fffbe6;
@@ -220,12 +289,133 @@
         font-weight: 700;
     }
 
+    .export-text {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+        white-space: pre-wrap;
+        word-break: break-word;
+        min-height: 20px;
+    }
+
+    .section-after-exkul {
+        margin-top: 18px;
+    }
+
+    .stacked-table {
+        margin-top: 12px;
+    }
+
+    .excel-spacer {
+        border-collapse: collapse;
+        width: 100%;
+        table-layout: fixed;
+    }
+
+    .excel-spacer td {
+        border: none;
+        height: 12px;
+        padding: 0;
+    }
+
+    .final-score-rps {
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    #exkulTable th:nth-child(1),
+    #exkulTable td:nth-child(1) {
+        width: 5%;
+        text-align: center;
+    }
+
+    #exkulTable th:nth-child(2),
+    #exkulTable td:nth-child(2) {
+        width: 28%;
+    }
+
+    #exkulTable th:nth-child(3),
+    #exkulTable td:nth-child(3) {
+        width: 15%;
+        text-align: center;
+    }
+
+    #exkulTable th:nth-child(4),
+    #exkulTable td:nth-child(4) {
+        width: 52%;
+    }
+
+    body.output-mode {
+        font-size: 12px;
+    }
+
+    body.output-mode .paper {
+        width: 190mm;
+        min-height: 277mm;
+        margin: 0 auto;
+        padding: 0;
+        box-shadow: none;
+    }
+
+    body.output-mode td,
+    body.output-mode th {
+        padding: 4px;
+        font-size: 12px;
+    }
+
+    body.output-mode .final-score-rps {
+        text-align: center !important;
+    }
+
+    body.output-mode .stacked-table {
+        margin-top: 10px;
+    }
+
+    body.output-mode .excel-spacer td {
+        height: 16px;
+    }
+
+    body.output-mode .page-break {
+        display: block;
+        height: 0;
+        break-before: page;
+        page-break-before: always;
+        mso-break-type: page-break;
+    }
+
+    body.output-mode .page-break-spacer {
+        display: table;
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+
+    body.output-mode .page-break-spacer td {
+        border: none;
+        height: 30px;
+        padding: 0;
+    }
+
+    body.output-mode h3 {
+        margin: 8px 0 6px;
+        font-size: 15px;
+    }
+
+    body.output-mode .signature td {
+        height: 56px;
+    }
+
+    body.output-mode .signature-spacer {
+        width: 18%;
+    }
+
 </style>
 
 <!-- ========================= -->
 <!-- HALAMAN 1 -->
 <!-- ========================= -->
 
+<body class="@(isExportMode ? "output-mode" : "")">
 <div class="paper">
     <table class="no-border">
         <tr>
@@ -271,7 +461,10 @@
             <th width="5%">NO</th>
             <th width="31%">MATA PELAJARAN</th>
             <th width="7%">NILAI AKHIR</th>
-            <th width="7%">NILAI TAMBAH</th>
+            @if (isPreviewMode)
+            {
+                <th width="7%">NILAI TAMBAH</th>
+            }
             <th>CAPAIAN KOMPETENSI</th>
         </tr>
 
@@ -279,33 +472,60 @@
         {
             if (row["subject_type"].ToString() == "SUBJ_PRIMARY")
             {
+                var subjectName = row["subject_name"]?.ToString() ?? "";
+                var adjustmentValue = GetSavedGradeValue(savedGradeMap, row["subject_id"], "final_score_adjustment", "0");
+                var descriptionValue = GetSavedGradeValue(savedGradeMap, row["subject_id"], "competency_description", $"{data["full_name"]} membutuhkan bimbingan dalam pembelajaran {subjectName}.");
+                var displayFinalScore = GetDisplayFinalScore(savedGradeMap, row);
                 <tr class="row-grade">
                     <td class="center">@noPri</td>
                     <td class="subject-name">
-                        @row["subject_name"]
+                        @subjectName
                         <input type="hidden" class="subject-id" value="@row["subject_id"]" />
                         <input type="hidden" class="subject-type-id" value="@row["subject_code"]" />
                         <input type="hidden" class="subject-type-name" value="@row["subject_type"]" />
                     </td>
-                    <td class="final-score-rps center">
-                        @Math.Round(Convert.ToDecimal(row["final_score"] == DBNull.Value ? 0 : row["final_score"]), 0)
+                    <td class="final-score-rps center" align="center" style="text-align:center;vertical-align:middle;">
+                        @displayFinalScore
                     </td>
-                    <td class="center nt">
-                        <input type="number"
-                               class="final-score-adjustment"
-                               value="0"
-                               onfocus="clearZero(this)"
-                               onblur="restoreZero(this)">
-                    </td>
+                    @if (isPreviewMode)
+                    {
+                        <td class="center nt">
+                            <input type="number"
+                                   class="final-score-adjustment"
+                                   value="@adjustmentValue"
+                                   onfocus="clearZero(this)"
+                                   onblur="restoreZero(this)">
+                        </td>
+                    }
                     <td>
-                        <textarea class="desc">@data["full_name"] membutuhkan bimbingan dalam pembelajaran @row["subject_name"].</textarea>
-                        <div class="desc-preview"></div>
+                        @if (isPreviewMode)
+                        {
+                            <textarea class="desc">@descriptionValue</textarea>
+                            <div class="desc-preview"></div>
+                        }
+                        else
+                        {
+                            <div class="export-text">@descriptionValue</div>
+                        }
                     </td>
                 </tr>
 
                 noPri++;
             }
 
+        }
+        @for (int filler = noPri; filler <= targetSubjectRows; filler++)
+        {
+            <tr class="row-grade filler-row">
+                <td class="center">@filler</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                @if (isPreviewMode)
+                {
+                    <td>&nbsp;</td>
+                }
+                <td>&nbsp;</td>
+            </tr>
         }
 
     </table>
@@ -319,7 +539,10 @@
             <th width="5%">NO</th>
             <th width="31%">MATA PELAJARAN</th>
             <th width="7%">NILAI AKHIR</th>
-            <th width="7%">NILAI TAMBAH</th>
+            @if (isPreviewMode)
+            {
+                <th width="7%">NILAI TAMBAH</th>
+            }
             <th>CAPAIAN KOMPETENSI</th>
         </tr>
 
@@ -327,32 +550,59 @@
         {
             if (row["subject_type"].ToString() == "SUBJ_LOCAL")
             {
+                var subjectName = row["subject_name"]?.ToString() ?? "";
+                var adjustmentValue = GetSavedGradeValue(savedGradeMap, row["subject_id"], "final_score_adjustment", "0");
+                var descriptionValue = GetSavedGradeValue(savedGradeMap, row["subject_id"], "competency_description", $"{data["full_name"]} membutuhkan bimbingan dalam pembelajaran {subjectName}.");
+                var displayFinalScore = GetDisplayFinalScore(savedGradeMap, row);
                 <tr class="row-grade">
                     <td class="center">@noLoc</td>
                     <td class="subject-name">
-                        @row["subject_name"]
+                        @subjectName
                         <input type="hidden" class="subject-id" value="@row["subject_id"]" />
                         <input type="hidden" class="subject-type-id" value="@row["subject_code"]" />
                         <input type="hidden" class="subject-type-name" value="@row["subject_type"]" />
                     </td>
-                    <td class="final-score-rps center">
-                        @Math.Round(Convert.ToDecimal(row["final_score"] == DBNull.Value ? 0 : row["final_score"]), 0)
+                    <td class="final-score-rps center" align="center" style="text-align:center;vertical-align:middle;">
+                        @displayFinalScore
                     </td>
-                    <td class="center nt">
-                        <input type="number"
-                               class="final-score-adjustment"
-                               value="0"
-                               onfocus="clearZero(this)"
-                               onblur="restoreZero(this)">
-                    </td>
+                    @if (isPreviewMode)
+                    {
+                        <td class="center nt">
+                            <input type="number"
+                                   class="final-score-adjustment"
+                                   value="@adjustmentValue"
+                                   onfocus="clearZero(this)"
+                                   onblur="restoreZero(this)">
+                        </td>
+                    }
                     <td>
-                        <textarea class="desc">@data["full_name"] membutuhkan bimbingan dalam pembelajaran @row["subject_name"].</textarea>
-                        <div class="desc-preview"></div>
+                        @if (isPreviewMode)
+                        {
+                            <textarea class="desc">@descriptionValue</textarea>
+                            <div class="desc-preview"></div>
+                        }
+                        else
+                        {
+                            <div class="export-text">@descriptionValue</div>
+                        }
                     </td>
                 </tr>
 
                 noLoc++;
             }
+        }
+        @for (int filler = noLoc; filler <= targetSubjectRows; filler++)
+        {
+            <tr class="row-grade filler-row">
+                <td class="center">@filler</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                @if (isPreviewMode)
+                {
+                    <td>&nbsp;</td>
+                }
+                <td>&nbsp;</td>
+            </tr>
         }
 
     </table>
@@ -361,12 +611,19 @@
 
     <table>
         <tr class="bold center">
-            <th width="100%">KOKURIKULER</th>
+            <th colspan="@subjectTableColspan">KOKURIKULER</th>
         </tr>
         <tr>
-            <td>
-                <textarea class="kokurikuler">Ananda @data["full_name"] sudah sangat menghargai sesama teman berdasarkan yang terlihat dari beberapa proyek pembelajaran interdisipliner.</textarea>
-                <div class="desc-preview"></div>
+            <td colspan="@subjectTableColspan">
+                @if (isPreviewMode)
+                {
+                    <textarea class="kokurikuler">@(string.IsNullOrWhiteSpace(savedKokurikuler) ? $"Ananda {data["full_name"]} sudah sangat menghargai sesama teman berdasarkan yang terlihat dari beberapa proyek pembelajaran interdisipliner." : savedKokurikuler)</textarea>
+                    <div class="desc-preview"></div>
+                }
+                else
+                {
+                    <div class="export-text">@(string.IsNullOrWhiteSpace(savedKokurikuler) ? $"Ananda {data["full_name"]} sudah sangat menghargai sesama teman berdasarkan yang terlihat dari beberapa proyek pembelajaran interdisipliner." : savedKokurikuler)</div>
+                }
             </td>
         </tr>
     </table>
@@ -378,170 +635,233 @@
     <div>
         <h3>EKSTRAKURIKULER</h3>
 
-        <button id="btnAdd" type="button" onclick="addEkskulRow()">+ Tambah</button>
+        @if (isPreviewMode)
+        {
+            <button id="btnAdd" type="button" onclick="addEkskulRow()">+ Tambah</button>
+        }
 
-        <table id="exkulTable">
+        <table id="exkulTable" style="width:100%;table-layout:fixed;">
 
             <tr class="bold center">
                 <th width="5%">NO</th>
-                <th>KEGIATAN</th>
+                <th width="28%">KEGIATAN</th>
                 <th width="15%">PREDIKAT</th>
-                <th>KETERANGAN</th>
-                <th width="5%">Aksi</th>
+                <th width="52%">KETERANGAN</th>
+                @if (isPreviewMode)
+                {
+                    <th width="5%">Aksi</th>
+                }
             </tr>
+            @{
+                var extraRows = savedExtracurriculars.Count > 0
+                    ? savedExtracurriculars.Take(3).ToList()
+                    : new List<Dictionary<string, string>>
+                    {
+                        new Dictionary<string, string>
+                        {
+                            ["name"] = "-",
+                            ["predicate"] = "-",
+                            ["description"] = "-"
+                        }
+                    };
+            }
+            @for (int i = 0; i < extraRows.Count; i++)
+            {
+                var extra = extraRows[i];
+                <tr class="row-extra">
+                    <td class="center" style="width:5%;text-align:center;vertical-align:top;">@(i + 1)</td>
+                    <td style="width:28%;vertical-align:top;">
+                        @if (isPreviewMode)
+                        {
+                            <input class="exkul-name" value="@(string.IsNullOrWhiteSpace(extra.GetValueOrDefault("name")) ? "-" : extra.GetValueOrDefault("name"))"
+                                   onfocus="clearDash(this)"
+                                   onblur="restoreDash(this)" />
+                            <div class="input-preview"></div>
+                        }
+                        else
+                        {
+                            <div class="export-text">@(string.IsNullOrWhiteSpace(extra.GetValueOrDefault("name")) ? "-" : extra.GetValueOrDefault("name"))</div>
+                        }
+                    </td>
 
-            <tr class="row-extra">
-                <td class="center">1</td>
-                <td>
-                    <input class="exkul-name" value="-"
-                           onfocus="clearDash(this)"
-                           onblur="restoreDash(this)" />
-                    <div class="input-preview"></div>
-                </td>
-
-                <td class="center">
-                    <input class="exkul-predicate" value="-"
-                           onfocus="clearDash(this)"
-                           onblur="restoreDash(this)" />
-                    <div class="input-preview"></div>
-                </td>
-                <td>
-                    <textarea class="exkul-desc"
-                              onfocus="clearDash(this)"
-                              onblur="restoreDash(this)">-</textarea>
-                    <div class="desc-preview"></div>
-                </td>
-
-                <td class="center">
-                    <button type="button" class="btn-remove-row" onclick="removeRow(this)" title="Hapus baris">&times;</button>
-                </td>
-            </tr>
+                    <td class="center" style="width:15%;text-align:center;vertical-align:top;">
+                        @if (isPreviewMode)
+                        {
+                            <input class="exkul-predicate" value="@(string.IsNullOrWhiteSpace(extra.GetValueOrDefault("predicate")) ? "-" : extra.GetValueOrDefault("predicate"))"
+                                   onfocus="clearDash(this)"
+                                   onblur="restoreDash(this)" />
+                            <div class="input-preview"></div>
+                        }
+                        else
+                        {
+                            <div class="export-text">@(string.IsNullOrWhiteSpace(extra.GetValueOrDefault("predicate")) ? "-" : extra.GetValueOrDefault("predicate"))</div>
+                        }
+                    </td>
+                    <td style="width:52%;vertical-align:top;">
+                        @if (isPreviewMode)
+                        {
+                            <textarea class="exkul-desc"
+                                      onfocus="clearDash(this)"
+                                      onblur="restoreDash(this)">@(string.IsNullOrWhiteSpace(extra.GetValueOrDefault("description")) ? "-" : extra.GetValueOrDefault("description"))</textarea>
+                            <div class="desc-preview"></div>
+                        }
+                        else
+                        {
+                            <div class="export-text">@(string.IsNullOrWhiteSpace(extra.GetValueOrDefault("description")) ? "-" : extra.GetValueOrDefault("description"))</div>
+                        }
+                    </td>
+                    @if (isPreviewMode)
+                    {
+                        <td class="center">
+                            <button type="button" class="btn-remove-row" onclick="removeRow(this)" title="Hapus baris">&times;</button>
+                        </td>
+                    }
+                </tr>
+            }
 
         </table>
     </div>
 
 </div>
 
-<div class="page-break"></div>
+    <div class="section-after-exkul">
+        <table class="excel-spacer">
+            <tr>
+                <td colspan="4">&nbsp;</td>
+            </tr>
+        </table>
 
-<!-- ========================= -->
-<!-- HALAMAN 2 -->
-<!-- ========================= -->
+        <table width="100%" class="stacked-table">
+            <tr class="bold center">
+                <th width="10%">NO</th>
+                <th>KETIDAKHADIRAN</th>
+                <th width="20%">JUMLAH</th>
+            </tr>
 
-<div class="paper">
+            <tr>
+                <td class="center">1</td>
+                <td>Sakit</td>
+                <td class="center">@data["sick"] hari</td>
+            </tr>
 
-    <table width="100%" style="border:none;border-collapse:collapse;">
+            <tr>
+                <td class="center">2</td>
+                <td>Izin</td>
+                <td class="center">@data["permit"] hari</td>
+            </tr>
 
-        <tr>
+            <tr>
+                <td class="center">3</td>
+                <td>Tanpa Keterangan</td>
+                <td class="center">@data["alpha"] hari</td>
+            </tr>
+        </table>
 
-            <!-- KETIDAKHADIRAN -->
-            <td width="50%" valign="top" style="border:none;">
-                <table width="100%">
-                    <tr class="bold center">
-                        <th width="10%">NO</th>
-                        <th>KETIDAKHADIRAN</th>
-                        <th width="20%">JUMLAH</th>
-                    </tr>
+        <table class="excel-spacer">
+            <tr>
+                <td colspan="4">&nbsp;</td>
+            </tr>
+        </table>
 
-                    <tr>
-                        <td class="center">1</td>
-                        <td>Sakit</td>
-                        <td class="center">@data["sick"] hari</td>
-                    </tr>
+        <table width="100%" class="stacked-table">
+            <tr>
+                <td colspan="4" class="bold center">CATATAN WALI KELAS</td>
+            </tr>
+            <tr>
+                <td colspan="4">
+                    @if (isPreviewMode)
+                    {
+                        <textarea class="wali-notes">@savedWaliNotesPage1</textarea>
+                        <div class="desc-preview walas"></div>
+                    }
+                    else
+                    {
+                        <div class="export-text walas">@savedWaliNotesPage1</div>
+                    }
+                </td>
+            </tr>
+        </table>
 
-                    <tr>
-                        <td class="center">2</td>
-                        <td>Izin</td>
-                        <td class="center">@data["permit"] hari</td>
-                    </tr>
+        <table class="excel-spacer">
+            <tr>
+                <td colspan="4">&nbsp;</td>
+            </tr>
+        </table>
 
-                    <tr>
-                        <td class="center">3</td>
-                        <td>Tanpa Keterangan</td>
-                        <td class="center">@data["alpha"] hari</td>
-                    </tr>
-                </table>
-            </td>
+        <table width="100%" class="stacked-table">
+            <tr>
+                <td colspan="4" class="bold center">TANGGAPAN ORANG TUA / WALI MURID</td>
+            </tr>
+            <tr>
+                <td colspan="4">
+                    @if (isPreviewMode)
+                    {
+                        <textarea class="parent-notes">@savedParentNotes</textarea>
+                        <div class="desc-preview parent"></div>
+                    }
+                    else
+                    {
+                        <div class="export-text parent">@savedParentNotes</div>
+                    }
+                </td>
+            </tr>
+        </table>
 
-            <!-- CATATAN WALI -->
-            <td width="50%" valign="top" style="border:none;">
-                <table width="100%">
-                    <tr>
-                        <td class="bold center">CATATAN WALI KELAS</td>
-                    </tr>
+        <table class="excel-spacer">
+            <tr>
+                <td colspan="4">&nbsp;</td>
+            </tr>
+        </table>
 
-                    <tr>
-                        <td>
-                            <textarea class="wali-notes">Prestasinya sangat baik, perlu dipertahankan.</textarea>
-                            <div class="desc-preview walas"></div>
-                        </td>
-                    </tr>
-                </table>
-            </td>
+        <table class="signature">
+    
+            <tr>
+                <td width="41%" class="center">
+                    Mengetahui,<br>
+                    Orang Tua/Wali
+                </td>
+    
+                <td class="signature-spacer"></td>
+    
+                <td width="41%" class="center">
+                    Bekasi, @DateTime.Now.ToString("dd MMMM yyyy", new CultureInfo("id-ID"))<br>
+                    Wali Kelas
+                </td>
+            </tr>
+    
+            <tr>
+                <td class="center"><br><br>(.......................)</td>
+                <td class="signature-spacer"></td>
+                <td class="center"><br><br><b>@data["teacher_name"]</b></td>
+            </tr>
+    
+        </table>
 
-        </tr>
+        <table class="excel-spacer">
+            <tr>
+                <td colspan="4">&nbsp;</td>
+            </tr>
+        </table>
+    
+        <table class="signature">
+            <tr>
+                <td></td>
+                <td width="52%" class="center">
+                    Mengetahui,<br>
+                    Kepala SMP IT Haniya
+                    <br><br><br><br><br>
+                    <b>@data["headschool_name"]</b>
+                </td>
+                <td></td>
+            </tr>
+        </table>
+    </div>
 
-    </table>
-
-
-    <br>
-
-    <table>
-        <tr>
-            <td class="bold center">TANGGAPAN ORANG TUA / WALI MURID</td>
-        </tr>
-
-        <tr>
-            <td>
-                <textarea class="parent-notes"></textarea>
-                <div class="desc-preview parent"></div>
-            </td>
-        </tr>
-    </table>
-
-    <br>
-    <br>
-
-    <table class="signature">
-
-        <tr>
-            <td class="center">
-                Mengetahui,<br>
-                Orang Tua/Wali
-            </td>
-
-            <td></td>
-
-            <td class="center">
-                Bekasi, @DateTime.Now.ToString("dd MMMM yyyy", new CultureInfo("id-ID"))<br>
-                Wali Kelas
-            </td>
-        </tr>
-
-        <tr>
-            <td class="center"><br><br>(.......................)</td>
-            <td></td>
-            <td class="center"><br><br><b>@data["teacher_name"]</b></td>
-        </tr>
-
-    </table>
-
-    <br>
-    <br>
-
-    <table class="signature">
-        <tr>
-            <td class="center">
-                Mengetahui,<br>
-                Kepala SMP IT Haniya
-                <br><br><br><br><br>
-                <b>@data["headschool_name"]</b>
-            </td>
-        </tr>
-    </table>
-
-</div>
-
+<table class="page-break-spacer">
+    <tr>
+        <td colspan="4">&nbsp;</td>
+    </tr>
+</table>
 <div class="page-break"></div>
 
 <!-- ========================= -->
@@ -593,7 +913,10 @@
             <th width="5%">NO</th>
             <th width="31%">MATA PELAJARAN</th>
             <th width="7%">NILAI AKHIR</th>
-            <th width="7%">NILAI TAMBAH</th>
+            @if (isPreviewMode)
+            {
+                <th width="7%">NILAI TAMBAH</th>
+            }
             <th>CAPAIAN KOMPETENSI</th>
         </tr>
 
@@ -601,33 +924,60 @@
         {
             if (row["subject_type"].ToString() == "SUBJ_ISLAMIC")
             {
+                var subjectName = row["subject_name"]?.ToString() ?? "";
+                var adjustmentValue = GetSavedGradeValue(savedGradeMap, row["subject_id"], "final_score_adjustment", "0");
+                var descriptionValue = GetSavedGradeValue(savedGradeMap, row["subject_id"], "competency_description", $"{data["full_name"]} membutuhkan bimbingan dalam pembelajaran {subjectName}.");
+                var displayFinalScore = GetDisplayFinalScore(savedGradeMap, row);
                 <tr class="row-grade">
                     <td class="center">@noIsl</td>
                     <td class="subject-name">
-                        @row["subject_name"]
+                        @subjectName
                         <input type="hidden" class="subject-id" value="@row["subject_id"]" />
                         <input type="hidden" class="subject-type-id" value="@row["subject_code"]" />
                         <input type="hidden" class="subject-type-name" value="@row["subject_type"]" />
                     </td>
-                    <td class="final-score-rps center">
-                        @Math.Round(Convert.ToDecimal(row["final_score"] == DBNull.Value ? 0 : row["final_score"]), 0)
+                    <td class="final-score-rps center" align="center" style="text-align:center;vertical-align:middle;">
+                        @displayFinalScore
                     </td>
-                    <td class="center nt">
-                        <input type="number"
-                               class="final-score-adjustment"
-                               value="0"
-                               onfocus="clearZero(this)"
-                               onblur="restoreZero(this)">
-                    </td>
+                    @if (isPreviewMode)
+                    {
+                        <td class="center nt">
+                            <input type="number"
+                                   class="final-score-adjustment"
+                                   value="@adjustmentValue"
+                                   onfocus="clearZero(this)"
+                                   onblur="restoreZero(this)">
+                        </td>
+                    }
                     <td>
-                        <textarea class="desc">@data["full_name"] membutuhkan bimbingan dalam pembelajaran @row["subject_name"].</textarea>
-                        <div class="desc-preview"></div>
+                        @if (isPreviewMode)
+                        {
+                            <textarea class="desc">@descriptionValue</textarea>
+                            <div class="desc-preview"></div>
+                        }
+                        else
+                        {
+                            <div class="export-text">@descriptionValue</div>
+                        }
                     </td>
                 </tr>
 
                 noIsl++;
             }
 
+        }
+        @for (int filler = noIsl; filler <= targetSubjectRows; filler++)
+        {
+            <tr class="row-grade filler-row">
+                <td class="center">@filler</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                @if (isPreviewMode)
+                {
+                    <td>&nbsp;</td>
+                }
+                <td>&nbsp;</td>
+            </tr>
         }
 
     </table>
@@ -637,13 +987,20 @@
     <table width="100%">
 
         <tr>
-            <td class="bold center">CATATAN WALI KELAS</td>
+            <td colspan="@subjectTableColspan" class="bold center">CATATAN WALI KELAS</td>
         </tr>
 
         <tr>
-            <td>
-                <textarea class="wali-notes-2"></textarea>
-                <div class="desc-preview walas2"></div>
+            <td colspan="@subjectTableColspan">
+                @if (isPreviewMode)
+                {
+                    <textarea class="wali-notes-2">@savedWaliNotesPage2</textarea>
+                    <div class="desc-preview walas2"></div>
+                }
+                else
+                {
+                    <div class="export-text walas2">@savedWaliNotesPage2</div>
+                }
             </td>
         </tr>
 
@@ -655,14 +1012,14 @@
     <table class="signature">
 
         <tr>
-            <td class="center">
+            <td width="41%" class="center">
                 Mengetahui,<br>
                 Orang Tua/Wali
             </td>
 
-            <td></td>
+            <td class="signature-spacer"></td>
 
-            <td class="center">
+            <td width="41%" class="center">
                 Bekasi, @DateTime.Now.ToString("dd MMMM yyyy", new CultureInfo("id-ID"))<br>
                 Wali Kelas
             </td>
@@ -670,7 +1027,7 @@
 
         <tr>
             <td class="center"><br><br>(.......................)</td>
-            <td></td>
+            <td class="signature-spacer"></td>
             <td class="center"><br><br><b>@data["teacher_name"]</b></td>
         </tr>
 
@@ -681,16 +1038,20 @@
 
     <table class="signature">
         <tr>
-            <td class="center">
+            <td></td>
+            <td width="52%" class="center">
                 Mengetahui,<br>
                 Kepala SMP IT Haniya
                 <br><br><br><br><br>
                 <b>@data["headschool_name"]</b>
             </td>
+            <td></td>
         </tr>
     </table>
 
 </div>
+@if (isPreviewMode)
+{
 <div class="download-container">
     <button id="btnSubmit" onclick="submitEraport()"
             style="padding:10px 18px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-weight:600;cursor:pointer;">
@@ -768,8 +1129,8 @@
                     return;
                 }
 
-                alert('Data e-raport berhasil disimpan.');
-                window.location.href = '/Eraport';
+                triggerPdfDownload();
+                alert('Data e-raport berhasil disimpan. Download PDF dimulai.');
             })
             .fail(function (err) {
                 console.log(err.responseText);
@@ -778,6 +1139,18 @@
             .always(function () {
                 $btn.prop('disabled', false).text('Submit');
             });
+    }
+
+    function triggerPdfDownload() {
+        const downloadUrl = `/Eraport/ExportPdf?id=@data["student_id"]&classId=@data["academic_class_id"]&download=true`;
+        let iframe = document.getElementById('eraport-pdf-download-frame');
+        if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.id = 'eraport-pdf-download-frame';
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+        }
+        iframe.src = downloadUrl;
     }
 
     function autoResize() {
@@ -994,3 +1367,5 @@
     }
 
 </script>
+}
+</body>

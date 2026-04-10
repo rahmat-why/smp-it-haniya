@@ -1,5 +1,9 @@
 ﻿using Haniya.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Razor;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc.ViewEngines;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Rotativa.AspNetCore;
 using System.Data;
 using System.Data.SqlClient;
@@ -12,10 +16,14 @@ namespace Haniya.Controllers.PortalAdmin
     public class EraportController : Controller
     {
         private readonly IConfiguration _config;
+        private readonly IRazorViewEngine _viewEngine;
+        private readonly ITempDataProvider _tempDataProvider;
 
-        public EraportController(IConfiguration config)
+        public EraportController(IConfiguration config, IRazorViewEngine viewEngine, ITempDataProvider tempDataProvider)
         {
             _config = config;
+            _viewEngine = viewEngine;
+            _tempDataProvider = tempDataProvider;
         }
 
         private SqlConnection GetConn()
@@ -440,6 +448,9 @@ namespace Haniya.Controllers.PortalAdmin
         {
             var data = BuildPreviewData(id, classId);
             if (data == null) return Content("DATA STUDENT TIDAK DITEMUKAN");
+            var saved = GetLatestSavedEraport(data["student_id"]?.ToString() ?? id, data["class_id"]?.ToString() ?? "");
+            ApplySavedDataToPreviewModel(data, saved);
+            data["render_mode"] = "pdf";
 
             var pdf = new ViewAsPdf("~/Views/PortalAdmin/E-Raport/EraportExcel.cshtml", data)
             {
@@ -462,6 +473,8 @@ namespace Haniya.Controllers.PortalAdmin
             var data = BuildPreviewData(id, classId);
             if (data == null) return Content("DATA STUDENT TIDAK DITEMUKAN");
             var saved = GetLatestSavedEraport(data["student_id"]?.ToString() ?? id, data["class_id"]?.ToString() ?? "");
+            ApplySavedDataToPreviewModel(data, saved);
+            data["render_mode"] = "preview";
             data["saved_json"] = Newtonsoft.Json.JsonConvert.SerializeObject(new
             {
                 grades = saved.Grades.Values.Select(g => new
@@ -481,6 +494,105 @@ namespace Haniya.Controllers.PortalAdmin
                 parent_notes = saved.ParentNotes
             });
             return View("~/Views/PortalAdmin/E-Raport/EraportExcel.cshtml", data);
+        }
+
+        private async Task<string> RenderViewToStringAsync(string viewPath, object model)
+        {
+            ViewData.Model = model;
+
+            await using var writer = new StringWriter();
+            var viewResult = _viewEngine.GetView(null, viewPath, true);
+            if (!viewResult.Success)
+            {
+                throw new InvalidOperationException($"View '{viewPath}' tidak ditemukan.");
+            }
+
+            var viewContext = new ViewContext(
+                ControllerContext,
+                viewResult.View,
+                ViewData,
+                new TempDataDictionary(HttpContext, _tempDataProvider),
+                writer,
+                new HtmlHelperOptions());
+
+            await viewResult.View.RenderAsync(viewContext);
+            return writer.ToString();
+        }
+
+        private static byte[] BuildExcelFileContent(string bodyHtml, string worksheetName)
+        {
+            var safeWorksheetName = string.IsNullOrWhiteSpace(worksheetName)
+                ? "E-Raport"
+                : worksheetName;
+
+            var workbookHtml = $"""
+<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:x="urn:schemas-microsoft-com:office:excel"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <!--[if gte mso 9]><xml>
+    <x:ExcelWorkbook>
+        <x:ExcelWorksheets>
+            <x:ExcelWorksheet>
+                <x:Name>{System.Net.WebUtility.HtmlEncode(safeWorksheetName)}</x:Name>
+                <x:WorksheetOptions>
+                    <x:DisplayGridlines/>
+                </x:WorksheetOptions>
+            </x:ExcelWorksheet>
+        </x:ExcelWorksheets>
+    </x:ExcelWorkbook>
+    </xml><![endif]-->
+</head>
+<body>
+{bodyHtml}
+</body>
+</html>
+""";
+
+            return Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(workbookHtml)).ToArray();
+        }
+
+        private void ApplySavedDataToPreviewModel(Dictionary<string, object> data, SavedEraport saved)
+        {
+            data["saved_grade_map"] = saved.Grades.ToDictionary(
+                x => x.Key,
+                x => new Dictionary<string, string>
+                {
+                    ["final_score_adjustment"] = NormalizeNumericString(x.Value.FinalScoreAdjustment, ""),
+                    ["competency_description"] = x.Value.CompetencyDescription ?? ""
+                }
+            );
+
+            data["saved_extracurriculars"] = saved.Extracurriculars
+                .Select(x => new Dictionary<string, string>
+                {
+                    ["name"] = x.Name ?? "",
+                    ["predicate"] = x.Predicate ?? "",
+                    ["description"] = x.Description ?? ""
+                })
+                .ToList();
+
+            data["saved_kokurikuler"] = saved.Kokurikuler ?? "";
+            data["saved_parent_notes"] = saved.ParentNotes ?? "";
+
+            var waliAll = saved.WaliNotes ?? "";
+            var waliPage1 = "Prestasinya sangat baik, perlu dipertahankan.";
+            var waliPage2 = "";
+            if (!string.IsNullOrWhiteSpace(waliAll))
+            {
+                var split = waliAll.Split('\n');
+                waliPage1 = split[0].Trim();
+                if (split.Length > 1)
+                {
+                    waliPage2 = string.Join("\n", split.Skip(1)).Trim();
+                }
+            }
+
+            data["saved_wali_notes_page1"] = waliPage1;
+            data["saved_wali_notes_page2"] = waliPage2;
         }
 
         private class SavedGrade
@@ -611,153 +723,19 @@ namespace Haniya.Controllers.PortalAdmin
         }
 
         [HttpGet]
-        public IActionResult ExportExcel(string id, string classId)
+        public async Task<IActionResult> ExportExcel(string id, string classId)
         {
             var data = BuildPreviewData(id, classId);
             if (data == null) return Content("DATA STUDENT TIDAK DITEMUKAN");
 
-            var report = data["report"] as DataTable ?? new DataTable();
             var saved = GetLatestSavedEraport(data["student_id"]?.ToString() ?? id, data["class_id"]?.ToString() ?? "");
+            ApplySavedDataToPreviewModel(data, saved);
+            data["render_mode"] = "excel";
 
-            string Encode(object? value) => System.Net.WebUtility.HtmlEncode(value?.ToString() ?? "-");
-            string ScoreAdjustCell(DataRow row)
-            {
-                var sid = row["subject_id"]?.ToString() ?? "";
-                if (!string.IsNullOrWhiteSpace(sid) && saved.Grades.TryGetValue(sid, out var g))
-                    return NormalizeNumericString(g.FinalScoreAdjustment, "0");
-                return "0";
-            }
-            string DescCell(DataRow row)
-            {
-                var sid = row["subject_id"]?.ToString() ?? "";
-                var subject = row["subject_name"]?.ToString() ?? "-";
-                if (!string.IsNullOrWhiteSpace(sid) && saved.Grades.TryGetValue(sid, out var g) && !string.IsNullOrWhiteSpace(g.CompetencyDescription))
-                    return g.CompetencyDescription;
-                return $"{data["full_name"]} membutuhkan bimbingan dalam pembelajaran {subject}.";
-            }
-
-            var html = new StringBuilder();
-            html.Append("<html><head><meta charset='UTF-8'><style>");
-            html.Append("body{font-family:'Times New Roman';font-size:12pt;}table{border-collapse:collapse;width:100%;margin-bottom:12px;}th,td{border:1px solid #000;padding:6px;}th{text-align:center;background:#f3f4f6;}h3{text-align:center;margin:14px 0 8px;} .nb td{border:none;padding:4px 0;} .center{text-align:center;} .signature td{border:none;height:80px;} .split td{border:none;vertical-align:top;} .paper{width:100%;}");
-            html.Append("</style></head><body>");
-
-            void AppendStudentInfo()
-            {
-                html.Append("<table class='nb'>");
-                html.Append($"<tr><td width='15%'>Nama</td><td width='35%'>: {Encode(data["full_name"])}</td><td width='15%'>Kelas</td><td width='35%'>: {Encode(data["class_name"])}</td></tr>");
-                html.Append($"<tr><td>NISN / NIS</td><td>: {Encode(data["nis"])}</td><td>Fase</td><td>: D</td></tr>");
-                html.Append($"<tr><td>Nama Sekolah</td><td>: {Encode(data["school_name"])}</td><td>Semester</td><td>: {Encode(data["semester"])}</td></tr>");
-                html.Append($"<tr><td>Alamat</td><td>: {Encode(data["school_address"])}</td><td>Tahun Pelajaran</td><td>: {Encode(data["academic_year_name"])}</td></tr>");
-                html.Append("</table>");
-            }
-
-            void AppendGradesSection(string title, string type)
-            {
-                html.Append($"<h3>{Encode(title)}</h3>");
-                html.Append("<table><tr><th width='3%'>NO</th><th width='37%'>MATA PELAJARAN</th><th width='10%'>NILAI AKHIR</th><th>CAPAIAN KOMPETENSI</th></tr>");
-                int no = 1;
-                foreach (DataRow row in report.Rows)
-                {
-                    if (!string.Equals(row["subject_type"]?.ToString(), type, StringComparison.OrdinalIgnoreCase)) continue;
-                    var subject = row["subject_name"]?.ToString() ?? "-";
-                    html.Append("<tr>");
-                    html.Append($"<td class='center'>{no++}</td>");
-                    html.Append($"<td>{Encode(subject)}</td>");
-                    html.Append($"<td class='center'>{Encode(ScoreAdjustCell(row))}</td>");
-                    html.Append($"<td>{Encode(DescCell(row))}</td>");
-                    html.Append("</tr>");
-                }
-                if (no == 1) html.Append("<tr><td colspan='4' class='center'>-</td></tr>");
-                html.Append("</table>");
-            }
-
-            string waliAll = saved.Exists ? (saved.WaliNotes ?? "") : "";
-            string waliPage2 = "Prestasinya sangat baik, perlu dipertahankan.";
-            string waliPage3 = "";
-            if (!string.IsNullOrWhiteSpace(waliAll))
-            {
-                var split = waliAll.Split('\n');
-                waliPage2 = split[0].Trim();
-                if (split.Length > 1)
-                    waliPage3 = string.Join("\n", split.Skip(1)).Trim();
-            }
-            var today = DateTime.Now.ToString("dd MMMM yyyy", new CultureInfo("id-ID"));
-
-            html.Append("<div class='paper'>");
-            AppendStudentInfo();
-            AppendGradesSection("LAPORAN HASIL BELAJAR", "SUBJ_PRIMARY");
-            AppendGradesSection("MUATAN LOKAL", "SUBJ_LOCAL");
-            html.Append("<table><tr><th>KOKURIKULER</th></tr>");
-            html.Append($"<tr><td>{Encode(saved.Exists ? saved.Kokurikuler : $"Ananda {data["full_name"]} sudah sangat menghargai sesama teman berdasarkan yang terlihat dari beberapa proyek pembelajaran interdisipliner.")}</td></tr></table>");
-
-            html.Append("<h3>EKSTRAKURIKULER</h3>");
-            html.Append("<table><tr><th width='3%'>NO</th><th>KEGIATAN</th><th width='15%'>PREDIKAT</th><th>KETERANGAN</th></tr>");
-            var extras = saved.Extracurriculars.Count > 0
-                ? saved.Extracurriculars
-                : new List<SavedExtracurricular> { new SavedExtracurricular { Name = "-", Predicate = "-", Description = "-" } };
-            for (int i = 0; i < extras.Count; i++)
-            {
-                html.Append("<tr>");
-                html.Append($"<td class='center'>{i + 1}</td>");
-                html.Append($"<td>{Encode(extras[i].Name)}</td>");
-                html.Append($"<td class='center'>{Encode(extras[i].Predicate)}</td>");
-                html.Append($"<td>{Encode(extras[i].Description)}</td>");
-                html.Append("</tr>");
-            }
-            html.Append("</table>");
-            html.Append("</div>");
-
-            html.Append("<div style='page-break-before:always;'></div>");
-            html.Append("<div class='paper'>");
-
-            int sick = saved.Attendances.TryGetValue("Sakit", out var sv1) ? sv1 : SafeToInt(data["sick"]);
-            int permit = saved.Attendances.TryGetValue("Izin", out var sv2) ? sv2 : SafeToInt(data["permit"]);
-            int alpha = saved.Attendances.TryGetValue("Tanpa Keterangan", out var sv3) ? sv3 : SafeToInt(data["alpha"]);
-
-            html.Append("<table class='split' style='margin-bottom:12px;'><tr>");
-            html.Append("<td width='50%'>");
-            html.Append("<table><tr><th width='10%'>NO</th><th>KETIDAKHADIRAN</th><th width='25%'>JUMLAH</th></tr>");
-            html.Append($"<tr><td class='center'>1</td><td>Sakit</td><td class='center'>{sick} hari</td></tr>");
-            html.Append($"<tr><td class='center'>2</td><td>Izin</td><td class='center'>{permit} hari</td></tr>");
-            html.Append($"<tr><td class='center'>3</td><td>Tanpa Keterangan</td><td class='center'>{alpha} hari</td></tr>");
-            html.Append("</table>");
-            html.Append("</td>");
-            html.Append("<td width='50%'>");
-            html.Append("<table><tr><th>CATATAN WALI KELAS</th></tr>");
-            html.Append($"<tr><td>{Encode(waliPage2)}</td></tr></table>");
-            html.Append("</td>");
-            html.Append("</tr></table>");
-
-            html.Append("<table><tr><th>TANGGAPAN ORANG TUA / WALI MURID</th></tr>");
-            html.Append($"<tr><td>{Encode(saved.ParentNotes)}</td></tr></table>");
-            html.Append("<table class='signature wfull'><tr>");
-            html.Append("<td class='center'>Mengetahui,<br>Orang Tua/Wali</td><td></td>");
-            html.Append($"<td class='center'>Bekasi, {Encode(today)}<br>Wali Kelas</td></tr>");
-            html.Append($"<tr><td class='center'><br><br>(.......................)</td><td></td><td class='center'><br><br><b>{Encode(data["teacher_name"])}</b></td></tr></table>");
-            html.Append("<table class='signature'><tr>");
-            html.Append($"<td class='center'>Mengetahui,<br>Kepala SMP IT Haniya<br><br><br><br><br><b>{Encode(data["headschool_name"])}</b></td>");
-            html.Append("</tr></table>");
-            html.Append("</div>");
-
-            html.Append("<div style='page-break-before:always;'></div>");
-            html.Append("<div class='paper'>");
-            AppendStudentInfo();
-            AppendGradesSection("LAPORAN HASIL BELAJAR ISLAMIC", "SUBJ_ISLAMIC");
-            html.Append("<table><tr><th>CATATAN WALI KELAS</th></tr>");
-            html.Append($"<tr><td>{Encode(waliPage3)}</td></tr></table>");
-            html.Append("<table class='signature wfull'><tr>");
-            html.Append("<td class='center'>Mengetahui,<br>Orang Tua/Wali</td><td></td>");
-            html.Append($"<td class='center'>Bekasi, {Encode(today)}<br>Wali Kelas</td></tr>");
-            html.Append($"<tr><td class='center'><br><br>(.......................)</td><td></td><td class='center'><br><br><b>{Encode(data["teacher_name"])}</b></td></tr></table>");
-            html.Append("<table class='signature'><tr>");
-            html.Append($"<td class='center'>Mengetahui,<br>Kepala SMP IT Haniya<br><br><br><br><br><b>{Encode(data["headschool_name"])}</b></td>");
-            html.Append("</tr></table>");
-            html.Append("</div>");
-            html.Append("</body></html>");
-
-            var bytes = Encoding.UTF8.GetBytes(html.ToString());
+            var html = await RenderViewToStringAsync("~/Views/PortalAdmin/E-Raport/EraportExcel.cshtml", data);
+            var bytes = BuildExcelFileContent(html, $"E-Raport-{(data["nis"]?.ToString() ?? "student")}");
             var fileName = $"E-Raport-{(data["nis"]?.ToString() ?? "student")}.xls";
-            return File(bytes, "application/vnd.ms-excel", fileName);
+            return File(bytes, "application/vnd.ms-excel; charset=utf-8", fileName);
         }
 
         private int GetNextCounter(object lastIdObj, int prefixLength)
