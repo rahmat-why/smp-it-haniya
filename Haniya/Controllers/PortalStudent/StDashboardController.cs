@@ -153,12 +153,12 @@ namespace Haniya.Controllers.PortalStudent
                 WHERE sc.student_id = @studentId AND ay.status = 'ACTIVE'
                 ORDER BY
                     CASE s.day
-                        WHEN 'Senin' THEN 1
-                        WHEN 'Selasa' THEN 2
-                        WHEN 'Rabu' THEN 3
-                        WHEN 'Kamis' THEN 4
-                        WHEN 'Jumat' THEN 5
-                        WHEN 'Sabtu' THEN 6
+                        WHEN 'DAY_MON' THEN 1
+                        WHEN 'DAY_TUE' THEN 2
+                        WHEN 'DAY_WED' THEN 3
+                        WHEN 'DAY_THU' THEN 4
+                        WHEN 'DAY_FRI' THEN 5
+                        WHEN 'DAY_SAT' THEN 6
                     END, sd.start_time;
             ", conn);
             cmd.Parameters.AddWithValue("@studentId", studentId);

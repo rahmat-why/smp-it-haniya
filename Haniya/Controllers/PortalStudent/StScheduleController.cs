@@ -73,14 +73,14 @@ namespace Haniya.Controllers.PortalStudent
                         ON ac.class_id = c.class_id
                     WHERE sc.student_id = @studentId
                       AND ay.status = 'ACTIVE'
-                      AND sch.day IN ('Senin','Selasa','Rabu','Kamis','Jumat')
+                      AND sch.day IN ('DAY_MON','DAY_TUE','DAY_WED','DAY_THU','DAY_FRI')
                     ORDER BY
                         CASE sch.day
-                            WHEN 'Senin' THEN 1
-                            WHEN 'Selasa' THEN 2
-                            WHEN 'Rabu' THEN 3
-                            WHEN 'Kamis' THEN 4
-                            WHEN 'Jumat' THEN 5
+                            WHEN 'DAY_MON' THEN 1
+                            WHEN 'DAY_TUE' THEN 2
+                            WHEN 'DAY_WED' THEN 3
+                            WHEN 'DAY_THU' THEN 4
+                            WHEN 'DAY_FRI' THEN 5
                             ELSE 99
                         END,
                         sd.start_time
