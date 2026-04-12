@@ -48,6 +48,28 @@ namespace Haniya.Controllers.LandingPage
                         data[key + "_DESC"] = reader["item_desc"]?.ToString();
                     }
                 }
+
+                string principalQuery = @"
+                    SELECT TOP 1
+                        LTRIM(RTRIM(ISNULL(item_code, ''))) AS item_code,
+                        ISNULL(item_name, '') AS item_name,
+                        ISNULL(item_desc, '') AS item_desc
+                    FROM mst_detail_settings
+                    WHERE header_id = 'PRINCIPAL'
+                      AND detail_id = 'PRINCIPAL_NAME'
+                      AND status = 'ACTIVE'
+                ";
+
+                using (SqlCommand cmd = new SqlCommand(principalQuery, conn))
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        data["PRINCIPAL_IMAGE"] = reader["item_code"]?.ToString();
+                        data["PRINCIPAL_NAME"] = reader["item_name"]?.ToString();
+                        data["PRINCIPAL_DESC"] = reader["item_desc"]?.ToString();
+                    }
+                }
             }
 
             return Json(data);
