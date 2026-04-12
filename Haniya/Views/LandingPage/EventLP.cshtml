@@ -82,8 +82,7 @@
                     </div>
                     <div class="p-5">
                         <h3 class="text-xl font-bold leading-snug text-slate-900">${escapeHtml(item.name || "-")}</h3>
-                        <p class="mt-3 text-sm font-medium text-slate-500">Date: ${escapeHtml(item.date || "-")}</p>
-                        <p class="mt-1 text-sm text-slate-500">Location: ${escapeHtml(item.location || "-")}</p>
+                        <p class="mt-3 text-sm font-medium text-slate-500">${escapeHtml(formatEventDate(item.date))}</p>
                         <p class="mt-4 text-sm font-semibold text-brand-700">View Event</p>
                     </div>
                 </a>`;
@@ -125,5 +124,18 @@
             .replaceAll(">", "&gt;")
             .replaceAll('"', "&quot;")
             .replaceAll("'", "&#39;");
+    }
+
+    function formatEventDate(value) {
+        if (!value) return "-";
+
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return value;
+
+        const day = String(date.getDate()).padStart(2, "0");
+        const month = date.toLocaleString("en-US", { month: "short" });
+        const year = date.getFullYear();
+
+        return `${day} ${month} ${year}`;
     }
 </script>
