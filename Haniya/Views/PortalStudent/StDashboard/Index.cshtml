@@ -352,35 +352,65 @@
                     </td>
                 </tr>`;
         } else {
+
+            const dayMap = {
+                'Senin': 'DAY_MON',
+                'Selasa': 'DAY_TUE',
+                'Rabu': 'DAY_WED',
+                'Kamis': 'DAY_THU',
+                'Jumat': 'DAY_FRI',
+                'Sabtu': 'DAY_SAT',
+                'Minggu': 'DAY_SUN'
+            };
+
+            const dayReverseMap = Object.fromEntries(
+                Object.entries(dayMap).map(([k, v]) => [v, k])
+            );
+
             const today = new Date().toLocaleDateString('id-ID', { weekday: 'long' });
-            const isWeekend = today === 'Sabtu' || today === 'Minggu';
-            const targetDay = isWeekend ? 'Senin' : today;
-            const dayItems = schedule.filter(x => x.day === targetDay);
+            const isWeekend = ['Sabtu', 'Minggu'].includes(today);
+
+            // target pakai kode (DAY_*)
+            const targetDayCode = isWeekend ? 'DAY_MON' : dayMap[today];
+            const targetDayName = dayReverseMap[targetDayCode];
+
+            // filter + sort
+            const dayItems = schedule
+                .filter(x => x.day === targetDayCode)
+                .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
 
             if (dayItems.length === 0) {
                 html = `
                     <tr>
                         <td colspan="4" class="text-center py-8 text-gray-500">
-                            Tidak ada jadwal untuk ${targetDay}
+                            Tidak ada jadwal untuk ${targetDayName}
                         </td>
                     </tr>`;
             } else {
+
+                const label = isWeekend ? '(Upcoming)' : '(Today)';
+
                 dayItems.forEach((i, index) => {
+
+                    // format jam HH:mm
+                    const start = i.startTime ? i.startTime.substring(0, 5) : '-';
+                    const end = i.endTime ? i.endTime.substring(0, 5) : '-';
+
                     html += `
                         <tr class="bg-amber-50 border-l-4 border-amber-400 ${index === 0 ? 'border-t-2 border-gray-200' : ''}">
                             ${index === 0 ? `
                                 <td rowspan="${dayItems.length}" class="px-6 py-4 font-medium align-middle text-center text-amber-900">
-                                    ${targetDay} ${isWeekend ? '(Upcoming)' : '(Today)'}
+                                    ${targetDayName} ${label}
                                 </td>
                             ` : ''}
                             <td class="px-6 py-4 text-indigo-900 font-medium">
-                                ${i.startTime} - ${i.endTime}
+                                ${start} - ${end}
                             </td>
                             <td class="px-6 py-4 font-semibold">
-                                ${i.subject}
+                                ${i.subject || '-'}
                             </td>
                             <td class="px-6 py-4 text-gray-600">
-                                ${i.teacher}
+                                ${i.teacher || '-'}
                             </td>
                         </tr>`;
                 });

@@ -225,6 +225,16 @@
     function renderWeeklySchedule(schedule) {
         let html = '';
 
+        const dayReverseMap = {
+            'DAY_MON': 'Senin',
+            'DAY_TUE': 'Selasa',
+            'DAY_WED': 'Rabu',
+            'DAY_THU': 'Kamis',
+            'DAY_FRI': 'Jumat',
+            'DAY_SAT': 'Sabtu',
+            'DAY_SUN': 'Minggu'
+        };
+
         if (!schedule || schedule.length === 0) {
             html = `
                 <tr>
@@ -236,18 +246,25 @@
             const now = new Date();
             const jsDay = now.getDay(); // 0=Sunday, 6=Saturday
             const isWeekendToday = jsDay === 0 || jsDay === 6;
+
             const todayName = now.toLocaleDateString('id-ID', { weekday: 'long' });
             const normalizedTodayName = todayName
                 ? todayName.charAt(0).toUpperCase() + todayName.slice(1).toLowerCase()
                 : '';
 
+            // grouping berdasarkan nama hari Indonesia
             const grouped = {};
             schedule.forEach(item => {
-                if (!grouped[item.day]) grouped[item.day] = [];
-                grouped[item.day].push(item);
+                const dayName = dayReverseMap[item.day];
+                if (!dayName) return; // skip kalau tidak valid
+
+                if (!grouped[dayName]) grouped[dayName] = [];
+                grouped[dayName].push(item);
             });
 
             const daysOrder = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+
+            // cari hari terdekat saat weekend
             const upcomingDay = isWeekendToday
                 ? daysOrder.find(day => Array.isArray(grouped[day]) && grouped[day].length > 0)
                 : null;
@@ -259,6 +276,7 @@
                 const isToday = !isWeekendToday && day === normalizedTodayName;
                 const isUpcoming = isWeekendToday && day === upcomingDay;
                 const isHighlighted = isToday || isUpcoming;
+
                 const dayLabel = isToday
                     ? '<span class="ml-1 text-xs font-semibold text-amber-700">(Today)</span>'
                     : (isUpcoming
@@ -272,7 +290,7 @@
                             ${index === 0 ? 'border-t-2 border-gray-200' : ''}
                         ">
                             ${index === 0 ? `
-                                <td rowspan="${items.length}" 
+                                <td rowspan="${items.length}"
                                     class="px-6 py-4 font-medium align-middle text-center ${isHighlighted ? 'text-amber-900' : 'text-gray-900'}">
                                     <div class="leading-tight">
                                         <span>${day}</span>${dayLabel}

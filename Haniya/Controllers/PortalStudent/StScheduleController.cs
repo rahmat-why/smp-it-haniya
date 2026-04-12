@@ -68,7 +68,7 @@ namespace Haniya.Controllers.PortalStudent
                     JOIN mst_subjects sub
                         ON sd.subject_id = sub.subject_id
                     LEFT JOIN mst_teachers ht
-                        ON ac.homeroom_teacher_id = ht.teacher_id
+                        ON sd.teacher_id = ht.teacher_id
                     JOIN mst_classes c
                         ON ac.class_id = c.class_id
                     WHERE sc.student_id = @studentId

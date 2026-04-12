@@ -1,4 +1,4 @@
-@{
+﻿@{
     Layout = "_LayoutStudent";
     ViewData["Title"] = "My Schedule";
 }
@@ -96,6 +96,26 @@
             const $tbody = $('#schedule-table tbody');
             $tbody.empty();
 
+            const dayReverseMap = {
+                'DAY_MON': 'Senin',
+                'DAY_TUE': 'Selasa',
+                'DAY_WED': 'Rabu',
+                'DAY_THU': 'Kamis',
+                'DAY_FRI': 'Jumat',
+                'DAY_SAT': 'Sabtu',
+                'DAY_SUN': 'Minggu'
+            };
+
+            const dayMap = {
+                'Senin': 'DAY_MON',
+                'Selasa': 'DAY_TUE',
+                'Rabu': 'DAY_WED',
+                'Kamis': 'DAY_THU',
+                'Jumat': 'DAY_FRI',
+                'Sabtu': 'DAY_SAT',
+                'Minggu': 'DAY_SUN'
+            };
+
             if (!rows || rows.length === 0) {
                 $tbody.html(`
                     <tr>
@@ -109,36 +129,61 @@
 
             const grouped = {};
             rows.forEach(function (r) {
-                if (!grouped[r.day]) grouped[r.day] = [];
-                grouped[r.day].push(r);
+                const dayName = dayReverseMap[r.day];
+                if (!dayName) return;
+
+                if (!grouped[dayName]) grouped[dayName] = [];
+                grouped[dayName].push(r);
+            });
+
+            Object.keys(grouped).forEach(day => {
+                grouped[day].sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
             });
 
             const days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+
             const today = new Date().toLocaleDateString('id-ID', { weekday: 'long' });
-            const isWeekend = today === 'Sabtu' || today === 'Minggu';
+            const isWeekend = ['Sabtu', 'Minggu'].includes(today);
+
             const targetDay = isWeekend ? 'Senin' : today;
+            const targetDayCode = dayMap[targetDay]; // kalau butuh
 
             days.forEach(function (day) {
                 const items = grouped[day];
                 if (!items || items.length === 0) return;
 
+                const isTargetDay = day === targetDay;
+                const highlight = isTargetDay
+                    ? (isWeekend ? 'bg-amber-50' : 'bg-blue-50')
+                    : '';
+
+                const dayLabel = isTargetDay
+                    ? `${day} ${isWeekend ? '(Upcoming)' : '(Today)'}`
+                    : day;
+
                 items.forEach(function (item, idx) {
-                    const isTargetDay = day === targetDay;
-                    const highlight = isTargetDay ? (isWeekend ? 'bg-amber-50' : 'bg-blue-50') : '';
-                    const dayLabel = isTargetDay
-                        ? `${day} ${isWeekend ? '(Upcoming)' : '(Today)'}`
-                        : day;
                     const dayCell = idx === 0
-                        ? `<td rowspan="${items.length}" class="px-5 py-3 font-semibold text-gray-900 whitespace-nowrap align-middle text-center ${highlight}">${dayLabel}</td>`
+                        ? `<td rowspan="${items.length}"
+                                class="px-5 py-3 font-semibold text-gray-900 whitespace-nowrap align-middle text-center ${highlight}">
+                                ${dayLabel}
+                           </td>`
                         : '';
 
                     $tbody.append(`
                         <tr class="${highlight}">
                             ${dayCell}
-                            <td class="px-5 py-3 text-gray-700 whitespace-nowrap">${item.start_time || '-'} - ${item.end_time || '-'}</td>
-                            <td class="px-5 py-3 text-gray-700">${item.subject || '-'}</td>
-                            <td class="px-5 py-3 text-gray-700">${item.teacher || '-'}</td>
-                            <td class="px-5 py-3 text-gray-700 whitespace-nowrap">${item.class_name || '-'}</td>
+                            <td class="px-5 py-3 text-gray-700 whitespace-nowrap">
+                                ${item.start_time || '-'} - ${item.end_time || '-'}
+                            </td>
+                            <td class="px-5 py-3 text-gray-700">
+                                ${item.subject || '-'}
+                            </td>
+                            <td class="px-5 py-3 text-gray-700">
+                                ${item.teacher || '-'}
+                            </td>
+                            <td class="px-5 py-3 text-gray-700 whitespace-nowrap">
+                                ${item.class_name || '-'}
+                            </td>
                         </tr>
                     `);
                 });

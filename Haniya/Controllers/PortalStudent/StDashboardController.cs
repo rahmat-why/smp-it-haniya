@@ -142,7 +142,7 @@ namespace Haniya.Controllers.PortalStudent
                     sd.start_time,
                     sd.end_time,
                     sub.subject_name,
-                    ISNULL(t.first_name + ' ' + t.last_name, 'Tidak Ditentukan') AS teacher
+                    ISNULL(t.first_name + ' ' + t.last_name, '-') AS teacher
                 FROM mst_schedules s
                 JOIN mst_schedule_details sd ON s.schedule_id = sd.schedule_id
                 JOIN mst_subjects sub ON sd.subject_id = sub.subject_id
@@ -172,7 +172,7 @@ namespace Haniya.Controllers.PortalStudent
                     startTime = rd["start_time"]?.ToString() ?? string.Empty,
                     endTime = rd["end_time"]?.ToString() ?? string.Empty,
                     subject = rd["subject_name"]?.ToString() ?? string.Empty,
-                    teacher = rd["teacher"]?.ToString() ?? "Tidak Ditentukan"
+                    teacher = rd["teacher"]?.ToString() ?? "-"
                 });
             }
 
