@@ -126,6 +126,7 @@
                             <div class="hidden sm:block text-left">
                                 <p class="text-xs md:text-sm font-semibold text-gray-800 truncate max-w-[140px] md:max-w-[200px]">@fullName</p>
                                 <p class="text-[10px] md:text-xs text-gray-500">NIS: @nis</p>
+                                <p class="text-[10px] md:text-xs text-gray-500">Level: <span id="student-memorization-achievement">-</span></p>
                             </div>
                         </div>
 
@@ -201,6 +202,7 @@
                     </svg>
                     <span>Attendance</span>
                 </a>
+                <div id="student-portal-menu-container"></div>
             </nav>
 
             <div class="p-4 border-t border-blue-700 text-center text-xs text-blue-200">
@@ -217,7 +219,7 @@
 
     <!-- Bottom Nav Mobile -->
     <nav class="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 shadow-lg z-30">
-        <div class="grid grid-cols-5">
+        <div id="student-bottom-menu-grid" class="grid grid-cols-5">
             <button type="button"
                     class="student-bottom-item flex flex-col items-center justify-center py-2 w-full text-xs"
                     data-route="/StDashboard"
@@ -345,7 +347,65 @@
 
         $(document).ready(function () {
             setActiveStudentMenu();
+            loadPortalMenuStudent();
+            loadMemorizationAchievement();
         });
+
+        function loadMemorizationAchievement() {
+            $.ajax({
+                url: '/StDashboard/GetMemorizationAchievement',
+                type: 'GET',
+                success: function (res) {
+                    if (!res || !res.success) return;
+                    $('#student-memorization-achievement').text(res.data || '-');
+                }
+            });
+        }
+
+        function loadPortalMenuStudent() {
+            $.ajax({
+                url: '/Menu/GetPortalMenus',
+                type: 'GET',
+                success: function (res) {
+                    if (!res || !res.success || !Array.isArray(res.data) || !res.data.length) return;
+
+                    let desktopHtml = '';
+                    let mobileHtml = '';
+
+                    res.data.forEach(m => {
+                        const iconClass = m.icon || 'fa-book-open';
+                        const name = m.menu_name || 'Portal';
+                        const url = m.url || '#';
+
+                        desktopHtml += `
+                            <a href="${url}"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="student-menu-item flex items-center gap-3 px-4 py-2 rounded transition hover:bg-blue-700">
+                                <i class="fa-solid ${iconClass} w-5 text-center"></i>
+                                <span>${name}</span>
+                            </a>
+                        `;
+
+                        mobileHtml += `
+                            <a href="${url}"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="student-bottom-item flex flex-col items-center justify-center py-2 w-full text-xs text-gray-500">
+                                <i class="fa-solid ${iconClass} w-5 h-5 mb-0.5 text-base"></i>
+                                <span>${name}</span>
+                            </a>
+                        `;
+                    });
+
+                    $('#student-portal-menu-container').html(desktopHtml);
+
+                    if (mobileHtml) {
+                        $('#student-bottom-menu-grid').append(mobileHtml);
+                    }
+                }
+            });
+        }
     </script>
 
     @await Html.PartialAsync("_TailwindConfirmModal")

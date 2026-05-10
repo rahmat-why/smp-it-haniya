@@ -27,7 +27,9 @@
     var primaryCount = report.AsEnumerable().Count(row => row["subject_type"].ToString() == "SUBJ_PRIMARY");
     var localCount = report.AsEnumerable().Count(row => row["subject_type"].ToString() == "SUBJ_LOCAL");
     var islamicCount = report.AsEnumerable().Count(row => row["subject_type"].ToString() == "SUBJ_ISLAMIC");
-    var targetSubjectRows = Math.Max(1, Math.Max(primaryCount, Math.Max(localCount, islamicCount)));
+    var targetPrimaryRows = Math.Max(1, primaryCount);
+    var targetLocalRows = Math.Max(1, localCount);
+    var targetIslamicRows = Math.Max(1, islamicCount);
 
 }
 
@@ -514,7 +516,7 @@
             }
 
         }
-        @for (int filler = noPri; filler <= targetSubjectRows; filler++)
+        @for (int filler = noPri; filler <= targetPrimaryRows; filler++)
         {
             <tr class="row-grade filler-row">
                 <td class="center">@filler</td>
@@ -554,6 +556,7 @@
                 var adjustmentValue = GetSavedGradeValue(savedGradeMap, row["subject_id"], "final_score_adjustment", "0");
                 var descriptionValue = GetSavedGradeValue(savedGradeMap, row["subject_id"], "competency_description", $"{data["full_name"]} membutuhkan bimbingan dalam pembelajaran {subjectName}.");
                 var displayFinalScore = GetDisplayFinalScore(savedGradeMap, row);
+                var calculatedFinalScore = Math.Round(Convert.ToDecimal(row["final_score"] == DBNull.Value ? 0 : row["final_score"]), 0).ToString();
                 <tr class="row-grade">
                     <td class="center">@noLoc</td>
                     <td class="subject-name">
@@ -561,6 +564,7 @@
                         <input type="hidden" class="subject-id" value="@row["subject_id"]" />
                         <input type="hidden" class="subject-type-id" value="@row["subject_code"]" />
                         <input type="hidden" class="subject-type-name" value="@row["subject_type"]" />
+                        <input type="hidden" class="final-score-rps-raw" value="@calculatedFinalScore" />
                     </td>
                     <td class="final-score-rps center" align="center" style="text-align:center;vertical-align:middle;">
                         @displayFinalScore
@@ -591,7 +595,7 @@
                 noLoc++;
             }
         }
-        @for (int filler = noLoc; filler <= targetSubjectRows; filler++)
+        @for (int filler = noLoc; filler <= targetLocalRows; filler++)
         {
             <tr class="row-grade filler-row">
                 <td class="center">@filler</td>
@@ -722,8 +726,6 @@
         </table>
     </div>
 
-</div>
-
     <div class="section-after-exkul">
         <table class="excel-spacer">
             <tr>
@@ -735,25 +737,53 @@
             <tr class="bold center">
                 <th width="10%">NO</th>
                 <th>KETIDAKHADIRAN</th>
-                <th width="20%">JUMLAH</th>
+                @if (isExportMode)
+                {
+                    <th width="20%" colspan="2">JUMLAH</th>
+                }
+                else
+                {
+                    <th width="20%">JUMLAH</th>
+                }
             </tr>
 
             <tr>
                 <td class="center">1</td>
                 <td>Sakit</td>
-                <td class="center">@data["sick"] hari</td>
+                @if (isExportMode)
+                {
+                    <td class="center" colspan="2">@data["sick"] hari</td>
+                }
+                else
+                {
+                    <td class="center">@data["sick"] hari</td>
+                }
             </tr>
 
             <tr>
                 <td class="center">2</td>
                 <td>Izin</td>
-                <td class="center">@data["permit"] hari</td>
+                @if (isExportMode)
+                {
+                    <td class="center" colspan="2">@data["permit"] hari</td>
+                }
+                else
+                {
+                    <td class="center">@data["permit"] hari</td>
+                }
             </tr>
 
             <tr>
                 <td class="center">3</td>
                 <td>Tanpa Keterangan</td>
-                <td class="center">@data["alpha"] hari</td>
+                @if (isExportMode)
+                {
+                    <td class="center" colspan="2">@data["alpha"] hari</td>
+                }
+                else
+                {
+                    <td class="center">@data["alpha"] hari</td>
+                }
             </tr>
         </table>
 
@@ -856,6 +886,7 @@
             </tr>
         </table>
     </div>
+</div>
 
 <table class="page-break-spacer">
     <tr>
@@ -928,6 +959,7 @@
                 var adjustmentValue = GetSavedGradeValue(savedGradeMap, row["subject_id"], "final_score_adjustment", "0");
                 var descriptionValue = GetSavedGradeValue(savedGradeMap, row["subject_id"], "competency_description", $"{data["full_name"]} membutuhkan bimbingan dalam pembelajaran {subjectName}.");
                 var displayFinalScore = GetDisplayFinalScore(savedGradeMap, row);
+                var calculatedFinalScore = Math.Round(Convert.ToDecimal(row["final_score"] == DBNull.Value ? 0 : row["final_score"]), 0).ToString();
                 <tr class="row-grade">
                     <td class="center">@noIsl</td>
                     <td class="subject-name">
@@ -935,6 +967,7 @@
                         <input type="hidden" class="subject-id" value="@row["subject_id"]" />
                         <input type="hidden" class="subject-type-id" value="@row["subject_code"]" />
                         <input type="hidden" class="subject-type-name" value="@row["subject_type"]" />
+                        <input type="hidden" class="final-score-rps-raw" value="@calculatedFinalScore" />
                     </td>
                     <td class="final-score-rps center" align="center" style="text-align:center;vertical-align:middle;">
                         @displayFinalScore
@@ -966,7 +999,7 @@
             }
 
         }
-        @for (int filler = noIsl; filler <= targetSubjectRows; filler++)
+        @for (int filler = noIsl; filler <= targetIslamicRows; filler++)
         {
             <tr class="row-grade filler-row">
                 <td class="center">@filler</td>
@@ -1315,7 +1348,7 @@
                 subject_name: $(this).find('.subject-name').text().trim(),
                 subject_type_id: $(this).find('.subject-type-id').val(),
                 subject_type_name: $(this).find('.subject-type-name').val(),
-                final_score_rps: $(this).find('.final-score-rps').text().trim(),
+                final_score_rps: (($(this).find('.final-score-rps-raw').val() || '').toString().trim() || $(this).find('.final-score-rps').text().trim() || '0'),
                 final_score_adjustment: adjustment,
                 predicate: predicate,
                 competency_description: $(this).find('.desc').val()

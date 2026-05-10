@@ -1,4 +1,4 @@
-﻿@{
+@{
     Layout = "_LayoutAdmin";
     ViewData["Title"] = "Create Attendance";
 }
@@ -244,7 +244,7 @@
                     url: '/Select2/AcademicClasses',
                     dataType: 'json',
                     delay: 250,
-                    data: params => ({ q: params.term || '', page: params.page || 1 }),
+                    data: params => ({ q: params.term || '', page: params.page || 1, activeOnly: true }),
                     processResults: data => ({
                         results: data.results,
                         pagination: data.pagination
@@ -254,7 +254,7 @@
                 minimumInputLength: 0
             });
 
-            // When class changes → load teacher & students
+            // When class changes ? load teacher & students
             $('#academic_class_id').on('change', function () {
                 const classId = $(this).val();
 

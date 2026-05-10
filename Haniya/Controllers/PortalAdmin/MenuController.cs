@@ -69,9 +69,72 @@ namespace Haniya.Controllers.PortalAdmin
                             menu_name = rd["menu_name"].ToString(),
                             url = rd["url"].ToString(),
                             icon = rd["icon"]?.ToString(),
-                            sort_order = rd["sort_order"]
+                            sort_order = rd["sort_order"],
+                            is_external = false
                         });
                     }
+                    rd.Close();
+
+                    var portalSql = @"
+                        SELECT detail_id, item_code, item_name, item_desc
+                        FROM mst_detail_settings
+                        WHERE (header_id = 'MENU_PORTAL' OR detail_id = 'MENU_PORTAL')
+                          AND status = 'ACTIVE'
+                        ORDER BY item_name, detail_id";
+
+                    using var portalCmd = new SqlCommand(portalSql, conn);
+                    using var portalRd = portalCmd.ExecuteReader();
+                    while (portalRd.Read())
+                    {
+                        menus.Add(new
+                        {
+                            menu_id = portalRd["detail_id"]?.ToString() ?? "",
+                            parent_id = (string?)null,
+                            menu_name = portalRd["item_name"]?.ToString() ?? "",
+                            url = portalRd["item_desc"]?.ToString() ?? "#",
+                            icon = portalRd["item_code"]?.ToString() ?? "",
+                            sort_order = 9999,
+                            is_external = true
+                        });
+                    }
+                }
+
+                return Json(DTOResponse.ok(menus));
+            }
+            catch (Exception ex)
+            {
+                return Json(DTOResponse.fail(ex.Message, 500));
+            }
+        }
+
+        [HttpGet]
+        public IActionResult GetPortalMenus()
+        {
+            try
+            {
+                var menus = new List<object>();
+                using var conn = GetConn();
+                conn.Open();
+
+                var sql = @"
+                    SELECT detail_id, item_code, item_name, item_desc
+                    FROM mst_detail_settings
+                    WHERE (header_id = 'MENU_PORTAL' OR detail_id = 'MENU_PORTAL')
+                      AND status = 'ACTIVE'
+                    ORDER BY item_name, detail_id";
+
+                using var cmd = new SqlCommand(sql, conn);
+                using var rd = cmd.ExecuteReader();
+                while (rd.Read())
+                {
+                    menus.Add(new
+                    {
+                        menu_id = rd["detail_id"]?.ToString() ?? "",
+                        menu_name = rd["item_name"]?.ToString() ?? "",
+                        url = rd["item_desc"]?.ToString() ?? "#",
+                        icon = rd["item_code"]?.ToString() ?? "",
+                        is_external = true
+                    });
                 }
 
                 return Json(DTOResponse.ok(menus));

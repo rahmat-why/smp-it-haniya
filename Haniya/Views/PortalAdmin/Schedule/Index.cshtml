@@ -1,4 +1,3 @@
-﻿<!-- ~/Views/PortalAdmin/Schedule/Index.cshtml -->
 @{
     Layout = "_LayoutAdmin";
     ViewData["Title"] = "Schedules";
@@ -6,7 +5,7 @@
 
 <div class="flex justify-between items-center mb-4">
     <h2 class="text-xl font-semibold">Schedule List</h2>
-    <a href="/Schedule/Create"
+    <a id="schedule-add-link" href="/Schedule/Create"
        class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
         + Add Schedule
     </a>
@@ -18,15 +17,14 @@
     </div>
 
     <div class="overflow-x-auto px-4 pt-4">
-        <table id="schedule-table"
-               class="min-w-full text-sm text-left text-gray-700 border-collapse">
+        <table id="schedule-table" class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Academic Year</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Semester</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Class</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Day</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center">Total Subject</th>
+                    <th data-sort="academicYear" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Academic Year</th>
+                    <th data-sort="semester" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Semester</th>
+                    <th data-sort="class" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Class</th>
+                    <th data-sort="day" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Day</th>
+                    <th data-sort="totalSubject" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center cursor-pointer select-none">Total Subject</th>
                     <th class="px-4 py-3 pr-6 text-xs font-semibold tracking-wide uppercase text-right">Action</th>
                 </tr>
             </thead>
@@ -36,257 +34,30 @@
 
     <div class="px-4 pb-4 pt-3">
         <div id="schedule-table-footer" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div id="table-info-container"></div>
-            <div id="table-pagination-container"></div>
+            <div id="schedule-table-info"></div>
+            <div id="schedule-table-pagination"></div>
         </div>
     </div>
 </div>
 
+@await Html.PartialAsync("_TailwindConfirmModal")
+
 @section Scripts {
 <script>
-    let scheduleTable = null;
-    let currentAcademicYearId = '';
-    let currentAcademicClassId = '';
-    let currentDay = '';
+    const pageState = {
+        page: 1,
+        limit: 10,
+        filters: { search: '', academic_year_id: '', academic_class_id: '', day: '' },
+        sort: { field: 'academicYear', order: 'asc' },
+        hasNextPage: false
+    };
+    let lastRequestKey = '';
 
-    $(document).ready(function () {
-        initScheduleTable();
-
-        $(document).on('click', function (e) {
-            if (!$(e.target).closest('.schedule-actions-wrapper').length) {
-                $('.schedule-actions-menu').addClass('hidden');
-            }
-        });
-    });
-
-    function initScheduleTable() {
-        scheduleTable = $('#schedule-table').DataTable({
-            processing: true,
-            serverSide: true,
-            searching: true,
-            lengthChange: true,
-            ajax: {
-                url: '/Schedule/GetAll',
-                type: 'GET',
-                data: function (d) {
-                    d.academic_year_id = currentAcademicYearId || null;
-                    d.academic_class_id = currentAcademicClassId || null;
-                    d.day = currentDay || null;
-                }
-            },
-            dom: 'lftip',
-            language: {
-                lengthMenu: "Show _MENU_ rows",
-                search: "",
-                searchPlaceholder: "Search...",
-                paginate: {
-                    first: "First",
-                    last: "Last",
-                    next: "Next",
-                    previous: "Previous"
-                },
-                info: "Showing _START_ to _END_ of _TOTAL_ entries"
-            },
-            columns: [
-                {
-                    data: null,
-                    className: 'py-3',
-                    render: function (data, type, row) {
-                        return `${formatYearShort(row.start_date)} - ${formatYearShort(row.end_date)}`;
-                    }
-                },
-                {
-                    data: 'semester',
-                    className: 'py-3',
-                    render: function (data) {
-                        return data ? `Semester ${data}` : '-';
-                    }
-                },
-                { data: 'class_name', className: 'py-3 text-gray-900' },
-                {
-                    data: 'day',
-                    className: 'py-3 text-gray-700',
-                    render: data => data ?? '-'
-                },
-                {
-                    data: 'lesson_count',
-                    className: 'py-3',
-                    render: data => data || 0
-                },
-                {
-                    data: null,
-                    orderable: false,
-                    searchable: false,
-                    className: 'text-right py-3',
-                    render: function (data, type, row) {
-                        var id = row.schedule_id;
-                        var editUrl = '/Schedule/Edit?id=' + id;
-                        return `
-                            <div class="flex justify-end schedule-actions-wrapper relative">
-                                <button type="button" onclick="toggleActionsMenu(event, '${id}')"
-                                        class="p-1.5 hover:bg-gray-100 rounded-md transition-colors duration-150">
-                                    <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                                    </svg>
-                                </button>
-                                <div id="actions-menu-${id}" class="schedule-actions-menu hidden absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10">
-                                    <a href="${editUrl}" class="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">
-                                        Edit
-                                    </a>
-                                    <button type="button" onclick="delSchedule('${id}')"
-                                            class="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100">
-                                        Delete
-                                    </button>
-                                </div>
-                            </div>`;
-                    }
-                }
-            ],
-            initComplete: function () {
-                const wrapper = $('#schedule-table_wrapper');
-
-                const $length = wrapper.find('.dataTables_length, .dt-length');
-                const $filter = wrapper.find('.dataTables_filter, .dt-search');
-
-                $filter.hide();
-
-                const $toggleFilter = $(`
-                    <div class="relative">
-                        <button id="filterToggleBtn"
-                                onclick="toggleFilter()"
-                                class="flex items-center gap-2 bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none"
-                                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-                            </svg>
-                            Filter
-                        </button>
-
-                        <div id="filterDropdown"
-                                class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl border border-gray-200 shadow-xl z-50 overflow-visible">
-                            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                                <h3 class="text-lg font-bold text-gray-800">Filter</h3>
-                                <button type="button"
-                                        onclick="toggleFilter()"
-                                        class="text-gray-400 hover:text-gray-600 transition p-1 rounded-lg hover:bg-gray-100">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
-                                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <line x1="18" y1="6" x2="6" y2="18" />
-                                        <line x1="6" y1="6" x2="18" y2="18" />
-                                    </svg>
-                                </button>
-                            </div>
-                            <div class="px-5 py-4 space-y-4">
-                                <div class="w-full">
-                                    <label class="block text-xs font-medium mb-1" for="filter_academic_year">Academic Year</label>
-                                    <select id="filter_academic_year" class="w-full"></select>
-                                </div>
-                                <div class="w-full">
-                                    <label class="block text-xs font-medium mb-1" for="filter_class">Academic Class</label>
-                                    <select id="filter_class" class="w-full"></select>
-                                </div>
-                                <div class="w-full">
-                                    <label class="block text-xs font-medium mb-1" for="filter_day">Day</label>
-                                    <select id="filter_day" class="w-full"></select>
-                                </div>
-                            </div>
-                            <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
-                                <button type="button"
-                                        onclick="applyScheduleFilter()"
-                                        class="px-5 py-2 rounded-full text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 transition">
-                                    Filter
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `);
-
-                $('#schedule-table-toolbar').empty().append($length).append($toggleFilter);
-
-                // LENGTH
-                $length.addClass('flex items-center gap-2 text-sm text-gray-600');
-                $length.find('label').addClass('flex items-center gap-2');
-                $length.find('select').addClass(
-                    'border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 ' +
-                        'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-                    );
-
-                $('#schedule-table-toolbar').addClass('flex flex-col md:flex-row md:items-center md:justify-between gap-4');
-
-                $('#filter_academic_year').select2({
-                    placeholder: "All Academic Years",
-                    allowClear: true,
-                    width: '100%',
-                    ajax: {
-                        url: '/Select2/AcademicYears',
-                        dataType: 'json',
-                        delay: 250,
-                        data: params => ({ q: params.term || '', page: params.page || 1 }),
-                        processResults: data => ({ results: data.results, pagination: data.pagination }),
-                        cache: true
-                    },
-                    minimumInputLength: 0
-                });
-
-                $('#filter_class').select2({
-                    placeholder: "-- All Classes --",
-                    allowClear: true,
-                    width: '100%',
-                    templateResult: formatClassText,
-                    templateSelection: formatClassText,
-                    ajax: {
-                        url: '/Select2/AcademicClasses',
-                        dataType: 'json',
-                        delay: 250,
-                        data: params => ({ q: params.term || '', page: params.page || 1 }),
-                        processResults: data => ({ results: data.results, pagination: data.pagination }),
-                        cache: true
-                    },
-                    minimumInputLength: 0
-                });
-
-                $('#filter_day').select2({
-                    placeholder: "-- All Days --",
-                    allowClear: true,
-                    width: '100%',
-                    ajax: {
-                        url: '/Select2/Days',
-                        dataType: 'json',
-                        delay: 250,
-                        data: params => ({ q: params.term || '', page: params.page || 1 }),
-                        processResults: data => ({ results: data.results, pagination: data.pagination }),
-                        cache: true
-                    },
-                    minimumInputLength: 0
-                });
-
-                $.ajax({
-                    url: '/Select2/AcademicYears',
-                    data: { page: 1 },
-                    success: function (data) {
-                        if (data.results && data.results.length === 1) {
-                            const activeYear = data.results[0];
-                            $('#filter_academic_year').val(activeYear.id).trigger('change');
-                        }
-                    }
-                });
-
-                stylePagination();
-            },
-            drawCallback: function () {
-                setTimeout(function () {
-                    stylePagination();
-                }, 50);
-            }
-        });
-    }
-
-    function applyScheduleFilter() {
-        currentAcademicYearId = $('#filter_academic_year').val() || '';
-        currentAcademicClassId = $('#filter_class').val() || '';
-        currentDay = $('#filter_day').val() || '';
-        scheduleTable.ajax.reload(null, true);
-        toggleFilter();
+    function formatYearShort(d) {
+        if (!d) return '';
+        const date = new Date(d);
+        if (isNaN(date.getTime())) return '';
+        return date.getFullYear();
     }
 
     function formatClassText(item) {
@@ -296,35 +67,280 @@
         return text.replace(/\s*\(\d+\)\s*$/, '').trim();
     }
 
-    function stylePagination() {
-        const wrapper = $('#schedule-table_wrapper');
-
-        let $info = wrapper.find('.dataTables_info').first();
-        if ($info.length === 0) $info = wrapper.find('.dt-info').first();
-
-        let $paginate = wrapper.find('.dataTables_paginate').first();
-        if ($paginate.length === 0) $paginate = wrapper.find('.dt-paging').first();
-
-        if ($info.length > 0) {
-            $('#table-info-container').empty().append($info);
-            $info.removeClass().addClass('text-sm text-gray-600');
-        }
-
-        if ($paginate.length > 0) {
-            $('#table-pagination-container').empty().append($paginate);
-            $('#table-pagination-container').addClass('w-full flex justify-end overflow-x-auto whitespace-nowrap');
-        }
-
-        if (typeof applyAdminPaginationStyle === 'function') {
-            applyAdminPaginationStyle($('#table-pagination-container'));
-        }
+    function getStateQuery() {
+        return `page=${pageState.page}&limit=${pageState.limit}&search=${encodeURIComponent(pageState.filters.search || '')}&academic_year_id=${encodeURIComponent(pageState.filters.academic_year_id || '')}&academic_class_id=${encodeURIComponent(pageState.filters.academic_class_id || '')}&day=${encodeURIComponent(pageState.filters.day || '')}&sortField=${encodeURIComponent(pageState.sort.field)}&sortOrder=${encodeURIComponent(pageState.sort.order)}`;
     }
 
-    function formatYearShort(d) {
-        if (!d) return "";
-        const date = new Date(d);
-        if (isNaN(date.getTime())) return "";
-        return date.getFullYear();
+    function syncStateToUrl() {
+        history.replaceState({ ...pageState }, '', `?${getStateQuery()}`);
+        $('#schedule-add-link').attr('href', `/Schedule/Create?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+    }
+
+    function hydrateStateFromUrl() {
+        const q = new URLSearchParams(window.location.search);
+        const page = Number(q.get('page') || 1);
+        const limit = Number(q.get('limit') || 10);
+        pageState.page = Number.isFinite(page) && page > 0 ? page : 1;
+        pageState.limit = Number.isFinite(limit) && limit > 0 ? limit : 10;
+        pageState.filters.search = q.get('search') || '';
+        pageState.filters.academic_year_id = q.get('academic_year_id') || '';
+        pageState.filters.academic_class_id = q.get('academic_class_id') || '';
+        pageState.filters.day = q.get('day') || '';
+        pageState.sort.field = q.get('sortField') || 'academicYear';
+        pageState.sort.order = q.get('sortOrder') || 'asc';
+    }
+
+    function renderToolbar() {
+        $('#schedule-table-toolbar').html(`
+            <div class="flex items-center gap-2 text-sm text-gray-600">
+                Show
+                <select id="list-limit" class="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:ring-2 focus:ring-blue-500">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select> rows
+            </div>
+            <div class="flex items-center gap-2">
+                <input id="list-search" type="text" placeholder="Search..." class="w-full md:w-64 border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>
+                <div class="relative">
+                    <button id="filterToggleBtn" onclick="toggleFilter()" class="flex items-center gap-2 bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                        </svg>
+                        Filter
+                    </button>
+
+                    <div id="filterDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl border border-gray-200 shadow-xl z-50 overflow-visible">
+                        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                            <h3 class="text-lg font-bold text-gray-800">Filter</h3>
+                            <button type="button" onclick="toggleFilter()" class="text-gray-400 hover:text-gray-600 transition p-1 rounded-lg hover:bg-gray-100">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18" />
+                                    <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="px-5 py-4 space-y-4">
+                            <div class="w-full">
+                                <label class="block text-xs font-medium mb-1" for="filter_academic_year">Academic Year</label>
+                                <select id="filter_academic_year" class="w-full"></select>
+                            </div>
+                            <div class="w-full">
+                                <label class="block text-xs font-medium mb-1" for="filter_class">Academic Class</label>
+                                <select id="filter_class" class="w-full"></select>
+                            </div>
+                            <div class="w-full">
+                                <label class="block text-xs font-medium mb-1" for="filter_day">Day</label>
+                                <select id="filter_day" class="w-full"></select>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
+                            <button type="button" onclick="applyScheduleFilter()" class="px-5 py-2 rounded-full text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 transition">
+                                Filter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `);
+
+        $('#list-limit').val(String(pageState.limit));
+        $('#list-search').val(pageState.filters.search || '');
+
+        $('#list-limit').off('change').on('change', function () {
+            const next = Number($(this).val() || 10);
+            if (pageState.limit === next) return;
+            pageState.limit = next;
+            pageState.page = 1;
+            lastRequestKey = '';
+            fetchSchedules();
+        });
+
+        $('#list-search').off('input').on('input', function () {
+            pageState.filters.search = ($(this).val() || '').trim();
+            pageState.page = 1;
+            lastRequestKey = '';
+            fetchSchedules();
+        });
+
+        $('#filter_academic_year').select2({
+            placeholder: 'All Academic Years',
+            allowClear: true,
+            width: '100%',
+            ajax: {
+                url: '/Select2/AcademicYears',
+                dataType: 'json',
+                delay: 250,
+                data: params => ({ q: params.term || '', page: params.page || 1 }),
+                processResults: data => ({ results: data.results, pagination: data.pagination }),
+                cache: true
+            },
+            minimumInputLength: 0
+        });
+
+        $('#filter_class').select2({
+            placeholder: '-- All Classes --',
+            allowClear: true,
+            width: '100%',
+            templateResult: formatClassText,
+            templateSelection: formatClassText,
+            ajax: {
+                url: '/Select2/AcademicClasses',
+                dataType: 'json',
+                delay: 250,
+                data: params => ({ q: params.term || '', page: params.page || 1 }),
+                processResults: data => ({ results: data.results, pagination: data.pagination }),
+                cache: true
+            },
+            minimumInputLength: 0
+        });
+
+        $('#filter_day').select2({
+            placeholder: '-- All Days --',
+            allowClear: true,
+            width: '100%',
+            ajax: {
+                url: '/Select2/Days',
+                dataType: 'json',
+                delay: 250,
+                data: params => ({ q: params.term || '', page: params.page || 1 }),
+                processResults: data => ({ results: data.results, pagination: data.pagination }),
+                cache: true
+            },
+            minimumInputLength: 0
+        });
+
+        if (pageState.filters.academic_year_id) $('#filter_academic_year').val(pageState.filters.academic_year_id).trigger('change');
+        if (pageState.filters.academic_class_id) $('#filter_class').val(pageState.filters.academic_class_id).trigger('change');
+        if (pageState.filters.day) $('#filter_day').val(pageState.filters.day).trigger('change');
+    }
+
+    function applyScheduleFilter() {
+        pageState.filters.academic_year_id = $('#filter_academic_year').val() || '';
+        pageState.filters.academic_class_id = $('#filter_class').val() || '';
+        pageState.filters.day = $('#filter_day').val() || '';
+        pageState.page = 1;
+        lastRequestKey = '';
+        fetchSchedules();
+        toggleFilter();
+    }
+
+    function renderSortIndicators() {
+        $('#schedule-table thead th[data-sort]').each(function () {
+            const field = $(this).data('sort');
+            const isActive = field === pageState.sort.field;
+            const icon = isActive ? (pageState.sort.order === 'asc' ? ' (asc)' : ' (desc)') : '';
+            const base = $(this).text().replace(/ \((asc|desc)\)$/, '');
+            $(this).text(base + icon);
+        });
+    }
+
+    function renderRows(items) {
+        const $tbody = $('#schedule-table tbody');
+        if (!items || !items.length) {
+            $tbody.html(`<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">No data found.</td></tr>`);
+            return;
+        }
+
+        let html = '';
+        items.forEach(row => {
+            const id = row.schedule_id || '';
+            const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+            html += `
+                <tr class="bg-white divide-y divide-gray-100">
+                    <td class="px-4 py-3">${formatYearShort(row.start_date)} - ${formatYearShort(row.end_date)}</td>
+                    <td class="px-4 py-3">${row.semester ? `Semester ${row.semester}` : '-'}</td>
+                    <td class="px-4 py-3 text-gray-900">${row.class_name || '-'}</td>
+                    <td class="px-4 py-3 text-gray-700">${row.day || '-'}</td>
+                    <td class="px-4 py-3 text-center">${row.lesson_count || 0}</td>
+                    <td class="px-4 py-3 text-right">
+                        <div class="inline-flex justify-end schedule-actions-wrapper relative">
+                            <button type="button" onclick="toggleActionsMenu(event, '${id}')" class="p-1.5 hover:bg-gray-100 rounded-md transition-colors duration-150">
+                                <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                                </svg>
+                            </button>
+                            <div id="actions-menu-${id}" class="schedule-actions-menu hidden absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-100">
+                                <a href="/Schedule/Edit?id=${encodeURIComponent(id)}&returnUrl=${returnUrl}" class="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">Edit</a>
+                                <button type="button" onclick="delSchedule('${id}')" class="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100">Delete</button>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        $tbody.html(html);
+    }
+
+    function renderPagination(currentCount) {
+        const start = currentCount === 0 ? 0 : ((pageState.page - 1) * pageState.limit) + 1;
+        const end = ((pageState.page - 1) * pageState.limit) + currentCount;
+        $('#schedule-table-info').html(`<span class="text-sm text-gray-600">Showing ${start} to ${end}</span>`);
+
+        const prevDisabled = pageState.page <= 1;
+        const nextDisabled = !pageState.hasNextPage;
+        $('#schedule-table-pagination').html(`
+            <div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                <button id="page-prev" class="px-3 py-2 text-sm border-r border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Prev</button>
+                <span class="px-3 py-2 text-sm bg-blue-900 text-white font-semibold">${pageState.page}</span>
+                <button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Next</button>
+            </div>
+        `);
+
+        $('#page-prev').off('click').on('click', function () {
+            if (pageState.page <= 1) return;
+            pageState.page -= 1;
+            lastRequestKey = '';
+            fetchSchedules();
+        });
+        $('#page-next').off('click').on('click', function () {
+            if (!pageState.hasNextPage) return;
+            pageState.page += 1;
+            lastRequestKey = '';
+            fetchSchedules();
+        });
+    }
+
+    async function fetchSchedules() {
+        const payload = {
+            page: pageState.page,
+            limit: pageState.limit,
+            filters: { ...pageState.filters },
+            sort: { ...pageState.sort }
+        };
+        const requestKey = JSON.stringify(payload);
+        if (requestKey === lastRequestKey) return;
+        lastRequestKey = requestKey;
+
+        syncStateToUrl();
+        renderSortIndicators();
+
+        try {
+            const res = await $.ajax({
+                url: '/Schedule/GetAll',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(payload)
+            });
+
+            if (!res.success) {
+                lastRequestKey = '';
+                tailwindMessageModal('Failed', res.message || 'Failed to load schedule data.');
+                return;
+            }
+
+            const result = res.data || {};
+            const items = result.data || [];
+            pageState.hasNextPage = !!result.hasNextPage;
+            renderRows(items);
+            renderPagination(items.length);
+        } catch (xhr) {
+            lastRequestKey = '';
+            const message = (xhr && xhr.responseJSON && xhr.responseJSON.message)
+                ? xhr.responseJSON.message
+                : 'An error occurred while loading schedule data.';
+            tailwindMessageModal('Error', message);
+        }
     }
 
     function toggleActionsMenu(event, id) {
@@ -333,24 +349,62 @@
         $('#actions-menu-' + id).toggleClass('hidden');
     }
 
-    function delSchedule(id) {
+    async function delSchedule(id) {
         $('.schedule-actions-menu').addClass('hidden');
-        if (!confirm("Delete this schedule?")) return;
-
-        $.ajax({
-            url: "/Schedule/Delete",
-            type: "POST",
-            contentType: "application/json",
-            data: JSON.stringify({ id: id }),
-            success: res => {
-                if (res.success) {
-                    $('#schedule-table').DataTable().ajax.reload(null, false);
-                } else {
-                    alert(res.message || "Failed to delete schedule");
-                }
-            },
-            error: () => alert("Error deleting schedule")
+        const yes = await tailwindConfirmModal({
+            title: 'Delete Confirmation',
+            message: 'Are you sure you want to delete this data?',
+            confirmText: 'Delete',
+            cancelText: 'Cancel'
         });
+        if (!yes) return;
+
+        try {
+            const res = await $.ajax({
+                url: '/Schedule/Delete',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ action: 'delete', id: id, data: null })
+            });
+
+            if (!res || !res.success) {
+                await tailwindMessageModal('Failed', (res && res.message) ? res.message : 'Delete failed.');
+                return;
+            }
+
+            lastRequestKey = '';
+            await fetchSchedules();
+            await tailwindMessageModal('Deleted', 'Schedule data has been deleted.');
+        } catch {
+            await tailwindMessageModal('Error', 'An error occurred while deleting schedule data.');
+        }
     }
+
+    $(document).ready(function () {
+        hydrateStateFromUrl();
+        renderToolbar();
+        renderSortIndicators();
+        fetchSchedules();
+
+        $(document).on('click', function (e) {
+            if (!$(e.target).closest('.schedule-actions-wrapper').length) {
+                $('.schedule-actions-menu').addClass('hidden');
+            }
+        });
+
+        $('#schedule-table thead').on('click', 'th[data-sort]', function () {
+            const field = $(this).data('sort');
+            if (!field) return;
+            if (pageState.sort.field === field) {
+                pageState.sort.order = pageState.sort.order === 'asc' ? 'desc' : 'asc';
+            } else {
+                pageState.sort.field = field;
+                pageState.sort.order = 'asc';
+            }
+            pageState.page = 1;
+            lastRequestKey = '';
+            fetchSchedules();
+        });
+    });
 </script>
 }

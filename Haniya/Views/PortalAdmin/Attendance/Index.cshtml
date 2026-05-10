@@ -1,4 +1,4 @@
-﻿@{
+@{
     Layout = "_LayoutAdmin";
     ViewData["Title"] = "Attendance";
 }
@@ -272,7 +272,7 @@
                             url: '/Select2/AcademicClasses',
                             dataType: 'json',
                             delay: 250,
-                            data: params => ({ q: params.term || '', page: params.page || 1 }),
+                            data: params => ({ q: params.term || '', page: params.page || 1, activeOnly: true }),
                             processResults: data => ({ results: data.results, pagination: data.pagination }),
                             cache: true
                         },

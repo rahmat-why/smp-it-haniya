@@ -1,4 +1,4 @@
-﻿@{
+@{
     Layout = "_LayoutAdmin";
     ViewData["Title"] = "Create Grade";
 }
@@ -205,7 +205,8 @@
                     delay: 250,
                     data: p => ({
                         q: p.term || '',
-                        page: p.page || 1
+                        page: p.page || 1,
+                        activeOnly: true
                     }),
                     processResults: d => ({
                         results: d.results,

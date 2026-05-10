@@ -1,4 +1,4 @@
-﻿<!-- ~/Views/PortalAdmin/Schedule/Edit.cshtml -->
+<!-- ~/Views/PortalAdmin/Schedule/Edit.cshtml -->
 @{
     Layout = "_LayoutAdmin";
     ViewData["Title"] = "Edit Schedule";
@@ -194,8 +194,16 @@
             window.location.href = "/Schedule";
         }
 
-        function updateSchedule() {
+        async function updateSchedule() {
             if (!validateForm()) return;
+
+            const yes = await tailwindConfirmModal({
+                title: 'Update Confirmation',
+                message: 'Are you sure you want to update this data?',
+                confirmText: 'Save',
+                cancelText: 'Cancel'
+            });
+            if (!yes) return;
 
             const fd = new FormData();
             fd.append("schedule_id", $('#schedule_id').val());
@@ -209,15 +217,15 @@
                 data: fd,
                 processData: false,
                 contentType: false,
-                success: res => res.success ? location.href = "/Schedule" : alert(res.message || "Update failed"),
-                error: () => alert("Error updating schedule")
+                success: res => res.success ? location.href = "/Schedule" : tailwindMessageModal('Failed', res.message || "Update failed"), 
+                error: () => tailwindMessageModal('Error', "Error updating schedule")
             });
         }
 
         function loadSchedule() {
             const id = $('#schedule_id').val().trim();
             if (!id) {
-                alert("Invalid schedule ID");
+                tailwindMessageModal('Error', "Invalid schedule ID");
                 return;
             }
 
@@ -227,7 +235,7 @@
                 dataType: 'json',
                 success: res => {
                     if (!res.success) {
-                        alert(res.message || "Failed to load schedule");
+                        tailwindMessageModal('Failed', res.message || "Failed to load schedule");
                         return;
                     }
                     const d = res.data;
@@ -256,7 +264,7 @@
                         addDetailRow();
                     }
                 },
-                error: () => alert("Error loading schedule data")
+                error: () => tailwindMessageModal('Error', "Error loading schedule data")
             });
         }
 

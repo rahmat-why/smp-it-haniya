@@ -1,0 +1,182 @@
+@{
+    Layout = "_LayoutAdmin";
+    ViewData["Title"] = "Payment Detail";
+}
+
+<input type="hidden" id="payment_id" value="@ViewBag.paymentId">
+
+<div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">Payment Detail</h2>
+    <a id="btn-export-payment-receipt" href="#" target="_blank"
+       class="inline-flex items-center justify-center bg-emerald-700 hover:bg-emerald-600 text-white w-10 h-10 rounded-md shadow-sm"
+       title="Export Kwitansi Pembayaran">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
+            <path d="M14 2v6h6"></path>
+            <path d="M8 13h8"></path>
+            <path d="M8 17h8"></path>
+        </svg>
+    </a>
+</div>
+
+<div class="bg-white p-6 rounded-xl shadow-lg w-full space-y-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div><div class="block text-sm font-medium text-gray-700 mb-2">Student</div><div id="student_display" class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">-</div></div>
+        <div><div class="block text-sm font-medium text-gray-700 mb-2">Class (PPDB)</div><div id="class_display" class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">-</div></div>
+        <div><div class="block text-sm font-medium text-gray-700 mb-2">Payment Type</div><div id="payment_type_display" class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">-</div></div>
+        <div><div class="block text-sm font-medium text-gray-700 mb-2">Total Price</div><div id="total_price_display" class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">-</div></div>
+        <div><div class="block text-sm font-medium text-gray-700 mb-2">Total Paid</div><div id="total_paid_display" class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">-</div></div>
+        <div><div class="block text-sm font-medium text-gray-700 mb-2">Remaining</div><div id="remaining_payment_display" class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">-</div></div>
+    </div>
+
+    <div class="space-y-3">
+        <div class="flex justify-between items-center">
+            <h3 class="text-lg font-semibold text-gray-800">Detail Cicilan</h3>
+            <a id="btn-export-all-instalment-receipt" href="#" target="_blank"
+               class="inline-flex items-center justify-center bg-indigo-700 hover:bg-indigo-600 text-white w-9 h-9 rounded-md shadow-sm"
+               title="Export Semua Kwitansi Cicilan">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
+                    <path d="M14 2v6h6"></path>
+                    <path d="M8 13h8"></path>
+                    <path d="M8 17h8"></path>
+                </svg>
+            </a>
+        </div>
+        <div class="overflow-x-auto border border-gray-200 rounded-lg shadow-inner">
+            <table class="min-w-full divide-y divide-gray-200 table-fixed">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-1/12">#</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-2/12">Paid</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-2/12">Tanggal</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-2/12">Method</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-3/12">Notes</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-2/12">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-instalments"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="flex justify-end pt-2">
+        <a href="/Payment" class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm">Back</a>
+    </div>
+</div>
+
+@await Html.PartialAsync("_TailwindConfirmModal")
+
+@section Scripts {
+<script>
+    function formatCurrency(amount) {
+        if (!amount || isNaN(amount)) return 'Rp 0';
+        return 'Rp ' + Number(amount).toLocaleString('id-ID');
+    }
+
+    function loadPayment() {
+        const id = ($('#payment_id').val() || '').trim();
+        if (!id) return;
+
+        $('#btn-export-payment-receipt').attr('href', `/Payment/ExportPaymentReceipt?id=${encodeURIComponent(id)}&download=true`);
+        $('#btn-export-all-instalment-receipt')
+            .attr('href', '#')
+            .removeAttr('target')
+            .removeClass('bg-indigo-700 hover:bg-indigo-600 text-white')
+            .addClass('bg-gray-300 text-gray-500 cursor-not-allowed pointer-events-none')
+            .attr('title', 'Belum ada cicilan, kwitansi cicilan belum tersedia');
+
+        $.ajax({
+            url: `/Payment/GetById?id=${id}`,
+            type: 'GET',
+            dataType: 'json',
+            success: function (res) {
+                if (!res.success) {
+                    tailwindMessageModal('Error', res.message || 'Failed to load payment');
+                    return;
+                }
+                const d = res.data || {};
+                $('#student_display').text(d.student_name ? `${d.student_name} - ${d.nis || '-'}` : '-');
+                $('#class_display').text(d.class_name || '-');
+                $('#payment_type_display').text(d.payment_type_desc || d.payment_type || '-');
+                $('#total_price_display').text(formatCurrency(d.total_price || 0));
+                $('#total_paid_display').text(formatCurrency(d.total_payment || 0));
+                $('#remaining_payment_display').text(formatCurrency(d.remaining_payment || 0));
+
+                const totalPaid = Number(d.total_payment || 0);
+                const isPaid = (d.status || '').toUpperCase() === 'PAID';
+                const canExportTotalReceipt = !(totalPaid <= 0 && !isPaid);
+                if (canExportTotalReceipt) {
+                    $('#btn-export-payment-receipt')
+                        .attr('href', `/Payment/ExportPaymentReceipt?id=${encodeURIComponent(id)}&download=true`)
+                        .attr('target', '_blank')
+                        .removeClass('bg-gray-300 text-gray-500 cursor-not-allowed pointer-events-none')
+                        .addClass('bg-emerald-700 hover:bg-emerald-600 text-white')
+                        .attr('title', 'Export Kwitansi Pembayaran');
+                } else {
+                    $('#btn-export-payment-receipt')
+                        .attr('href', '#')
+                        .removeAttr('target')
+                        .removeClass('bg-emerald-700 hover:bg-emerald-600 text-white')
+                        .addClass('bg-gray-300 text-gray-500 cursor-not-allowed pointer-events-none')
+                        .attr('title', 'Belum ada pembayaran, kwitansi total belum tersedia');
+                }
+
+                const rows = d.instalments || [];
+                if (rows.length > 0) {
+                    $('#btn-export-all-instalment-receipt')
+                        .attr('href', `/Payment/ExportInstalmentReceipt?paymentId=${encodeURIComponent(id)}&download=true`)
+                        .attr('target', '_blank')
+                        .removeClass('bg-gray-300 text-gray-500 cursor-not-allowed pointer-events-none')
+                        .addClass('bg-indigo-700 hover:bg-indigo-600 text-white')
+                        .attr('title', 'Export Semua Kwitansi Cicilan');
+                } else {
+                    $('#btn-export-all-instalment-receipt')
+                        .attr('href', '#')
+                        .removeAttr('target')
+                        .removeClass('bg-indigo-700 hover:bg-indigo-600 text-white')
+                        .addClass('bg-gray-300 text-gray-500 cursor-not-allowed pointer-events-none')
+                        .attr('title', 'Belum ada cicilan, kwitansi cicilan belum tersedia');
+                }
+
+                if (!rows.length) {
+                    $('#tbody-instalments').html('<tr><td colspan="6" class="px-4 py-4 text-center text-gray-500">Belum ada cicilan.</td></tr>');
+                    return;
+                }
+
+                let html = '';
+                rows.forEach((row, idx) => {
+                    const url = `/Payment/ExportInstalmentReceipt?paymentId=${encodeURIComponent(id)}&instalmentId=${encodeURIComponent(row.instalment_id || '')}&download=true`;
+                    html += `
+                        <tr class="border-b last:border-0">
+                            <td class="px-4 py-3">${idx + 1}</td>
+                            <td class="px-4 py-3">${formatCurrency(row.total_payment || 0)}</td>
+                            <td class="px-4 py-3">${row.payment_date || '-'}</td>
+                            <td class="px-4 py-3">${row.payment_method_desc || row.payment_method || '-'}</td>
+                            <td class="px-4 py-3">${row.notes || '-'}</td>
+                            <td class="px-4 py-3">
+                                <a href="${url}" target="_blank" class="inline-flex items-center justify-center bg-emerald-700 hover:bg-emerald-600 text-white w-8 h-8 rounded" title="Export Kwitansi Cicilan">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
+                                        <path d="M14 2v6h6"></path>
+                                        <path d="M8 13h8"></path>
+                                        <path d="M8 17h8"></path>
+                                    </svg>
+                                </a>
+                            </td>
+                        </tr>
+                    `;
+                });
+                $('#tbody-instalments').html(html);
+            },
+            error: function () {
+                tailwindMessageModal('Error', 'Failed to load payment');
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        loadPayment();
+    });
+</script>
+}

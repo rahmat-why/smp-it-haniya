@@ -54,6 +54,7 @@ namespace Haniya.Controllers.PortalStudent
                 var data = new
                 {
                     academicYearUsed = academicYear,
+                    memorizationAchievement = GetMemorizationAchievement(conn, studentId),
                     attendance = GetTotalAttendance(conn, studentId),
                     gradesChart = GetStudentGradesChart(conn, studentId),
                     attendanceChart = GetStudentAttendanceChart(conn, studentId),
@@ -75,6 +76,43 @@ namespace Haniya.Controllers.PortalStudent
                     message = ex.Message
                 });
             }
+        }
+
+        [HttpGet]
+        public IActionResult GetMemorizationAchievement()
+        {
+            try
+            {
+                var studentId = User.FindFirst("StudentId")?.Value;
+                if (string.IsNullOrEmpty(studentId))
+                {
+                    return Json(new { success = false, message = "Invalid student session" });
+                }
+
+                using var conn = GetConn();
+                conn.Open();
+                var value = GetMemorizationAchievement(conn, studentId);
+                return Json(new { success = true, data = value });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        private string GetMemorizationAchievement(SqlConnection conn, string studentId)
+        {
+            using var cmd = new SqlCommand(@"
+                SELECT TOP 1 ISNULL(ds.item_name, '-') AS memorization_achievement
+                FROM mst_students s
+                LEFT JOIN mst_detail_settings ds
+                    ON s.level = ds.detail_id
+                WHERE s.student_id = @studentId
+            ", conn);
+            cmd.Parameters.AddWithValue("@studentId", studentId);
+
+            var value = cmd.ExecuteScalar()?.ToString();
+            return string.IsNullOrWhiteSpace(value) ? "-" : value;
         }
 
         private string? GetLatestActiveAcademicYear(SqlConnection conn)

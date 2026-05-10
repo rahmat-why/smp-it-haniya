@@ -126,10 +126,10 @@ namespace Haniya.Controllers.PortalAdmin
                     LEFT JOIN (
                         SELECT 
                             d.student_id,
-                            SUM(CASE WHEN d.status='PRESENT' THEN 1 ELSE 0 END) AS present,
-                            SUM(CASE WHEN d.status='SICK' THEN 1 ELSE 0 END) AS sick,
-                            SUM(CASE WHEN d.status='EXCUSED' THEN 1 ELSE 0 END) AS permit,
-                            SUM(CASE WHEN d.status='NOINFO' THEN 1 ELSE 0 END) AS alpha
+                            SUM(CASE WHEN UPPER(LTRIM(RTRIM(ISNULL(d.status,'')))) IN ('PRESENT','HADIR') THEN 1 ELSE 0 END) AS present,
+                            SUM(CASE WHEN UPPER(LTRIM(RTRIM(ISNULL(d.status,'')))) IN ('SICK','SAKIT') THEN 1 ELSE 0 END) AS sick,
+                            SUM(CASE WHEN UPPER(LTRIM(RTRIM(ISNULL(d.status,'')))) IN ('EXCUSED','IZIN','PERMIT') THEN 1 ELSE 0 END) AS permit,
+                            SUM(CASE WHEN UPPER(LTRIM(RTRIM(ISNULL(d.status,'')))) IN ('NOINFO','ALPHA','TANPA KETERANGAN') THEN 1 ELSE 0 END) AS alpha
                         FROM txn_attendance_details d
                         JOIN txn_attendances a 
                             ON a.attendance_id = d.attendance_id
@@ -286,7 +286,7 @@ namespace Haniya.Controllers.PortalAdmin
                 SELECT 
                     d.student_id,
                     a.academic_class_id,
-                    (SUM(CASE WHEN d.status='PRESENT' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) AS attendance_score
+                    (SUM(CASE WHEN UPPER(LTRIM(RTRIM(ISNULL(d.status,'')))) IN ('PRESENT','HADIR') THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) AS attendance_score
                 FROM txn_attendance_details d
                 JOIN txn_attendances a 
                     ON a.attendance_id = d.attendance_id
@@ -391,9 +391,9 @@ namespace Haniya.Controllers.PortalAdmin
 
             using var attendanceCmd = new SqlCommand(@"
                 SELECT 
-                    SUM(CASE WHEN d.status='SICK' THEN 1 ELSE 0 END) AS sick,
-                    SUM(CASE WHEN d.status='EXCUSED' THEN 1 ELSE 0 END) AS permit,
-                    SUM(CASE WHEN d.status='NOINFO' THEN 1 ELSE 0 END) AS alpha
+                    SUM(CASE WHEN UPPER(LTRIM(RTRIM(ISNULL(d.status,'')))) IN ('SICK','SAKIT') THEN 1 ELSE 0 END) AS sick,
+                    SUM(CASE WHEN UPPER(LTRIM(RTRIM(ISNULL(d.status,'')))) IN ('EXCUSED','IZIN','PERMIT') THEN 1 ELSE 0 END) AS permit,
+                    SUM(CASE WHEN UPPER(LTRIM(RTRIM(ISNULL(d.status,'')))) IN ('NOINFO','ALPHA','TANPA KETERANGAN') THEN 1 ELSE 0 END) AS alpha
                 FROM txn_attendance_details d
                 JOIN txn_attendances a 
                     ON a.attendance_id = d.attendance_id
@@ -593,6 +593,21 @@ namespace Haniya.Controllers.PortalAdmin
 
             data["saved_wali_notes_page1"] = waliPage1;
             data["saved_wali_notes_page2"] = waliPage2;
+
+            if (saved.Attendances != null && saved.Attendances.Count > 0)
+            {
+                data["sick"] =
+                    saved.Attendances.TryGetValue("Sakit", out var sick) ? sick :
+                    (saved.Attendances.TryGetValue("SICK", out var sickEn) ? sickEn : 0);
+                data["permit"] =
+                    saved.Attendances.TryGetValue("Izin", out var permit) ? permit :
+                    (saved.Attendances.TryGetValue("EXCUSED", out var permitEn) ? permitEn :
+                    (saved.Attendances.TryGetValue("PERMIT", out var permitEn2) ? permitEn2 : 0));
+                data["alpha"] =
+                    saved.Attendances.TryGetValue("Tanpa Keterangan", out var alpha) ? alpha :
+                    (saved.Attendances.TryGetValue("NOINFO", out var alphaEn) ? alphaEn :
+                    (saved.Attendances.TryGetValue("ALPHA", out var alphaEn2) ? alphaEn2 : 0));
+            }
         }
 
         private class SavedGrade
@@ -897,16 +912,15 @@ namespace Haniya.Controllers.PortalAdmin
 
                     foreach (var ex in extraList)
                     {
-                        string name = ex.extracurricular_name?.ToString();
-                        string predicate = ex.predicate?.ToString();
-                        string desc = ex.description?.ToString();
+                        string name = (ex.extracurricular_name?.ToString() ?? "").Trim();
+                        string predicate = (ex.predicate?.ToString() ?? "").Trim();
+                        string desc = (ex.description?.ToString() ?? "").Trim();
 
-                        if (string.IsNullOrWhiteSpace(name))
+                        if (string.IsNullOrWhiteSpace(name) || name == "-")
                             continue;
-                        if (string.IsNullOrWhiteSpace(predicate))
-                            continue;
-                        if (string.IsNullOrWhiteSpace(desc))
-                            continue;
+
+                        if (string.IsNullOrWhiteSpace(predicate)) predicate = "-";
+                        if (string.IsNullOrWhiteSpace(desc)) desc = "-";
 
                         var cmdExtra = new SqlCommand(@"
                             INSERT INTO txn_eraport_extracurriculars
@@ -931,9 +945,9 @@ namespace Haniya.Controllers.PortalAdmin
 
                     var attendanceSummaryCmd = new SqlCommand(@"
                         SELECT 
-                            SUM(CASE WHEN d.status='SICK' THEN 1 ELSE 0 END) AS sick,
-                            SUM(CASE WHEN d.status='EXCUSED' THEN 1 ELSE 0 END) AS permit,
-                            SUM(CASE WHEN d.status='NOINFO' THEN 1 ELSE 0 END) AS alpha
+                            SUM(CASE WHEN UPPER(LTRIM(RTRIM(ISNULL(d.status,'')))) IN ('SICK','SAKIT') THEN 1 ELSE 0 END) AS sick,
+                            SUM(CASE WHEN UPPER(LTRIM(RTRIM(ISNULL(d.status,'')))) IN ('EXCUSED','IZIN','PERMIT') THEN 1 ELSE 0 END) AS permit,
+                            SUM(CASE WHEN UPPER(LTRIM(RTRIM(ISNULL(d.status,'')))) IN ('NOINFO','ALPHA','TANPA KETERANGAN') THEN 1 ELSE 0 END) AS alpha
                         FROM txn_attendance_details d
                         JOIN txn_attendances a 
                             ON a.attendance_id = d.attendance_id

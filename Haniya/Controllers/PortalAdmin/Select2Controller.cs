@@ -633,7 +633,7 @@ namespace Haniya.Controllers
         }
 
         [HttpGet]
-        public IActionResult AcademicClasses(string q = "", int page = 1, int pageSize = 20)
+        public IActionResult AcademicClasses(string q = "", int page = 1, int pageSize = 20, bool activeOnly = false)
         {
             try
             {
@@ -644,6 +644,10 @@ namespace Haniya.Controllers
                 conn.Open();
 
                 var where = "WHERE 1=1";
+                if (activeOnly)
+                {
+                    where += " AND ay.status = 'ACTIVE'";
+                }
                 if (!string.IsNullOrWhiteSpace(q))
                 {
                     where += " AND (c.class_name LIKE @q OR CAST(ay.start_date AS NVARCHAR) LIKE @q OR CAST(ay.end_date AS NVARCHAR) LIKE @q)";

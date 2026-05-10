@@ -518,10 +518,13 @@
                         const menuUrl = (m.url || '')
                             .toLowerCase()
                             .replace(/\/index$/, '');
+                        const isExternal = !!m.is_external || /^https?:\/\//i.test(m.url || '');
 
                         const isActive =
-                            currentPath === menuUrl ||
-                            currentPath.startsWith(menuUrl + '/');
+                            !isExternal && (
+                                currentPath === menuUrl ||
+                                currentPath.startsWith(menuUrl + '/')
+                            );
 
                         const activeDesktop = isActive
                             ? 'bg-blue-700 border-l-4 border-white font-semibold'
@@ -538,6 +541,7 @@
                         // Desktop
                         sidebarHtml += `
                             <a href="${m.url}"
+                            ${isExternal ? 'target="_blank" rel="noopener noreferrer"' : ''}
                             class="flex items-center gap-3 px-4 py-2 rounded transition ${activeDesktop}">
                                 ${iconHtml}
                                 <span>${m.menu_name}</span>
@@ -547,6 +551,7 @@
                         // Mobile
                         bottomHtml += `
                             <a href="${m.url}"
+                            ${isExternal ? 'target="_blank" rel="noopener noreferrer"' : ''}
                             class="flex flex-col items-center justify-center py-2 ${totalMenu <= 5 ? 'flex-1' : 'px-4 min-w-[70px]'} ${activeMobile}">
                                 ${m.icon ? `<i class="fa-solid ${m.icon} text-lg"></i>` : ''}
                                 <span class="text-[11px] mt-1 whitespace-nowrap">${m.menu_name}</span>

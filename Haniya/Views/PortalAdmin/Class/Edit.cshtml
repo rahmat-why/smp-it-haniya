@@ -250,8 +250,15 @@
             return valid;
         }
 
-        function updateClass() {
+        async function updateClass() {
             if (!validateForm()) return;
+            const yes = await tailwindConfirmModal({
+                title: 'Update Confirmation',
+                message: 'Are you sure you want to update this data?',
+                confirmText: 'Save',
+                cancelText: 'Cancel'
+            });
+            if (!yes) return;
 
             const fd = new FormData();
             fd.append("academic_class_id", $('#academic_class_id').val());
@@ -274,11 +281,11 @@
                     if (res.success) {
                         window.location.href = "/Class";
                     } else {
-                        alert(res.message || "Failed to update class");
+                        tailwindMessageModal('Failed', res.message || "Failed to update class");
                     }
                 },
                 error: function () {
-                    alert("An error occurred while updating the class.");
+                    tailwindMessageModal('Error', "An error occurred while updating the class.");
                 }
             });
         }
@@ -361,7 +368,7 @@
             // Load current class info and pre-select values
             $.get("/Class/GetById", { id: acId }, res => {
                 if (!res.success) {
-                    alert(res.message || 'Failed to load class info');
+                    tailwindMessageModal('Failed', res.message || 'Failed to load class info');
                     return;
                 }
                 const d = res.data;
@@ -390,7 +397,7 @@
                 // Load students with assignment status
                 $.get("/Class/GetStudentsWithAssignmentStatus", { academicClassId: acId }, stRes => {
                     if (!stRes.success) {
-                        alert(stRes.message || 'Failed to load students');
+                        tailwindMessageModal('Failed', stRes.message || 'Failed to load students');
                         return;
                     }
                     renderStudents(stRes.data || []);

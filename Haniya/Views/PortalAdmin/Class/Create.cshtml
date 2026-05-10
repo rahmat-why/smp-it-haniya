@@ -237,8 +237,15 @@
             return valid;
         }
 
-        function saveClass() {
+        async function saveClass() {
             if (!validateForm()) return;
+            const yes = await tailwindConfirmModal({
+                title: 'Create Confirmation',
+                message: 'Are you sure you want to create this data?',
+                confirmText: 'Save',
+                cancelText: 'Cancel'
+            });
+            if (!yes) return;
 
             const fd = new FormData();
             fd.append("academic_year_id", $('#academic_year_id').val());
@@ -260,11 +267,11 @@
                     if (res.success) {
                         window.location.href = "/Class";
                     } else {
-                        alert(res.message || "Failed to create class");
+                        tailwindMessageModal('Failed', res.message || "Failed to create class");
                     }
                 },
                 error: function () {
-                    alert("An error occurred while creating the class.");
+                    tailwindMessageModal('Error', "An error occurred while creating the class.");
                 }
             });
         }
@@ -345,7 +352,7 @@
             // Load unassigned students
             $.get("/Class/GetUnassignedStudents", res => {
                 if (!res.success) {
-                    alert(res.message || 'Failed to load students');
+                    tailwindMessageModal('Failed', res.message || 'Failed to load students');
                     return;
                 }
                 renderStudents(res.data);

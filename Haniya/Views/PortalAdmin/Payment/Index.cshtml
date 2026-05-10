@@ -29,7 +29,7 @@
                     <th data-sort="paid" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right !text-right cursor-pointer select-none" style="width: 130px;">Paid</th>
                     <th data-sort="remaining" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right !text-right cursor-pointer select-none" style="width: 130px;">Remaining</th>
                     <th data-sort="status" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center cursor-pointer select-none" style="width: 100px;">Status</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 70px;">Action</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 180px;">Action</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100"></tbody>
@@ -305,7 +305,11 @@
             else if (row.status === 'UNPAID') badge = 'bg-red-100 text-red-800';
 
             const isPaid = (row.status || '').toUpperCase() === 'PAID';
+            const totalPaid = Number(row.total_payment || 0);
+            const canExportTotalReceipt = !(totalPaid <= 0 && !isPaid);
             const editUrl = `/Payment/Edit?id=${encodeURIComponent(row.payment_id)}&returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+            const detailUrl = `/Payment/Detail?id=${encodeURIComponent(row.payment_id)}`;
+            const paymentReceiptUrl = `/Payment/ExportPaymentReceipt?id=${encodeURIComponent(row.payment_id)}&download=true`;
 
             html += `
                 <tr class="bg-white divide-y divide-gray-100 ${isOverdueAndUnpaid(row) ? 'bg-red-50' : ''}">
@@ -328,18 +332,45 @@
                         <span class="inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${badge}">${row.status || 'UNKNOWN'}</span>
                     </td>
                     <td class="px-4 py-3 text-center">
-                        ${isPaid
-                            ? `<button type="button" class="inline-flex items-center justify-center p-2 rounded-md bg-gray-100 text-gray-400 cursor-not-allowed" title="Fully paid" disabled>
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a5 5 0 00-10 0v2m-2 0h14a1 1 0 011 1v9a1 1 0 01-1 1H5a1 1 0 01-1-1v-9a1 1 0 011-1z" />
+                        <div class="flex flex-wrap gap-2 justify-center">
+                            <a href="${detailUrl}" class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200" title="Detail">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </a>
+                            ${canExportTotalReceipt
+                                ? `<a href="${paymentReceiptUrl}" target="_blank" class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-emerald-100 text-emerald-700 hover:bg-emerald-200" title="Export Kwitansi Pembayaran">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
+                                        <path d="M14 2v6h6"></path>
+                                        <path d="M8 13h8"></path>
+                                        <path d="M8 17h8"></path>
                                     </svg>
-                               </button>`
-                            : `<a href="${editUrl}" class="inline-flex items-center justify-center p-2 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors" title="Pay">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m3 0h6M5 6h14a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z" />
+                                   </a>`
+                                : `<button type="button" class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-gray-100 text-gray-400 cursor-not-allowed" title="Belum ada pembayaran, kwitansi total belum tersedia" disabled>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
+                                        <path d="M14 2v6h6"></path>
+                                        <path d="M8 13h8"></path>
+                                        <path d="M8 17h8"></path>
                                     </svg>
-                               </a>`
-                        }
+                                   </button>`
+                            }
+                            ${isPaid
+                                ? `<button type="button" class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-gray-100 text-gray-400 cursor-not-allowed" title="Fully paid" disabled>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                   </button>`
+                                : `<a href="${editUrl}" class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200" title="Pay">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 5v14"></path>
+                                        <path d="M5 12h14"></path>
+                                    </svg>
+                                   </a>`
+                            }
+                        </div>
                     </td>
                 </tr>
             `;

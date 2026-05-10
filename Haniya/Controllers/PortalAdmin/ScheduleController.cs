@@ -29,37 +29,49 @@ namespace Haniya.Controllers.PortalAdmin
             return View("~/Views/PortalAdmin/Schedule/Edit.cshtml");
         }
 
-        public IActionResult GetAll(string academic_year_id = null, string academic_class_id = null, string day = null)
+        public class ListSort
         {
-            var (draw, start, length, _, _, _) = ParseDataTablesQuery();
+            public string field { get; set; } = "academicYear";
+            public string order { get; set; } = "asc";
+        }
+
+        public class ListRequest
+        {
+            public int page { get; set; } = 1;
+            public int limit { get; set; } = 10;
+            public Dictionary<string, string>? filters { get; set; }
+            public ListSort? sort { get; set; }
+        }
+
+        [HttpPost]
+        public IActionResult GetAll([FromBody] ListRequest? req)
+        {
+            req ??= new ListRequest();
+            var page = req.page <= 0 ? 1 : req.page;
+            var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
+            var offset = (page - 1) * limit;
+            var take = limit + 1;
+
+            var filters = req.filters ?? new Dictionary<string, string>();
+            filters.TryGetValue("search", out var search);
+            filters.TryGetValue("academic_year_id", out var academicYearId);
+            filters.TryGetValue("academic_class_id", out var academicClassId);
+            filters.TryGetValue("day", out var day);
+
+            var sortMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["academicYear"] = "ay.start_date",
+                ["semester"] = "ay.semester",
+                ["class"] = "c.class_name",
+                ["day"] = "mds.item_name",
+                ["totalSubject"] = "COUNT(d.schedule_detail_id)"
+            };
+            var sort = req.sort ?? new ListSort();
+            var orderBy = sortMap.TryGetValue(sort.field ?? "", out var mapped) ? mapped : "ay.start_date";
+            var orderDir = string.Equals(sort.order, "desc", StringComparison.OrdinalIgnoreCase) ? "DESC" : "ASC";
 
             using var conn = GetConn();
             conn.Open();
-
-            var totalSql = @"
-                SELECT COUNT(*) 
-                FROM mst_schedules s
-                JOIN mst_detail_settings mds ON (s.day = mds.item_name OR s.day = mds.detail_id) AND mds.header_id = 'DAY'
-                JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
-                JOIN mst_academic_years ay ON ac.academic_year_id = ay.academic_year_id
-                WHERE (@classId IS NULL OR s.academic_class_id = @classId)
-                  AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
-                  AND (
-                        @day IS NULL
-                        OR s.day = @day
-                        OR mds.item_name = @day
-                        OR mds.item_desc = @day
-                        OR mds.detail_id = @day
-                  )";
-
-            int recordsTotal;
-            using (var cmd = new SqlCommand(totalSql, conn))
-            {
-                cmd.Parameters.AddWithValue("@classId", (object)academic_class_id ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@academicYearId", (object)academic_year_id ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@day", (object)day ?? DBNull.Value);
-                recordsTotal = (int)cmd.ExecuteScalar();
-            }
 
             var sql = @"
                 SELECT 
@@ -78,6 +90,11 @@ namespace Haniya.Controllers.PortalAdmin
                 LEFT JOIN mst_schedule_details d ON d.schedule_id = s.schedule_id
                 WHERE (@classId IS NULL OR s.academic_class_id = @classId)
                   AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
+                  AND (@search IS NULL OR (
+                        c.class_name LIKE @search
+                        OR mds.item_name LIKE @search
+                        OR mds.item_desc LIKE @search
+                  ))
                   AND (
                         @day IS NULL
                         OR s.day = @day
@@ -86,17 +103,18 @@ namespace Haniya.Controllers.PortalAdmin
                         OR mds.detail_id = @day
                   )
                 GROUP BY s.schedule_id, ay.start_date, ay.end_date, ay.semester, c.class_name, mds.item_name
-                ORDER BY ay.start_date, ay.semester, c.class_name, mds.item_name
-                OFFSET @start ROWS FETCH NEXT @length ROWS ONLY";
+                ORDER BY " + orderBy + " " + orderDir + @"
+                OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY";
 
             var list = new List<object>();
             using (var cmd = new SqlCommand(sql, conn))
             {
-                cmd.Parameters.AddWithValue("@classId", (object)academic_class_id ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@academicYearId", (object)academic_year_id ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@classId", (object)academicClassId ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@academicYearId", (object)academicYearId ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@search", string.IsNullOrWhiteSpace(search) ? DBNull.Value : $"%{search.Trim()}%");
                 cmd.Parameters.AddWithValue("@day", (object)day ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@start", start);
-                cmd.Parameters.AddWithValue("@length", length);
+                cmd.Parameters.AddWithValue("@offset", offset);
+                cmd.Parameters.AddWithValue("@take", take);
 
                 using var r = cmd.ExecuteReader();
                 while (r.Read())
@@ -114,19 +132,10 @@ namespace Haniya.Controllers.PortalAdmin
                 }
             }
 
-            return Json(new { draw, recordsTotal, recordsFiltered = recordsTotal, data = list });
-        }
+            var hasNextPage = list.Count > limit;
+            if (hasNextPage) list = list.Take(limit).ToList();
 
-        private (int draw, int start, int length, string searchValue, int orderColumnIndex, string orderDir) ParseDataTablesQuery()
-        {
-            var q = Request.Query;
-            int.TryParse(q["draw"], out var draw); draw = draw > 0 ? draw : 1;
-            int.TryParse(q["start"], out var start);
-            int.TryParse(q["length"], out var length); length = length > 0 ? length : 10;
-            var searchValue = q["search[value]"].ToString() ?? "";
-            int.TryParse(q["order[0][column]"], out var orderColumnIndex);
-            var orderDir = q["order[0][dir]"].ToString().ToUpper() is "ASC" or "DESC" ? q["order[0][dir]"].ToString().ToUpper() : "ASC";
-            return (draw, start, length, searchValue, orderColumnIndex, orderDir);
+            return Json(DTOResponse.ok(new { data = list, hasNextPage }));
         }
 
         [HttpGet]

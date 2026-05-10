@@ -1,4 +1,4 @@
-﻿<!-- ~/Views/PortalAdmin/Schedule/Create.cshtml -->
+<!-- ~/Views/PortalAdmin/Schedule/Create.cshtml -->
 @{
     Layout = "_LayoutAdmin";
     ViewData["Title"] = "Create Schedule";
@@ -185,8 +185,16 @@
             window.location.href = "/Schedule";
         }
 
-        function saveSchedule() {
+        async function saveSchedule() {
             if (!validateForm()) return;
+
+            const yes = await tailwindConfirmModal({
+                title: 'Create Confirmation',
+                message: 'Are you sure you want to create this data?',
+                confirmText: 'Save',
+                cancelText: 'Cancel'
+            });
+            if (!yes) return;
 
             const fd = new FormData();
             fd.append("academic_class_id", $('#academic_class_id').val());
@@ -199,8 +207,8 @@
                 data: fd,
                 processData: false,
                 contentType: false,
-                success: res => res.success ? location.href = "/Schedule" : alert(res.message || "Save failed"),
-                error: () => alert("Error saving schedule")
+                success: res => res.success ? location.href = "/Schedule" : tailwindMessageModal('Failed', res.message || "Save failed"), 
+                error: () => tailwindMessageModal('Error', "Error saving schedule")
             });
         }
 

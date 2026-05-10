@@ -7,6 +7,8 @@ using Haniya.Models;
 using System.Linq;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Rotativa.AspNetCore;
+using Rotativa.AspNetCore.Options;
 
 namespace Haniya.Controllers.PortalAdmin
 {
@@ -23,6 +25,11 @@ namespace Haniya.Controllers.PortalAdmin
         {
             ViewBag.paymentId = id;
             return View("~/Views/PortalAdmin/Payment/Edit.cshtml");
+        }
+        public IActionResult Detail(string id)
+        {
+            ViewBag.paymentId = id;
+            return View("~/Views/PortalAdmin/Payment/Detail.cshtml");
         }
 
         public class ListSort
@@ -255,11 +262,14 @@ namespace Haniya.Controllers.PortalAdmin
                 p.payment_method,
                 COALESCE(s.full_name, CONCAT(s.first_name, ' ', s.last_name)) AS student_name,
                 s.nis,
+                c.class_name,
                 COALESCE(pt.item_desc, p.payment_type) AS payment_type_desc,
                 COALESCE(pm.item_desc, p.payment_method) AS payment_method_desc
             FROM txn_payments p
             LEFT JOIN mst_student_classes sc ON p.student_class_id = sc.student_class_id
             LEFT JOIN mst_students s ON sc.student_id = s.student_id
+            LEFT JOIN mst_academic_classes ac ON sc.academic_class_id = ac.academic_class_id
+            LEFT JOIN mst_classes c ON ac.class_id = c.class_id
             LEFT JOIN mst_detail_settings pt ON p.payment_type = pt.detail_id AND pt.header_id = 'PAYMENT_TYPE'
             LEFT JOIN mst_detail_settings pm ON pm.header_id = 'PAYMENT_METHOD'
                                             AND (p.payment_method = pm.detail_id OR p.payment_method = pm.item_code)
@@ -286,6 +296,7 @@ namespace Haniya.Controllers.PortalAdmin
                             // Data tambahan untuk dropdown Edit
                             student_name = r["student_name"]?.ToString(),
                             nis = r["nis"]?.ToString(),
+                            class_name = r["class_name"]?.ToString(),
                             payment_type_desc = r["payment_type_desc"]?.ToString(),
                             payment_method_desc = r["payment_method_desc"]?.ToString()
                         };
@@ -338,6 +349,7 @@ namespace Haniya.Controllers.PortalAdmin
                     header.payment_method,
                     header.student_name,
                     header.nis,
+                    header.class_name,
                     header.payment_type_desc,
                     header.payment_method_desc,
                     instalments
@@ -771,6 +783,238 @@ namespace Haniya.Controllers.PortalAdmin
             {
                 return Json(new { success = false, message = ex.Message, amount = 0m, due_date = "" });
             }
+        }
+
+        [HttpGet]
+        public IActionResult ExportPaymentReceipt(string id, bool download = true)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(id))
+                    return Content("ID pembayaran tidak valid");
+
+                var receipt = BuildPaymentReceipt(id);
+                if (receipt == null)
+                    return Content("Data pembayaran tidak ditemukan");
+
+                var model = new ReceiptExportViewModel
+                {
+                    Receipts = new List<ReceiptItemViewModel> { receipt },
+                    RenderMode = "payment"
+                };
+
+                var pdf = new ViewAsPdf("~/Views/PortalAdmin/Payment/ReceiptPdf.cshtml", model)
+                {
+                    PageSize = Size.A4,
+                    PageOrientation = Orientation.Portrait,
+                    CustomSwitches = "--print-media-type --disable-smart-shrinking --margin-top 6mm --margin-bottom 6mm --margin-left 6mm --margin-right 6mm"
+                };
+
+                if (download)
+                    pdf.FileName = $"Kwitansi-Pembayaran-{id}.pdf";
+
+                return pdf;
+            }
+            catch (Exception ex)
+            {
+                return Content($"Gagal export kwitansi pembayaran: {ex.Message}");
+            }
+        }
+
+        [HttpGet]
+        public IActionResult ExportInstalmentReceipt(string paymentId, string? instalmentId = null, bool download = true)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(paymentId))
+                    return Content("ID pembayaran tidak valid");
+
+                var receipts = BuildInstalmentReceipts(paymentId, instalmentId);
+                if (receipts.Count == 0)
+                    return Content("Data cicilan tidak ditemukan");
+
+                var model = new ReceiptExportViewModel
+                {
+                    Receipts = receipts,
+                    RenderMode = "instalment"
+                };
+
+                var pdf = new ViewAsPdf("~/Views/PortalAdmin/Payment/ReceiptPdf.cshtml", model)
+                {
+                    PageSize = Size.A4,
+                    PageOrientation = Orientation.Portrait,
+                    CustomSwitches = "--print-media-type --disable-smart-shrinking --margin-top 6mm --margin-bottom 6mm --margin-left 6mm --margin-right 6mm"
+                };
+
+                if (download)
+                {
+                    pdf.FileName = string.IsNullOrWhiteSpace(instalmentId)
+                        ? $"Kwitansi-Cicilan-{paymentId}.pdf"
+                        : $"Kwitansi-Cicilan-{instalmentId}.pdf";
+                }
+
+                return pdf;
+            }
+            catch (Exception ex)
+            {
+                return Content($"Gagal export kwitansi cicilan: {ex.Message}");
+            }
+        }
+
+        private ReceiptItemViewModel? BuildPaymentReceipt(string paymentId)
+        {
+            using var conn = GetConn();
+            conn.Open();
+
+            var sql = @"
+                SELECT
+                    p.payment_id,
+                    p.total_payment,
+                    p.remaining_payment,
+                    p.payment_type,
+                    COALESCE(s.full_name, CONCAT(s.first_name, ' ', s.last_name)) AS student_name,
+                    c.class_name,
+                    COALESCE(pt.item_desc, p.payment_type) AS payment_type_desc
+                FROM txn_payments p
+                LEFT JOIN mst_student_classes sc ON p.student_class_id = sc.student_class_id
+                LEFT JOIN mst_students s ON sc.student_id = s.student_id
+                LEFT JOIN mst_academic_classes ac ON sc.academic_class_id = ac.academic_class_id
+                LEFT JOIN mst_classes c ON ac.class_id = c.class_id
+                LEFT JOIN mst_detail_settings pt ON p.payment_type = pt.detail_id AND pt.header_id = 'PAYMENT_TYPE'
+                WHERE p.payment_id = @id";
+
+            using var cmd = new SqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@id", paymentId);
+            using var rd = cmd.ExecuteReader();
+            if (!rd.Read()) return null;
+
+            var total = rd["total_payment"] as decimal? ?? 0m;
+            var remaining = rd["remaining_payment"] as decimal? ?? 0m;
+            var studentName = rd["student_name"]?.ToString() ?? "-";
+            var className = rd["class_name"]?.ToString() ?? "-";
+            var paymentTypeDesc = rd["payment_type_desc"]?.ToString() ?? rd["payment_type"]?.ToString() ?? "-";
+            rd.Close();
+
+            var paidDate = GetLatestInstalmentDate(conn, paymentId) ?? DateTime.Now.Date;
+            return new ReceiptItemViewModel
+            {
+                PaymentId = paymentId,
+                InstalmentId = null,
+                StudentName = studentName,
+                ClassName = className,
+                PaymentDate = paidDate,
+                TotalPayment = total,
+                PaymentTypeDescription = paymentTypeDesc,
+                Terbilang = ToTerbilang(total),
+                KeteranganText = "PELUNASAN AKHIRUSANAH",
+                PaymentLines = new List<string> { paymentTypeDesc }
+            };
+        }
+
+        private List<ReceiptItemViewModel> BuildInstalmentReceipts(string paymentId, string? instalmentId)
+        {
+            using var conn = GetConn();
+            conn.Open();
+
+            var sql = @"
+                SELECT
+                    i.instalment_id,
+                    i.total_payment,
+                    i.payment_date,
+                    i.notes,
+                    p.payment_id,
+                    p.payment_type,
+                    COALESCE(s.full_name, CONCAT(s.first_name, ' ', s.last_name)) AS student_name,
+                    c.class_name,
+                    COALESCE(pt.item_desc, p.payment_type) AS payment_type_desc
+                FROM txn_payment_instalments i
+                INNER JOIN txn_payments p ON i.payment_id = p.payment_id
+                LEFT JOIN mst_student_classes sc ON p.student_class_id = sc.student_class_id
+                LEFT JOIN mst_students s ON sc.student_id = s.student_id
+                LEFT JOIN mst_academic_classes ac ON sc.academic_class_id = ac.academic_class_id
+                LEFT JOIN mst_classes c ON ac.class_id = c.class_id
+                LEFT JOIN mst_detail_settings pt ON p.payment_type = pt.detail_id AND pt.header_id = 'PAYMENT_TYPE'
+                WHERE i.payment_id = @paymentId
+                  AND (@instalmentId IS NULL OR i.instalment_id = @instalmentId)
+                ORDER BY i.instalment_number";
+
+            var result = new List<ReceiptItemViewModel>();
+            using var cmd = new SqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@paymentId", paymentId);
+            cmd.Parameters.AddWithValue("@instalmentId", string.IsNullOrWhiteSpace(instalmentId) ? DBNull.Value : instalmentId);
+            using var rd = cmd.ExecuteReader();
+            while (rd.Read())
+            {
+                var amount = rd["total_payment"] as decimal? ?? 0m;
+                var paymentTypeDesc = rd["payment_type_desc"]?.ToString() ?? rd["payment_type"]?.ToString() ?? "-";
+                var notes = rd["notes"]?.ToString();
+                result.Add(new ReceiptItemViewModel
+                {
+                    PaymentId = rd["payment_id"]?.ToString() ?? paymentId,
+                    InstalmentId = rd["instalment_id"]?.ToString(),
+                    StudentName = rd["student_name"]?.ToString() ?? "-",
+                    ClassName = rd["class_name"]?.ToString() ?? "-",
+                    PaymentDate = rd["payment_date"] == DBNull.Value ? DateTime.Now.Date : ((DateTime)rd["payment_date"]).Date,
+                    TotalPayment = amount,
+                    PaymentTypeDescription = paymentTypeDesc,
+                    Terbilang = ToTerbilang(amount),
+                    KeteranganText = string.IsNullOrWhiteSpace(notes) ? "CICILAN AKHIRUSANAH" : notes.Trim(),
+                    PaymentLines = new List<string> { paymentTypeDesc }
+                });
+            }
+
+            return result;
+        }
+
+        private DateTime? GetLatestInstalmentDate(SqlConnection conn, string paymentId)
+        {
+            var cmd = new SqlCommand("SELECT MAX(payment_date) FROM txn_payment_instalments WHERE payment_id = @id", conn);
+            cmd.Parameters.AddWithValue("@id", paymentId);
+            var raw = cmd.ExecuteScalar();
+            if (raw == null || raw == DBNull.Value) return null;
+            return Convert.ToDateTime(raw).Date;
+        }
+
+        private static string ToTerbilang(decimal amount)
+        {
+            var number = (long)Math.Floor(amount);
+            if (number == 0) return "Nol Rupiah";
+            return $"{ToTerbilangInt(number).Trim()} Rupiah";
+        }
+
+        private static string ToTerbilangInt(long value)
+        {
+            string[] angka = { "", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas" };
+            if (value < 12) return " " + angka[value];
+            if (value < 20) return ToTerbilangInt(value - 10) + " Belas";
+            if (value < 100) return ToTerbilangInt(value / 10) + " Puluh" + ToTerbilangInt(value % 10);
+            if (value < 200) return " Seratus" + ToTerbilangInt(value - 100);
+            if (value < 1000) return ToTerbilangInt(value / 100) + " Ratus" + ToTerbilangInt(value % 100);
+            if (value < 2000) return " Seribu" + ToTerbilangInt(value - 1000);
+            if (value < 1000000) return ToTerbilangInt(value / 1000) + " Ribu" + ToTerbilangInt(value % 1000);
+            if (value < 1000000000) return ToTerbilangInt(value / 1000000) + " Juta" + ToTerbilangInt(value % 1000000);
+            if (value < 1000000000000) return ToTerbilangInt(value / 1000000000) + " Milyar" + ToTerbilangInt(value % 1000000000);
+            return ToTerbilangInt(value / 1000000000000) + " Triliun" + ToTerbilangInt(value % 1000000000000);
+        }
+
+        public class ReceiptExportViewModel
+        {
+            public string RenderMode { get; set; } = "";
+            public List<ReceiptItemViewModel> Receipts { get; set; } = new();
+        }
+
+        public class ReceiptItemViewModel
+        {
+            public string PaymentId { get; set; } = "";
+            public string? InstalmentId { get; set; }
+            public string StudentName { get; set; } = "-";
+            public string ClassName { get; set; } = "-";
+            public DateTime PaymentDate { get; set; }
+            public decimal TotalPayment { get; set; }
+            public string PaymentTypeDescription { get; set; } = "-";
+            public string Terbilang { get; set; } = "-";
+            public string KeteranganText { get; set; } = "CICILAN AKHIRUSANAH";
+            public List<string> PaymentLines { get; set; } = new();
         }
 
         private static bool TryParseMoney(string raw, out decimal amount)

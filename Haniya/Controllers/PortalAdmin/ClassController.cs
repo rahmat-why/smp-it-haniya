@@ -48,38 +48,50 @@ namespace Haniya.Controllers.PortalAdmin
             return View("~/Views/PortalAdmin/Class/Edit.cshtml");
         }
 
-        [HttpGet]
-        public IActionResult GetAll(string academic_year_id = null)
+        public class ListSort
+        {
+            public string field { get; set; } = "academicYear";
+            public string order { get; set; } = "asc";
+        }
+
+        public class ListRequest
+        {
+            public int page { get; set; } = 1;
+            public int limit { get; set; } = 10;
+            public Dictionary<string, string>? filters { get; set; }
+            public ListSort? sort { get; set; }
+        }
+
+        [HttpPost]
+        public IActionResult GetAll([FromBody] ListRequest? req)
         {
             try
             {
-                // Map DataTables column index to real SQL field for ORDER BY
-                var columnMapping = new Dictionary<int, string>
-        {
-            { 0, "ay.start_date" },           // Academic Year (sort by start_date)
-            { 1, "ay.semester" },             // Semester
-            { 2, "c.class_name" },            // Class
-            { 3, "t.first_name + ' ' + t.last_name" }, // Homeroom Teacher (name)
-            { 4, "student_count" }            // Students
-        };
+                req ??= new ListRequest();
+                var page = req.page <= 0 ? 1 : req.page;
+                var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
+                var offset = (page - 1) * limit;
+                var take = limit + 1;
 
-                var (draw, start, length, searchValue, orderColumnIndex, orderDir) = ParseDataTablesQuery();
+                var filters = req.filters ?? new Dictionary<string, string>();
+                filters.TryGetValue("search", out var searchValue);
+                filters.TryGetValue("academic_year_id", out var academicYearId);
 
-                string orderColumn = "ay.start_date"; 
-                
-                if (columnMapping.TryGetValue(orderColumnIndex, out var mappedColumn))
+                var sortMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                 {
-                    orderColumn = mappedColumn;
-                }
+                    ["academicYear"] = "ay.start_date",
+                    ["semester"] = "ay.semester",
+                    ["class"] = "c.class_name",
+                    ["homeroom"] = "ISNULL(t.first_name, '') + ' ' + ISNULL(t.last_name, '')",
+                    ["students"] = "COUNT(sc.student_class_id)"
+                };
+                var sort = req.sort ?? new ListSort();
+                var orderColumn = sortMap.TryGetValue(sort.field ?? "", out var mapped) ? mapped : "ay.start_date";
+                var orderDir = string.Equals(sort.order, "desc", StringComparison.OrdinalIgnoreCase) ? "DESC" : "ASC";
 
                 using var conn = GetConn();
                 conn.Open();
 
-                // Total records
-                var totalCmd = new SqlCommand("SELECT COUNT(*) FROM mst_academic_classes", conn);
-                var recordsTotal = (int)totalCmd.ExecuteScalar();
-
-                // Build WHERE clause
                 string whereSearch = "";
                 if (!string.IsNullOrWhiteSpace(searchValue))
                 {
@@ -89,27 +101,12 @@ namespace Haniya.Controllers.PortalAdmin
                 t.npk LIKE @search
             )";
                 }
-                if (!string.IsNullOrWhiteSpace(academic_year_id))
+                if (!string.IsNullOrWhiteSpace(academicYearId))
                 {
                     whereSearch += (string.IsNullOrWhiteSpace(whereSearch) ? " WHERE " : " AND ");
                     whereSearch += "ac.academic_year_id = @academic_year_id";
                 }
 
-                // Filtered count
-                var filteredSql = "SELECT COUNT(*) FROM mst_academic_classes ac " +
-                                  "JOIN mst_classes c ON ac.class_id = c.class_id " +
-                                  "LEFT JOIN mst_teachers t ON ac.homeroom_teacher_id = t.teacher_id " +
-                                  whereSearch;
-
-                using var filteredCmd = new SqlCommand(filteredSql, conn);
-                if (!string.IsNullOrWhiteSpace(searchValue))
-                    filteredCmd.Parameters.AddWithValue("@search", $"%{searchValue}%");
-                if (!string.IsNullOrWhiteSpace(academic_year_id))
-                    filteredCmd.Parameters.AddWithValue("@academic_year_id", academic_year_id);
-
-                var recordsFiltered = (int)filteredCmd.ExecuteScalar();
-
-                // Main query
                 var sql = $@"
             SELECT
                 ac.academic_class_id,
@@ -147,15 +144,15 @@ namespace Haniya.Controllers.PortalAdmin
                 t.npk,
                 t.profile_photo
             ORDER BY {orderColumn} {orderDir}
-            OFFSET @start ROWS FETCH NEXT @length ROWS ONLY";
+            OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY";
 
                 using var cmd = new SqlCommand(sql, conn);
-                cmd.Parameters.AddWithValue("@start", start);
-                cmd.Parameters.AddWithValue("@length", length);
+                cmd.Parameters.AddWithValue("@offset", offset);
+                cmd.Parameters.AddWithValue("@take", take);
                 if (!string.IsNullOrWhiteSpace(searchValue))
                     cmd.Parameters.AddWithValue("@search", $"%{searchValue}%");
-                if (!string.IsNullOrWhiteSpace(academic_year_id))
-                    cmd.Parameters.AddWithValue("@academic_year_id", academic_year_id);
+                if (!string.IsNullOrWhiteSpace(academicYearId))
+                    cmd.Parameters.AddWithValue("@academic_year_id", academicYearId);
 
                 var list = new List<object>();
                 using var rd = cmd.ExecuteReader();
@@ -182,50 +179,15 @@ namespace Haniya.Controllers.PortalAdmin
                     });
                 }
 
-                return Json(new
-                {
-                    draw,
-                    recordsTotal,
-                    recordsFiltered,
-                    data = list
-                });
+                var hasNextPage = list.Count > limit;
+                if (hasNextPage) list = list.Take(limit).ToList();
+
+                return Json(DTOResponse.ok(new { data = list, hasNextPage }));
             }
             catch (Exception ex)
             {
                 return Json(DTOResponse.fail(ex.Message, 500));
             }
-        }
-
-        // Fixed ParseDataTablesQuery - no default "title"
-        private (int draw, int start, int length, string searchValue, int orderColumnIndex, string orderDir)
-        ParseDataTablesQuery()
-        {
-            var q = Request.Query;
-            int.TryParse(q["draw"], out var draw);
-            if (draw <= 0) draw = 1;
-            int.TryParse(q["start"], out var start);
-            if (start < 0) start = 0;
-            int.TryParse(q["length"], out var length);
-            if (length <= 0) length = 10;
-            var searchValue = q["search[value]"].ToString() ?? string.Empty;
-
-            int orderColumnIndex = 0; // default to column 0 (Academic Year)
-            var orderColIdxStr = q["order[0][column]"].ToString();
-            if (int.TryParse(orderColIdxStr, out var idx))
-            {
-                orderColumnIndex = idx;
-            }
-
-            var dir = q["order[0][dir]"].ToString();
-            var orderDir = "ASC";
-            if (!string.IsNullOrWhiteSpace(dir) &&
-                (dir.Equals("asc", StringComparison.OrdinalIgnoreCase) ||
-                 dir.Equals("desc", StringComparison.OrdinalIgnoreCase)))
-            {
-                orderDir = dir.ToUpper();
-            }
-
-            return (draw, start, length, searchValue, orderColumnIndex, orderDir);
         }
 
         [HttpGet]

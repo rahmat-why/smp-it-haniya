@@ -1,0 +1,138 @@
+@model Haniya.Controllers.PortalAdmin.PaymentController.ReceiptExportViewModel
+@using System.Globalization
+@{
+    Layout = null;
+    var receipts = Model?.Receipts ?? new List<Haniya.Controllers.PortalAdmin.PaymentController.ReceiptItemViewModel>();
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <style>
+        body { font-family: "Times New Roman", serif; font-size: 11px; color: #111; margin: 0; }
+        .page { page-break-after: always; padding: 3mm; }
+        .page:last-child { page-break-after: auto; }
+        .receipt { border: 1px solid #111; margin-bottom: 3mm; padding: 0; position: relative; }
+        .header { width: 100%; border-collapse: collapse; }
+        .header td { font-weight: 700; font-size: 16px; padding: 2mm 4mm 1.5mm; }
+        .header-left { text-align: left; }
+        .header-right { text-align: right; }
+        .content { border-top: 1px solid #111; border-bottom: 1px solid #111; padding: 2mm 3mm; }
+        .grid { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .grid td { vertical-align: top; font-size: 11px; line-height: 1.2; }
+        .left-label { width: 40%; white-space: nowrap; font-size: 11px; }
+        .left-value { width: 60%; font-size: 11px; }
+        .amount-row td { padding-top: 8px; vertical-align: middle; font-size: 11px; }
+        .amount-label { font-size: 11px; }
+        .amount-value-wrap { padding-left: 2px; }
+        .amount-box { border: 1px solid #111; width: 220px; border-collapse: collapse; }
+        .amount-box td { border: 1px solid #111; padding: 4px 8px; font-size: 11px; font-weight: 400; }
+        .amount-rp-cell { width: 36px; text-align: left; border-right: 0 !important; }
+        .amount-number-cell { text-align: right; padding-right: 4px !important; border-left: 0 !important; }
+        .jenis-title { font-size: 11px; font-weight: 700; margin-bottom: 2px; }
+        .jenis-table { border-collapse: collapse; width: 100%; }
+        .jenis-table td { border: 1px solid #111; padding: 2px 3px; height: 20px; }
+        .terbilang { margin-top: 6px; border: 1px solid #111; padding: 4px 6px; font-style: italic; font-size: 11px; font-weight: 700; }
+        .keterangan { border-collapse: collapse; width: 100%; margin-top: 3px; table-layout: fixed; }
+        .keterangan td { border: 1px solid #111; padding: 4px; font-size: 11px; }
+        .ket-label { width: 22%; text-align: center; }
+        .ket-value { width: 63%; text-align: center; letter-spacing: 0.4px; }
+        .ket-sign { width: 15%; padding: 0 !important; }
+        .ket-sign-inner { width: 100%; border-collapse: collapse; height: 38px; }
+        .ket-sign-inner td { border: 1px solid #111; padding: 0; }
+        .note { padding: 1.5mm 3mm 2mm; font-style: italic; font-size: 11px; }
+        .keterangan-wrap { position: relative; }
+        .stamp-lunas {
+            position: absolute;
+            right: 2mm;
+            top: -6mm;
+            width: 28mm;
+            height: 28mm;
+            transform: rotate(-16deg);
+            opacity: 0.9;
+            pointer-events: none;
+        }
+        .stamp-lunas img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body>
+@for (var i = 0; i < receipts.Count; i += 3)
+{
+    var chunk = receipts.Skip(i).Take(3).ToList();
+    <div class="page">
+        @foreach (var item in chunk)
+        {
+            <div class="receipt">
+                <table class="header">
+                    <tr>
+                        <td class="header-left">SIT HANIYA</td>
+                        <td class="header-right">SLIP SETORAN</td>
+                    </tr>
+                </table>
+                <div class="content">
+                    <table class="grid">
+                        <tr>
+                            <td style="width:54%;">
+                                <table class="grid">
+                                    <tr><td class="left-label">NAMA SISWA</td><td class="left-value">@item.StudentName</td></tr>
+                                    <tr><td class="left-label">PPDB</td><td class="left-value">@item.ClassName</td></tr>
+                                    <tr><td class="left-label">TANGGAL</td><td class="left-value">@item.PaymentDate.ToString("dd MMMM yyyy", new CultureInfo("id-ID"))</td></tr>
+                                    <tr class="amount-row">
+                                        <td class="left-label amount-label">TOTAL PEMBAYARAN</td>
+                                        <td class="left-value amount-value-wrap">
+                                            <table class="amount-box">
+                                                <tr>
+                                                    <td class="amount-rp-cell">Rp</td>
+                                                    <td class="amount-number-cell">@item.TotalPayment.ToString("N2", new CultureInfo("id-ID"))</td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td style="width:46%;padding-left:8px;">
+                                <div class="jenis-title">JENIS PEMBAYARAN</div>
+                                <table class="jenis-table">
+                                    @for (int idx = 0; idx < 5; idx++)
+                                    {
+                                        var text = idx < item.PaymentLines.Count ? item.PaymentLines[idx] : "";
+                                        <tr>
+                                            <td style="width:20px;text-align:center;">@(idx + 1)</td>
+                                            <td>@text</td>
+                                        </tr>
+                                    }
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                    <div class="terbilang">Terbilang : @item.Terbilang</div>
+                    <div class="keterangan-wrap">
+                        <table class="keterangan">
+                            <tr>
+                                <td class="ket-label">Keterangan</td>
+                                <td class="ket-value">@item.KeteranganText</td>
+                                <td class="ket-sign">
+                                    <table class="ket-sign-inner">
+                                        <tr>
+                                            <td style="width:50%;"></td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                        <div class="stamp-lunas">
+                            <img src="/image/kwitansi/stamp.png" alt="LUNAS" />
+                        </div>
+                    </div>
+                </div>
+                <div class="note">Bukti setoran ini harus disimpan, complaint, tanpa menunjukkan bukti ini tidak akan dilayani</div>
+            </div>
+        }
+    </div>
+}
+</body>
+</html>
