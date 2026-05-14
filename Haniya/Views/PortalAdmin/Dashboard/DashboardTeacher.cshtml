@@ -179,10 +179,25 @@
 
 <script>
     let selectedClassId = null;
+    let currentAcademicYearId = null;
+    let currentClass = null;
+    let currentClassLevel = '7';
 
-    function renderClassButtons(classes) {
+    function renderClassButtons(classes, preferredClassName = null) {
         const container = $('#classFilterButtons');
         container.empty();
+
+        if (!classes || classes.length === 0) {
+            selectedClassId = null;
+            currentClass = '';
+            $('#weekly-schedule').html(`
+                <tr>
+                    <td colspan="4" class="text-center py-8 text-gray-500">
+                        Tidak ada kelas untuk filter ini
+                    </td>
+                </tr>`);
+            return;
+        }
 
         classes.forEach((cls, index) => {
             container.append(`
@@ -195,13 +210,21 @@
             `);
         });
 
-        const firstBtn = container.find('.class-btn').first();
-        if (firstBtn.length) {
-            firstBtn
+        let targetBtn = null;
+        if (preferredClassName) {
+            targetBtn = container.find(`.class-btn[data-name="${preferredClassName}"]`).first();
+        }
+        if (!targetBtn || !targetBtn.length) {
+            targetBtn = container.find('.class-btn').first();
+        }
+
+        if (targetBtn.length) {
+            container.find('.class-btn').addClass('bg-white').removeClass('bg-indigo-600 text-white');
+            targetBtn
                 .removeClass('bg-white')
                 .addClass('bg-indigo-600 text-white');
-            selectedClassId = firstBtn.data('id');
-            currentClass = firstBtn.data('name') || '';
+            selectedClassId = targetBtn.data('id');
+            currentClass = targetBtn.data('name') || '';
             loadTeacherDashboard();
         }
     }
@@ -220,6 +243,27 @@
         currentClass = $(this).data('name') || '';
         loadTeacherDashboard();
     });
+
+    function loadClassTabsByFilter(preferredClassName = null) {
+        $.ajax({
+            url: '/Dashboard/GetTeacherClassTabs',
+            type: 'GET',
+            data: {
+                academicYear: currentAcademicYearId,
+                classLevel: currentClassLevel
+            },
+            success: function (res) {
+                if (!res || !res.success) {
+                    $('#classFilterButtons').empty();
+                    return;
+                }
+                renderClassButtons(res.data || [], preferredClassName);
+            },
+            error: function () {
+                $('#classFilterButtons').empty();
+            }
+        });
+    }
 
 
     function renderWeeklySchedule(schedule) {
@@ -750,9 +794,6 @@
         renderAcademicCalendar();
     }
 
-    let currentAcademicYearId = null;
-    let currentClass = null;
-
     function loadTeacherDashboard() {
         $.ajax({
             url: '/Dashboard/GetTeacherData',
@@ -797,8 +838,8 @@
 
     function applyFilter() {
         currentAcademicYearId = $('#academic_year_filter').val() || '';
-        currentClass = $('#class_level_filter').val() || '';
-        loadTeacherDashboard();
+        currentClassLevel = $('#class_level_filter').val() || '7';
+        loadClassTabsByFilter();
         toggleFilter();
     }
 
@@ -847,22 +888,6 @@
 
 
     $(document).ready(function () {
-        $.ajax({
-            url: '/Select2/AcademicClasses',
-            type: 'GET',
-            dataType: 'json',
-            data: {
-                q: '',
-                page: 1
-            },
-            success: function (data) {
-                renderClassButtons(data.results);
-            },
-            error: function (err) {
-                console.error('Error fetch AcademicClasses:', err);
-            }
-        });
-
         $('#academic_year_filter').select2({
             placeholder: 'Academic Year',
             allowClear: true,
@@ -899,7 +924,7 @@
                 { id: '9', text: 'Class 9' }
             ]
         }).val('7').trigger('change');
-        currentClass = $('#class_level_filter').val() || '';
+        currentClassLevel = $('#class_level_filter').val() || '7';
 
         $.ajax({
             url: '/Select2Default/ActiveAcademicYear',
@@ -909,7 +934,7 @@
                     var option = new Option(data.text, data.id, true, true);
                     $('#academic_year_filter').append(option).trigger('change');
                     currentAcademicYearId = data.id;
-                    loadTeacherDashboard();
+                    loadClassTabsByFilter();
                 }
             },
             error: function (err) {

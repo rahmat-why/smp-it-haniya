@@ -70,7 +70,7 @@
                 lengthChange: true,
                 ajax: {
                     url: '/RPS/GetAll',
-                    type: 'GET',
+                    type: 'POST',
                     data: function (d) {
                         d.academic_year_id = currentAcademicYearId || null;
                         d.subject_id = currentSubjectId || null;

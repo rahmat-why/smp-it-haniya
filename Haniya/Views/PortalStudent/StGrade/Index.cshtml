@@ -63,7 +63,8 @@
             limit: 10,
             filters: { search: '' },
             sort: { field: 'date', order: 'desc' },
-            hasNextPage: false
+            hasNextPage: false,
+            totalRows: 0
         };
         let lastRequestKey = '';
         let searchDebounce = null;
@@ -171,7 +172,7 @@
         function renderPagination(currentCount) {
             const start = currentCount === 0 ? 0 : ((pageState.page - 1) * pageState.limit) + 1;
             const end = ((pageState.page - 1) * pageState.limit) + currentCount;
-            $('#table-info').html(`<span class="text-sm text-gray-600">Showing ${start} to ${end}</span>`);
+            $('#table-info').html(`<span class="text-sm text-gray-600">Showing ${start} to ${end} of ${pageState.totalRows}</span>`);
 
             const prevDisabled = pageState.page <= 1;
             const nextDisabled = !pageState.hasNextPage;
@@ -245,6 +246,7 @@
                     const startIdx = (pageState.page - 1) * pageState.limit;
                     const endIdx = startIdx + pageState.limit;
                     const pagedItems = allItems.slice(startIdx, endIdx);
+                    pageState.totalRows = allItems.length;
                     pageState.hasNextPage = allItems.length > endIdx;
                     renderRows(pagedItems);
                     renderPagination(pagedItems.length);
@@ -253,6 +255,7 @@
 
                 const result = res.data || {};
                 const items = result.data || [];
+                pageState.totalRows = Number(result.totalRows || 0);
                 pageState.hasNextPage = !!result.hasNextPage;
                 renderRows(items);
                 renderPagination(items.length);

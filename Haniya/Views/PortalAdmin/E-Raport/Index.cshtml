@@ -106,7 +106,8 @@
             classLevel: ''
         },
         sort: { field: 'student', order: 'asc' },
-        hasNextPage: false
+        hasNextPage: false,
+        totalRows: 0
     };
     let lastRequestKey = '';
     let searchDebounce = null;
@@ -253,7 +254,7 @@
     function renderPagination(currentCount) {
         const start = currentCount === 0 ? 0 : ((pageState.page - 1) * pageState.limit) + 1;
         const end = ((pageState.page - 1) * pageState.limit) + currentCount;
-        $('#eraport-table-info').html(`<span class="text-sm text-gray-600">Showing ${start} to ${end}</span>`);
+        $('#eraport-table-info').html(`<span class="text-sm text-gray-600">Showing ${start} to ${end} of ${pageState.totalRows}</span>`);
 
         const prevDisabled = pageState.page <= 1;
         const nextDisabled = !pageState.hasNextPage;
@@ -310,6 +311,7 @@
             const result = res.data || {};
             const items = result.data || [];
             pageState.hasNextPage = !!result.hasNextPage;
+            pageState.totalRows = Number(result.totalRows || 0);
             renderRows(items);
             renderPagination(items.length);
         } catch {

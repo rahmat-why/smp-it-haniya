@@ -69,7 +69,7 @@
                 lengthChange: true,
                 ajax: {
                     url: '/Grade/GetAll',
-                    type: 'GET',
+                    type: 'POST',
                     data: function (d) {
                         d.academic_year_id = currentAcademicYearId || null;
                         d.academic_class_id = currentAcademicClassId || null;

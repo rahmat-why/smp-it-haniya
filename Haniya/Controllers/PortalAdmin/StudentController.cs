@@ -58,7 +58,6 @@ namespace Haniya.Controllers.PortalAdmin
                 var page = req.page <= 0 ? 1 : req.page;
                 var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
                 var offset = (page - 1) * limit;
-                var take = limit + 1;
 
                 var filters = req.filters ?? new Dictionary<string, string>();
                 filters.TryGetValue("search", out var search);
@@ -97,6 +96,25 @@ namespace Haniya.Controllers.PortalAdmin
                 if (!string.IsNullOrWhiteSpace(gender)) where.Add("s.gender = @gender");
                 var whereSql = "WHERE " + string.Join(" AND ", where);
 
+                var countSql = $@"
+                    SELECT COUNT(1)
+                    FROM mst_students s
+                    LEFT JOIN mst_detail_settings dl
+                        ON dl.detail_id = s.level
+                        AND dl.header_id = 'LEVEL_STUDENT'
+                        AND dl.status = 'ACTIVE'
+                    LEFT JOIN mst_detail_settings dg
+                        ON dg.item_code = s.gender
+                        AND dg.header_id = 'GENDER'
+                        AND dg.status = 'ACTIVE'
+                    {whereSql}";
+
+                using var countCmd = new SqlCommand(countSql, conn);
+                if (!string.IsNullOrWhiteSpace(search)) countCmd.Parameters.AddWithValue("@search", $"%{search.Trim()}%");
+                if (!string.IsNullOrWhiteSpace(level)) countCmd.Parameters.AddWithValue("@level", level.Trim());
+                if (!string.IsNullOrWhiteSpace(gender)) countCmd.Parameters.AddWithValue("@gender", gender.Trim());
+                var totalRows = Convert.ToInt32(countCmd.ExecuteScalar() ?? 0);
+
                 var sql = $@"
                     SELECT
                         s.student_id,
@@ -127,11 +145,11 @@ namespace Haniya.Controllers.PortalAdmin
                         AND dg.status = 'ACTIVE'
                     {whereSql}
                     ORDER BY {orderBy} {orderDir}
-                    OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY";
+                    OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY";
 
                 using var cmd = new SqlCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@offset", offset);
-                cmd.Parameters.AddWithValue("@take", take);
+                cmd.Parameters.AddWithValue("@limit", limit);
                 if (!string.IsNullOrWhiteSpace(search)) cmd.Parameters.AddWithValue("@search", $"%{search.Trim()}%");
                 if (!string.IsNullOrWhiteSpace(level)) cmd.Parameters.AddWithValue("@level", level.Trim());
                 if (!string.IsNullOrWhiteSpace(gender)) cmd.Parameters.AddWithValue("@gender", gender.Trim());
@@ -156,10 +174,9 @@ namespace Haniya.Controllers.PortalAdmin
                     });
                 }
 
-                var hasNextPage = list.Count > limit;
-                if (hasNextPage) list = list.Take(limit).ToList();
+                var hasNextPage = (offset + list.Count) < totalRows;
 
-                return Json(DTOResponse.ok(new { data = list, hasNextPage }));
+                return Json(DTOResponse.ok(new { data = list, hasNextPage, totalRows }));
             }
             catch (Exception ex)
             {

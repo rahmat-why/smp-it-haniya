@@ -74,7 +74,7 @@
                 lengthChange: true,
                 ajax: {
                     url: '/Attendance/GetAll',
-                    type: 'GET',
+                    type: 'POST',
                     data: function (d) {
                         d.academic_year_id = currentAcademicYearId || null;
                         d.academic_class_id = currentAcademicClassId || null;

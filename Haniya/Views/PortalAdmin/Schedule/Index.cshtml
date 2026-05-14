@@ -49,7 +49,8 @@
         limit: 10,
         filters: { search: '', academic_year_id: '', academic_class_id: '', day: '' },
         sort: { field: 'academicYear', order: 'asc' },
-        hasNextPage: false
+        hasNextPage: false,
+        totalRows: 0
     };
     let lastRequestKey = '';
 
@@ -275,7 +276,7 @@
     function renderPagination(currentCount) {
         const start = currentCount === 0 ? 0 : ((pageState.page - 1) * pageState.limit) + 1;
         const end = ((pageState.page - 1) * pageState.limit) + currentCount;
-        $('#schedule-table-info').html(`<span class="text-sm text-gray-600">Showing ${start} to ${end}</span>`);
+        $('#schedule-table-info').html(`<span class="text-sm text-gray-600">Showing ${start} to ${end} of ${pageState.totalRows}</span>`);
 
         const prevDisabled = pageState.page <= 1;
         const nextDisabled = !pageState.hasNextPage;
@@ -322,7 +323,7 @@
                 contentType: 'application/json',
                 data: JSON.stringify(payload)
             });
-
+            console.log(res);
             if (!res.success) {
                 lastRequestKey = '';
                 tailwindMessageModal('Failed', res.message || 'Failed to load schedule data.');
@@ -332,6 +333,7 @@
             const result = res.data || {};
             const items = result.data || [];
             pageState.hasNextPage = !!result.hasNextPage;
+            pageState.totalRows = Number(result.totalRows || 0);
             renderRows(items);
             renderPagination(items.length);
         } catch (xhr) {

@@ -116,6 +116,8 @@
     let allEvents = [];
     let allArticles = [];
     const itemsPerPage = 6;
+    let teacherChartInstance = null;
+    let studentChartInstance = null;
 
     let currentAcademicYearId = null;
     let academicCalendarDays = [];
@@ -370,15 +372,30 @@
     }
 
     function initDashboardCharts(students, teachers) {
+        const studentRows = Array.isArray(students) ? students : [];
+        const studentByClass = {};
+        studentRows.forEach(s => {
+            const classNo = String(s?.classNumber ?? s?.ClassNumber ?? '').trim();
+            const total = Number(s?.totalStudents ?? s?.TotalStudents ?? 0);
+            if (classNo) studentByClass[classNo] = total;
+        });
+
+        const teacherPns = Number(teachers?.pns ?? teachers?.PNS ?? 0);
+        const teacherHonorer = Number(teachers?.honorer ?? teachers?.Honorer ?? 0);
+
         // Teacher Donut Chart
         const teacherCtx = document.getElementById('teacherChart');
         if (teacherCtx) {
-            new Chart(teacherCtx.getContext('2d'), {
+            if (teacherChartInstance) {
+                teacherChartInstance.destroy();
+            }
+
+            teacherChartInstance = new Chart(teacherCtx.getContext('2d'), {
                 type: 'doughnut',
                 data: {
                     labels: ['PNS', 'Honorer'],
                     datasets: [{
-                        data: [teachers?.pns ?? 0, teachers?.honorer ?? 0],
+                        data: [teacherPns, teacherHonorer],
                         backgroundColor: ['#3b82f6', '#f97316'],
                         borderWidth: 2,
                         borderColor: '#fff'
@@ -405,15 +422,19 @@
         // Student Donut Chart
         const studentCtx = document.getElementById('studentChart');
         if (studentCtx) {
-            new Chart(studentCtx.getContext('2d'), {
+            if (studentChartInstance) {
+                studentChartInstance.destroy();
+            }
+
+            studentChartInstance = new Chart(studentCtx.getContext('2d'), {
                 type: 'doughnut',
                 data: {
                     labels: ['Class 7', 'Class 8', 'Class 9'],
                     datasets: [{
                         data: [
-                            students[0]?.totalStudents ?? 0, 
-                            students[1]?.totalStudents ?? 0,
-                            students[2]?.totalStudents ?? 0,
+                            studentByClass['7'] ?? 0,
+                            studentByClass['8'] ?? 0,
+                            studentByClass['9'] ?? 0
                         ],
                         backgroundColor: ['#22c55e', '#eab308', '#ef4444'],
                         borderWidth: 2,

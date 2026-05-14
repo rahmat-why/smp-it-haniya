@@ -23,9 +23,10 @@ namespace Haniya.Controllers.PortalAdmin
             return View("~/Views/PortalAdmin/Grade/Edit.cshtml");
         }
 
+        [HttpPost]
         public IActionResult GetAll(string academic_year_id = null, string academic_class_id = null, string grade_type = null)
         {
-            var (draw, start, length, search, _, _) = ParseDataTablesQuery();
+            var (draw, start, length, search, orderColumnIndex, orderDir) = ParseDataTablesQuery();
 
             using var conn = GetConn();
             conn.Open();
@@ -62,6 +63,10 @@ namespace Haniya.Controllers.PortalAdmin
                 recordsTotal = (int)cmd.ExecuteScalar();
             }
 
+
+            var orderBy = GetGradeOrderByColumn(orderColumnIndex);
+            if (string.IsNullOrWhiteSpace(orderBy))
+                orderBy = "g.grade_date";
 
             // ================= MAIN QUERY =================
             var sql = @"
@@ -151,6 +156,7 @@ namespace Haniya.Controllers.PortalAdmin
             r.minimum_value
 
         ORDER BY 
+            " + orderBy + " " + orderDir + @",
             g.grade_date DESC,
             MAX(g.created_at) DESC
 
@@ -300,14 +306,40 @@ namespace Haniya.Controllers.PortalAdmin
 
         private (int draw, int start, int length, string searchValue, int orderColumnIndex, string orderDir) ParseDataTablesQuery()
         {
+            var form = Request.HasFormContentType ? Request.Form : null;
             var q = Request.Query;
-            int.TryParse(q["draw"], out var draw); draw = draw > 0 ? draw : 1;
-            int.TryParse(q["start"], out var start);
-            int.TryParse(q["length"], out var length); length = length > 0 ? length : 10;
-            var searchValue = q["search[value]"].ToString() ?? "";
-            int.TryParse(q["order[0][column]"], out var orderColumnIndex);
-            var orderDir = q["order[0][dir]"].ToString().ToUpper() is "ASC" or "DESC" ? q["order[0][dir]"].ToString().ToUpper() : "ASC";
+
+            string GetVal(string key)
+            {
+                if (form != null && form.ContainsKey(key)) return form[key].ToString();
+                return q[key].ToString();
+            }
+
+            int.TryParse(GetVal("draw"), out var draw); draw = draw > 0 ? draw : 1;
+            int.TryParse(GetVal("start"), out var start);
+            int.TryParse(GetVal("length"), out var length); length = length > 0 ? length : 10;
+            var searchValue = GetVal("search[value]") ?? "";
+            int.TryParse(GetVal("order[0][column]"), out var orderColumnIndex);
+            var rawOrderDir = (GetVal("order[0][dir]") ?? "").ToUpper();
+            var orderDir = rawOrderDir is "ASC" or "DESC" ? rawOrderDir : "ASC";
             return (draw, start, length, searchValue, orderColumnIndex, orderDir);
+        }
+
+        private string GetGradeOrderByColumn(int orderColumnIndex)
+        {
+            return orderColumnIndex switch
+            {
+                0 => "ay.start_date",
+                1 => "ay.semester",
+                2 => "g.grade_date",
+                3 => "c.class_name",
+                4 => "s.subject_name",
+                5 => "t.first_name",
+                6 => "COALESCE(dt.item_desc, g.grade_type)",
+                7 => "ISNULL(r.minimum_value, 0)",
+                8 => "SUM(CASE WHEN TRY_CAST(REPLACE(d.grade_value, ',', '.') AS FLOAT) >= ISNULL(r.minimum_value,0) THEN 1 ELSE 0 END)",
+                _ => "g.grade_date"
+            };
         }
 
         [HttpGet]

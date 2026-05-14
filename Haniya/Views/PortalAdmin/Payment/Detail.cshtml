@@ -7,16 +7,6 @@
 
 <div class="flex justify-between items-center mb-6">
     <h2 class="text-2xl font-bold text-gray-800">Payment Detail</h2>
-    <a id="btn-export-payment-receipt" href="#" target="_blank"
-       class="inline-flex items-center justify-center bg-emerald-700 hover:bg-emerald-600 text-white w-10 h-10 rounded-md shadow-sm"
-       title="Export Kwitansi Pembayaran">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
-            <path d="M14 2v6h6"></path>
-            <path d="M8 13h8"></path>
-            <path d="M8 17h8"></path>
-        </svg>
-    </a>
 </div>
 
 <div class="bg-white p-6 rounded-xl shadow-lg w-full space-y-8">
@@ -78,7 +68,6 @@
         const id = ($('#payment_id').val() || '').trim();
         if (!id) return;
 
-        $('#btn-export-payment-receipt').attr('href', `/Payment/ExportPaymentReceipt?id=${encodeURIComponent(id)}&download=true`);
         $('#btn-export-all-instalment-receipt')
             .attr('href', '#')
             .removeAttr('target')
@@ -102,25 +91,6 @@
                 $('#total_price_display').text(formatCurrency(d.total_price || 0));
                 $('#total_paid_display').text(formatCurrency(d.total_payment || 0));
                 $('#remaining_payment_display').text(formatCurrency(d.remaining_payment || 0));
-
-                const totalPaid = Number(d.total_payment || 0);
-                const isPaid = (d.status || '').toUpperCase() === 'PAID';
-                const canExportTotalReceipt = !(totalPaid <= 0 && !isPaid);
-                if (canExportTotalReceipt) {
-                    $('#btn-export-payment-receipt')
-                        .attr('href', `/Payment/ExportPaymentReceipt?id=${encodeURIComponent(id)}&download=true`)
-                        .attr('target', '_blank')
-                        .removeClass('bg-gray-300 text-gray-500 cursor-not-allowed pointer-events-none')
-                        .addClass('bg-emerald-700 hover:bg-emerald-600 text-white')
-                        .attr('title', 'Export Kwitansi Pembayaran');
-                } else {
-                    $('#btn-export-payment-receipt')
-                        .attr('href', '#')
-                        .removeAttr('target')
-                        .removeClass('bg-emerald-700 hover:bg-emerald-600 text-white')
-                        .addClass('bg-gray-300 text-gray-500 cursor-not-allowed pointer-events-none')
-                        .attr('title', 'Belum ada pembayaran, kwitansi total belum tersedia');
-                }
 
                 const rows = d.instalments || [];
                 if (rows.length > 0) {

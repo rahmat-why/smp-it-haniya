@@ -71,7 +71,6 @@ namespace Haniya.Controllers.PortalAdmin
                 var page = req.page <= 0 ? 1 : req.page;
                 var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
                 var offset = (page - 1) * limit;
-                var take = limit + 1;
 
                 var filters = req.filters ?? new Dictionary<string, string>();
                 filters.TryGetValue("search", out var searchValue);
@@ -82,8 +81,8 @@ namespace Haniya.Controllers.PortalAdmin
                     ["academicYear"] = "ay.start_date",
                     ["semester"] = "ay.semester",
                     ["class"] = "c.class_name",
-                    ["homeroom"] = "ISNULL(t.first_name, '') + ' ' + ISNULL(t.last_name, '')",
-                    ["students"] = "COUNT(sc.student_class_id)"
+                    ["homeroom"] = "homeroom_teacher_name",
+                    ["students"] = "student_count"
                 };
                 var sort = req.sort ?? new ListSort();
                 var orderColumn = sortMap.TryGetValue(sort.field ?? "", out var mapped) ? mapped : "ay.start_date";
@@ -107,6 +106,21 @@ namespace Haniya.Controllers.PortalAdmin
                     whereSearch += "ac.academic_year_id = @academic_year_id";
                 }
 
+                var countSql = $@"
+            SELECT COUNT(1)
+            FROM mst_academic_classes ac
+            JOIN mst_academic_years ay ON ac.academic_year_id = ay.academic_year_id
+            JOIN mst_classes c ON ac.class_id = c.class_id
+            LEFT JOIN mst_teachers t ON ac.homeroom_teacher_id = t.teacher_id
+            {whereSearch}";
+
+                using var countCmd = new SqlCommand(countSql, conn);
+                if (!string.IsNullOrWhiteSpace(searchValue))
+                    countCmd.Parameters.AddWithValue("@search", $"%{searchValue}%");
+                if (!string.IsNullOrWhiteSpace(academicYearId))
+                    countCmd.Parameters.AddWithValue("@academic_year_id", academicYearId);
+                var totalRows = Convert.ToInt32(countCmd.ExecuteScalar() ?? 0);
+
                 var sql = $@"
             SELECT
                 ac.academic_class_id,
@@ -122,6 +136,7 @@ namespace Haniya.Controllers.PortalAdmin
                 t.last_name,
                 t.npk,
                 t.profile_photo,
+                LTRIM(RTRIM(ISNULL(t.first_name, '') + ' ' + ISNULL(t.last_name, ''))) AS homeroom_teacher_name,
                 ISNULL(COUNT(sc.student_class_id), 0) AS student_count
             FROM mst_academic_classes ac
             JOIN mst_academic_years ay ON ac.academic_year_id = ay.academic_year_id
@@ -144,11 +159,11 @@ namespace Haniya.Controllers.PortalAdmin
                 t.npk,
                 t.profile_photo
             ORDER BY {orderColumn} {orderDir}
-            OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY";
+            OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY";
 
                 using var cmd = new SqlCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@offset", offset);
-                cmd.Parameters.AddWithValue("@take", take);
+                cmd.Parameters.AddWithValue("@limit", limit);
                 if (!string.IsNullOrWhiteSpace(searchValue))
                     cmd.Parameters.AddWithValue("@search", $"%{searchValue}%");
                 if (!string.IsNullOrWhiteSpace(academicYearId))
@@ -179,10 +194,9 @@ namespace Haniya.Controllers.PortalAdmin
                     });
                 }
 
-                var hasNextPage = list.Count > limit;
-                if (hasNextPage) list = list.Take(limit).ToList();
+                var hasNextPage = (offset + list.Count) < totalRows;
 
-                return Json(DTOResponse.ok(new { data = list, hasNextPage }));
+                return Json(DTOResponse.ok(new { data = list, hasNextPage, totalRows }));
             }
             catch (Exception ex)
             {

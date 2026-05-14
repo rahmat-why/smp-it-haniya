@@ -47,153 +47,136 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
-            loadStudentSchedule();
+            initScheduleTable();
         });
 
-        function loadStudentSchedule() {
-            const dayOrder = {
-                Senin: 1,
-                Selasa: 2,
-                Rabu: 3,
-                Kamis: 4,
-                Jumat: 5,
-                Sabtu: 6,
-                Minggu: 7
-            };
-
-            $.ajax({
-                url: '/StSchedule/GetMySchedule',
-                type: 'GET',
-                success: function (res) {
-                    if (!res.success) {
-                        alert(res.message || 'Failed load schedule');
-                        return;
-                    }
-
-                    const rows = (res.data || []).map(function (x) {
-                        return {
-                            ...x,
-                            day_order: dayOrder[x.day] ?? 99,
-                            time_order: x.start_time || ''
-                        };
-                    });
-
-                    rows.sort(function (a, b) {
-                        if (a.day_order !== b.day_order) return a.day_order - b.day_order;
-                        return (a.time_order || '').localeCompare(b.time_order || '');
-                    });
-
-                    renderScheduleRows(rows);
-                    updateScheduleInfo(rows.length);
+        function initScheduleTable() {
+            $('#schedule-table').DataTable({
+                processing: true,
+                serverSide: true,
+                searching: true,
+                lengthChange: true,
+                ordering: true,
+                dom: 'lftip',
+                ajax: {
+                    url: '/StSchedule/GetMySchedule',
+                    type: 'POST'
                 },
-                error: function () {
-                    alert('Failed load schedule');
+                language: {
+                    lengthMenu: "Show _MENU_ rows",
+                    search: "",
+                    searchPlaceholder: "Search schedule...",
+                    paginate: {
+                        first: "First",
+                        last: "Last",
+                        next: "Next",
+                        previous: "Previous"
+                    },
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries"
+                },
+                columns: [
+                    {
+                        data: 'day',
+                        className: 'px-5 py-3 whitespace-nowrap',
+                        render: function (data) {
+                            const dayMap = {
+                                'DAY_MON': 'Senin',
+                                'DAY_TUE': 'Selasa',
+                                'DAY_WED': 'Rabu',
+                                'DAY_THU': 'Kamis',
+                                'DAY_FRI': 'Jumat',
+                                'DAY_SAT': 'Sabtu',
+                                'DAY_SUN': 'Minggu'
+                            };
+                            return dayMap[data] || data || '-';
+                        }
+                    },
+                    {
+                        data: null,
+                        className: 'px-5 py-3 whitespace-nowrap',
+                        render: function (row) {
+                            return `${row.start_time || '-'} - ${row.end_time || '-'}`;
+                        }
+                    },
+                    { data: 'subject', className: 'px-5 py-3' },
+                    { data: 'teacher', className: 'px-5 py-3' },
+                    { data: 'class_name', className: 'px-5 py-3 whitespace-nowrap' }
+                ],
+                initComplete: function () {
+                    styleStudentScheduleTable();
+                },
+                drawCallback: function () {
+                    styleStudentScheduleTable();
                 }
             });
         }
 
-        function renderScheduleRows(rows) {
-            const $tbody = $('#schedule-table tbody');
-            $tbody.empty();
+        function styleStudentScheduleTable() {
+            const wrapper = $('#schedule-table_wrapper');
+            const $length = wrapper.find('.dataTables_length, .dt-length');
+            const $filter = wrapper.find('.dataTables_filter, .dt-search');
 
-            const dayReverseMap = {
-                'DAY_MON': 'Senin',
-                'DAY_TUE': 'Selasa',
-                'DAY_WED': 'Rabu',
-                'DAY_THU': 'Kamis',
-                'DAY_FRI': 'Jumat',
-                'DAY_SAT': 'Sabtu',
-                'DAY_SUN': 'Minggu'
-            };
+            $('#schedule-toolbar').empty().append($length).append($filter);
 
-            const dayMap = {
-                'Senin': 'DAY_MON',
-                'Selasa': 'DAY_TUE',
-                'Rabu': 'DAY_WED',
-                'Kamis': 'DAY_THU',
-                'Jumat': 'DAY_FRI',
-                'Sabtu': 'DAY_SAT',
-                'Minggu': 'DAY_SUN'
-            };
+            $length.addClass('flex items-center gap-2 text-sm text-gray-600');
+            $length.find('label').addClass('flex items-center gap-2');
+            $length.find('select').addClass(
+                'border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 ' +
+                'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+            );
 
-            if (!rows || rows.length === 0) {
-                $tbody.html(`
-                    <tr>
-                        <td colspan="5" class="px-5 py-6 text-center text-gray-500">
-                            No schedule available
-                        </td>
-                    </tr>
-                `);
-                return;
+            $filter.addClass('flex items-center gap-2 text-sm text-gray-600 w-full md:w-auto justify-end');
+            $filter.find('label').addClass('flex items-center gap-2');
+            $filter.find('input')
+                .addClass(
+                    'border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 ' +
+                    'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full md:w-72'
+                )
+                .attr('placeholder', 'Search schedule...');
+
+            let $info = wrapper.find('.dataTables_info').first();
+            if ($info.length === 0) $info = wrapper.find('.dt-info').first();
+
+            let $paginate = wrapper.find('.dataTables_paginate').first();
+            if ($paginate.length === 0) $paginate = wrapper.find('.dt-paging').first();
+
+            if ($info.length > 0) {
+                $('#table-info').empty().append($info);
+                $info.removeClass().addClass('text-sm text-gray-600');
             }
 
-            const grouped = {};
-            rows.forEach(function (r) {
-                const dayName = dayReverseMap[r.day];
-                if (!dayName) return;
+            if ($paginate.length > 0) {
+                $('#table-pagination').empty().append($paginate);
+            }
 
-                if (!grouped[dayName]) grouped[dayName] = [];
-                grouped[dayName].push(r);
-            });
-
-            Object.keys(grouped).forEach(day => {
-                grouped[day].sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
-            });
-
-            const days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
-
-            const today = new Date().toLocaleDateString('id-ID', { weekday: 'long' });
-            const isWeekend = ['Sabtu', 'Minggu'].includes(today);
-
-            const targetDay = isWeekend ? 'Senin' : today;
-            const targetDayCode = dayMap[targetDay]; // kalau butuh
-
-            days.forEach(function (day) {
-                const items = grouped[day];
-                if (!items || items.length === 0) return;
-
-                const isTargetDay = day === targetDay;
-                const highlight = isTargetDay
-                    ? (isWeekend ? 'bg-amber-50' : 'bg-blue-50')
-                    : '';
-
-                const dayLabel = isTargetDay
-                    ? `${day} ${isWeekend ? '(Upcoming)' : '(Today)'}`
-                    : day;
-
-                items.forEach(function (item, idx) {
-                    const dayCell = idx === 0
-                        ? `<td rowspan="${items.length}"
-                                class="px-5 py-3 font-semibold text-gray-900 whitespace-nowrap align-middle text-center ${highlight}">
-                                ${dayLabel}
-                           </td>`
-                        : '';
-
-                    $tbody.append(`
-                        <tr class="${highlight}">
-                            ${dayCell}
-                            <td class="px-5 py-3 text-gray-700 whitespace-nowrap">
-                                ${item.start_time || '-'} - ${item.end_time || '-'}
-                            </td>
-                            <td class="px-5 py-3 text-gray-700">
-                                ${item.subject || '-'}
-                            </td>
-                            <td class="px-5 py-3 text-gray-700">
-                                ${item.teacher || '-'}
-                            </td>
-                            <td class="px-5 py-3 text-gray-700 whitespace-nowrap">
-                                ${item.class_name || '-'}
-                            </td>
-                        </tr>
-                    `);
-                });
-            });
+            $('#table-pagination').removeClass('hidden').addClass('w-full flex justify-end overflow-x-auto whitespace-nowrap');
+            applyStudentPaginationStyle($('#table-pagination'));
         }
 
-        function updateScheduleInfo(totalRows) {
-            $('#table-info').html(`<span class="text-sm text-gray-600">Showing ${totalRows} schedule item(s)</span>`);
+        function applyStudentPaginationStyle($scope) {
+            const $root = $scope && $scope.length ? $scope : $(document);
+            $root.find('.dataTables_paginate, .dt-paging').each(function () {
+                const $paginate = $(this);
+                $paginate.addClass('inline-flex items-center border border-gray-300 rounded-md overflow-hidden min-w-max');
 
-            $('#table-pagination').empty().addClass('hidden');
+                $paginate.find('a, span, button, .paginate_button, .dt-paging-button').each(function () {
+                    const $btn = $(this);
+                    const isCurrent = $btn.hasClass('current') || $btn.hasClass('active') || $btn.attr('aria-current') === 'page';
+                    const isDisabled = $btn.hasClass('disabled') || $btn.prop('disabled') || $btn.attr('aria-disabled') === 'true';
+                    const baseClasses = 'inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 last:border-r-0 min-w-[40px] transition-colors duration-150';
+
+                    $btn.addClass(baseClasses);
+                    $btn.removeClass('bg-blue-900 text-white cursor-default bg-gray-50 text-gray-400 cursor-not-allowed bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900 cursor-pointer');
+
+                    if (isCurrent) {
+                        $btn.addClass('bg-blue-900 text-white cursor-default');
+                    } else if (isDisabled) {
+                        $btn.addClass('bg-gray-50 text-gray-400 cursor-not-allowed');
+                    } else {
+                        $btn.addClass('bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900 cursor-pointer');
+                    }
+                });
+            });
         }
     </script>
 }

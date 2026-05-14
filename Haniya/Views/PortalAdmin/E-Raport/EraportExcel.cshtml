@@ -58,12 +58,25 @@
         return fallback;
     }
 
-    public string GetDisplayFinalScore(Dictionary<string, Dictionary<string, string>> savedGradeMap, DataRow row)
+    public string GetDisplayFinalScore(Dictionary<string, Dictionary<string, string>> savedGradeMap, DataRow row, bool useAdjustment)
     {
+        var finalScoreRpsSaved = GetSavedGradeValue(savedGradeMap, row["subject_id"], "final_score_rps", "");
         var adjustment = GetSavedGradeValue(savedGradeMap, row["subject_id"], "final_score_adjustment", "");
-        if (!string.IsNullOrWhiteSpace(adjustment) && adjustment != "0")
+        if (useAdjustment)
         {
-            return adjustment;
+            var normalizedAdjustment = (adjustment ?? "").Trim().Replace(',', '.');
+            var hasNonZeroAdjustment = decimal.TryParse(normalizedAdjustment, NumberStyles.Any, CultureInfo.InvariantCulture, out var adjustmentNum)
+                ? adjustmentNum != 0
+                : !string.IsNullOrWhiteSpace(normalizedAdjustment);
+            if (hasNonZeroAdjustment)
+            {
+                return adjustment;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(finalScoreRpsSaved) && finalScoreRpsSaved != "0")
+        {
+            return finalScoreRpsSaved;
         }
 
         return Math.Round(Convert.ToDecimal(row["final_score"] == DBNull.Value ? 0 : row["final_score"]), 0).ToString();
@@ -150,6 +163,7 @@
     /* PRINT MODE */
     @@media print {
         #btnSubmit,
+        #btnBack,
         #btnAdd,
         #exkulTable td:last-child,
         #exkulTable th:last-child,
@@ -180,10 +194,37 @@
     }
 
     .download-container {
-        width: 250mm;
+        width: 210mm;
         margin: 30px auto;
+    }
+
+    .download-card {
+        background: white;
+        border: 1px solid #d1d5db;
+        border-radius: 12px;
+        padding: 14px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         display: flex;
-        justify-content: flex-end;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .action-btn {
+        padding: 10px 18px;
+        border: none;
+        border-radius: 8px;
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .action-btn-secondary {
+        background: #6b7280;
+    }
+
+    .action-btn-primary {
+        background: #2563eb;
     }
 
     .nt {
@@ -477,7 +518,7 @@
                 var subjectName = row["subject_name"]?.ToString() ?? "";
                 var adjustmentValue = GetSavedGradeValue(savedGradeMap, row["subject_id"], "final_score_adjustment", "0");
                 var descriptionValue = GetSavedGradeValue(savedGradeMap, row["subject_id"], "competency_description", $"{data["full_name"]} membutuhkan bimbingan dalam pembelajaran {subjectName}.");
-                var displayFinalScore = GetDisplayFinalScore(savedGradeMap, row);
+                var displayFinalScore = GetDisplayFinalScore(savedGradeMap, row, !isPreviewMode);
                 <tr class="row-grade">
                     <td class="center">@noPri</td>
                     <td class="subject-name">
@@ -485,6 +526,7 @@
                         <input type="hidden" class="subject-id" value="@row["subject_id"]" />
                         <input type="hidden" class="subject-type-id" value="@row["subject_code"]" />
                         <input type="hidden" class="subject-type-name" value="@row["subject_type"]" />
+                        <input type="hidden" class="final-score-rps-raw" value="@Math.Round(Convert.ToDecimal(row["final_score"] == DBNull.Value ? 0 : row["final_score"]), 0)" />
                     </td>
                     <td class="final-score-rps center" align="center" style="text-align:center;vertical-align:middle;">
                         @displayFinalScore
@@ -555,7 +597,7 @@
                 var subjectName = row["subject_name"]?.ToString() ?? "";
                 var adjustmentValue = GetSavedGradeValue(savedGradeMap, row["subject_id"], "final_score_adjustment", "0");
                 var descriptionValue = GetSavedGradeValue(savedGradeMap, row["subject_id"], "competency_description", $"{data["full_name"]} membutuhkan bimbingan dalam pembelajaran {subjectName}.");
-                var displayFinalScore = GetDisplayFinalScore(savedGradeMap, row);
+                var displayFinalScore = GetDisplayFinalScore(savedGradeMap, row, !isPreviewMode);
                 var calculatedFinalScore = Math.Round(Convert.ToDecimal(row["final_score"] == DBNull.Value ? 0 : row["final_score"]), 0).ToString();
                 <tr class="row-grade">
                     <td class="center">@noLoc</td>
@@ -958,7 +1000,7 @@
                 var subjectName = row["subject_name"]?.ToString() ?? "";
                 var adjustmentValue = GetSavedGradeValue(savedGradeMap, row["subject_id"], "final_score_adjustment", "0");
                 var descriptionValue = GetSavedGradeValue(savedGradeMap, row["subject_id"], "competency_description", $"{data["full_name"]} membutuhkan bimbingan dalam pembelajaran {subjectName}.");
-                var displayFinalScore = GetDisplayFinalScore(savedGradeMap, row);
+                var displayFinalScore = GetDisplayFinalScore(savedGradeMap, row, !isPreviewMode);
                 var calculatedFinalScore = Math.Round(Convert.ToDecimal(row["final_score"] == DBNull.Value ? 0 : row["final_score"]), 0).ToString();
                 <tr class="row-grade">
                     <td class="center">@noIsl</td>
@@ -1086,11 +1128,14 @@
 @if (isPreviewMode)
 {
 <div class="download-container">
-    <button id="btnSubmit" onclick="submitEraport()"
-            style="padding:10px 18px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-weight:600;cursor:pointer;">
-        Submit
-    </button>
-
+    <div class="download-card">
+        <button id="btnBack" type="button" class="action-btn action-btn-secondary" onclick="goBackToEraportList()">
+            Back
+        </button>
+        <button id="btnSubmit" type="button" class="action-btn action-btn-primary" onclick="submitEraport()">
+            Export PDF
+        </button>
+    </div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -1154,11 +1199,11 @@
         const $btn = $('#btnSubmit');
         if ($btn.prop('disabled')) return;
 
-        $btn.prop('disabled', true).text('Submitting...');
+        $btn.prop('disabled', true).text('Exporting PDF...');
         saveHeader()
             .done(function (res) {
                 if (!res || res.success !== true) {
-                    alert('Submit gagal.');
+                    alert('Export PDF gagal.');
                     return;
                 }
 
@@ -1167,11 +1212,19 @@
             })
             .fail(function (err) {
                 console.log(err.responseText);
-                alert('Terjadi kesalahan saat submit.');
+                alert('Terjadi kesalahan saat export PDF.');
             })
             .always(function () {
-                $btn.prop('disabled', false).text('Submit');
+                $btn.prop('disabled', false).text('Export PDF');
             });
+    }
+
+    function goBackToEraportList() {
+        if (window.history.length > 1) {
+            window.history.back();
+            return;
+        }
+        window.location.href = '/Eraport';
     }
 
     function triggerPdfDownload() {
@@ -1402,3 +1455,5 @@
 </script>
 }
 </body>
+
+

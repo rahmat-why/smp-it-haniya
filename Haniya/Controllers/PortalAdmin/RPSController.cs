@@ -29,14 +29,15 @@ namespace Haniya.Controllers.PortalAdmin
             return View("~/Views/PortalAdmin/RPS/Edit.cshtml");
         }
 
+        [HttpPost]
         public IActionResult GetAll(
-    string academic_year_id = null,
-    string academic_class_id = null,
-    string subject_id = null,
-    string teacher_id = null
-)
+            string academic_year_id = null,
+            string academic_class_id = null,
+            string subject_id = null,
+            string teacher_id = null
+        )
         {
-            var (draw, start, length, _, _, _) = ParseDataTablesQuery();
+            var (draw, start, length, searchValue, orderColumnIndex, orderDir) = ParseDataTablesQuery();
 
             using var conn = GetConn();
             conn.Open();
@@ -51,15 +52,28 @@ namespace Haniya.Controllers.PortalAdmin
                 academic_year_id = activeYearCmd.ExecuteScalar()?.ToString();
             }
 
-            // ============================
-            // COUNT DATA
-            // ============================
+            var where = @"
+          AND (@subjectId IS NULL OR r.subject_id = @subjectId)
+          AND (@academicClassId IS NULL OR r.academic_class_id = @academicClassId)
+          AND (@teacherId IS NULL OR r.teacher_id = @teacherId)";
+            if (!string.IsNullOrWhiteSpace(searchValue))
+            {
+                where += @"
+          AND (
+                s.subject_name LIKE @search
+                OR CONCAT(t.first_name, ' ', t.last_name) LIKE @search
+                OR c.class_name LIKE @search
+                OR CAST(r.minimum_value AS VARCHAR(32)) LIKE @search
+          )";
+            }
+
+            // recordsTotal: hanya berdasarkan filter utama (tanpa search)
             var totalSql = @"
         SELECT COUNT(*)
         FROM mst_rps r
         JOIN mst_academic_classes ac ON r.academic_class_id = ac.academic_class_id
         WHERE r.status = 'ACTIVE'
-          AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
+          AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)" + @"
           AND (@subjectId IS NULL OR r.subject_id = @subjectId)
           AND (@academicClassId IS NULL OR r.academic_class_id = @academicClassId)
           AND (@teacherId IS NULL OR r.teacher_id = @teacherId)";
@@ -74,6 +88,31 @@ namespace Haniya.Controllers.PortalAdmin
                 cmd.Parameters.AddWithValue("@teacherId", (object)teacher_id ?? DBNull.Value);
 
                 recordsTotal = (int)cmd.ExecuteScalar();
+            }
+
+            // recordsFiltered: termasuk search
+            var filteredSql = @"
+        SELECT COUNT(*)
+        FROM mst_rps r
+        JOIN mst_subjects s ON r.subject_id = s.subject_id
+        JOIN mst_teachers t ON r.teacher_id = t.teacher_id
+        JOIN mst_academic_classes ac ON r.academic_class_id = ac.academic_class_id
+        JOIN mst_classes c ON ac.class_id = c.class_id
+        WHERE r.status = 'ACTIVE'
+          AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
+        " + where;
+
+            int recordsFiltered;
+            using (var cmd = new SqlCommand(filteredSql, conn))
+            {
+                cmd.Parameters.AddWithValue("@academicYearId", (object)academic_year_id ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@subjectId", (object)subject_id ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@academicClassId", (object)academic_class_id ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@teacherId", (object)teacher_id ?? DBNull.Value);
+                if (!string.IsNullOrWhiteSpace(searchValue))
+                    cmd.Parameters.AddWithValue("@search", $"%{searchValue.Trim()}%");
+
+                recordsFiltered = (int)cmd.ExecuteScalar();
             }
 
             // ============================
@@ -114,9 +153,7 @@ namespace Haniya.Controllers.PortalAdmin
 
         WHERE r.status = 'ACTIVE'
           AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
-          AND (@subjectId IS NULL OR r.subject_id = @subjectId)
-          AND (@academicClassId IS NULL OR r.academic_class_id = @academicClassId)
-          AND (@teacherId IS NULL OR r.teacher_id = @teacherId)
+        " + where + @"
 
         GROUP BY 
             r.rps_id,
@@ -130,12 +167,12 @@ namespace Haniya.Controllers.PortalAdmin
             ay.semester,
             r.minimum_value
 
-        ORDER BY 
-            c.class_name ASC,
-            s.subject_name ASC
+        ORDER BY {ORDER_BY} {ORDER_DIR}
 
         OFFSET @start ROWS
-        FETCH NEXT @length ROWS ONLY";
+        FETCH NEXT @length ROWS ONLY"
+            .Replace("{ORDER_BY}", GetRpsOrderColumn(orderColumnIndex))
+            .Replace("{ORDER_DIR}", orderDir);
 
             var list = new List<object>();
 
@@ -145,6 +182,8 @@ namespace Haniya.Controllers.PortalAdmin
                 cmd.Parameters.AddWithValue("@subjectId", (object)subject_id ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@academicClassId", (object)academic_class_id ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@teacherId", (object)teacher_id ?? DBNull.Value);
+                if (!string.IsNullOrWhiteSpace(searchValue))
+                    cmd.Parameters.AddWithValue("@search", $"%{searchValue.Trim()}%");
 
                 cmd.Parameters.Add("@start", SqlDbType.Int).Value = start;
                 cmd.Parameters.Add("@length", SqlDbType.Int).Value = length;
@@ -173,7 +212,7 @@ namespace Haniya.Controllers.PortalAdmin
             {
                 draw,
                 recordsTotal,
-                recordsFiltered = recordsTotal,
+                recordsFiltered,
                 data = list
             });
         }
@@ -212,15 +251,39 @@ namespace Haniya.Controllers.PortalAdmin
             }
         }
 
+        private static string GetRpsOrderColumn(int columnIndex)
+        {
+            return columnIndex switch
+            {
+                0 => "ay.start_date",
+                1 => "ay.semester",
+                2 => "s.subject_name",
+                3 => "t.first_name",
+                4 => "c.class_name",
+                5 => "r.minimum_value",
+                6 => "COUNT(d.rps_detail_id)",
+                _ => "c.class_name"
+            };
+        }
+
         private (int draw, int start, int length, string searchValue, int orderColumnIndex, string orderDir) ParseDataTablesQuery()
         {
+            var form = Request.HasFormContentType ? Request.Form : null;
             var q = Request.Query;
-            int.TryParse(q["draw"], out var draw); draw = draw > 0 ? draw : 1;
-            int.TryParse(q["start"], out var start);
-            int.TryParse(q["length"], out var length); length = length > 0 ? length : 10;
-            var searchValue = q["search[value]"].ToString() ?? "";
-            int.TryParse(q["order[0][column]"], out var orderColumnIndex);
-            var orderDir = q["order[0][dir]"].ToString().ToUpper() is "ASC" or "DESC" ? q["order[0][dir]"].ToString().ToUpper() : "ASC";
+
+            string GetVal(string key)
+            {
+                if (form != null && form.ContainsKey(key)) return form[key].ToString();
+                return q[key].ToString();
+            }
+
+            int.TryParse(GetVal("draw"), out var draw); draw = draw > 0 ? draw : 1;
+            int.TryParse(GetVal("start"), out var start);
+            int.TryParse(GetVal("length"), out var length); length = length > 0 ? length : 10;
+            var searchValue = GetVal("search[value]") ?? "";
+            int.TryParse(GetVal("order[0][column]"), out var orderColumnIndex);
+            var rawDir = GetVal("order[0][dir]").ToUpper();
+            var orderDir = rawDir is "ASC" or "DESC" ? rawDir : "ASC";
             return (draw, start, length, searchValue, orderColumnIndex, orderDir);
         }
 

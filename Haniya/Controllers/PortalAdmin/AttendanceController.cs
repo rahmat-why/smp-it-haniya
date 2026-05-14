@@ -217,9 +217,10 @@ namespace Haniya.Controllers.PortalAdmin
             return View("~/Views/PortalAdmin/Attendance/Edit.cshtml");
         }
 
+        [HttpPost]
         public IActionResult GetAll(string academic_year_id = null, string academic_class_id = null, string attendance_month = null)
         {
-            var (draw, start, length, _, _, _) = ParseDataTablesQuery();
+            var (draw, start, length, _, orderColumnIndex, orderDir) = ParseDataTablesQuery();
 
             using var conn = GetConn();
             conn.Open();
@@ -260,6 +261,10 @@ namespace Haniya.Controllers.PortalAdmin
                 recordsTotal = (int)cmd.ExecuteScalar();
             }
 
+            var orderBy = GetAttendanceOrderByColumn(orderColumnIndex);
+            if (string.IsNullOrWhiteSpace(orderBy))
+                orderBy = "a.attendance_date";
+
             // DATA
             var sql = @"
     SELECT
@@ -293,7 +298,7 @@ namespace Haniya.Controllers.PortalAdmin
         c.class_name,
         t.first_name,
         t.last_name
-    ORDER BY a.attendance_date DESC
+    ORDER BY " + orderBy + " " + orderDir + @", a.attendance_date DESC
     OFFSET @start ROWS FETCH NEXT @length ROWS ONLY";
 
             var list = new List<object>();
@@ -376,23 +381,31 @@ namespace Haniya.Controllers.PortalAdmin
         private (int draw, int start, int length, string searchValue, int orderColumnIndex, string orderDir)
         ParseDataTablesQuery()
         {
+            var form = Request.HasFormContentType ? Request.Form : null;
             var q = Request.Query;
-            int.TryParse(q["draw"], out var draw);
+
+            string GetVal(string key)
+            {
+                if (form != null && form.ContainsKey(key)) return form[key].ToString();
+                return q[key].ToString();
+            }
+
+            int.TryParse(GetVal("draw"), out var draw);
             if (draw <= 0) draw = 1;
-            int.TryParse(q["start"], out var start);
+            int.TryParse(GetVal("start"), out var start);
             if (start < 0) start = 0;
-            int.TryParse(q["length"], out var length);
+            int.TryParse(GetVal("length"), out var length);
             if (length <= 0) length = 10;
-            var searchValue = q["search[value]"].ToString() ?? string.Empty;
+            var searchValue = GetVal("search[value]") ?? string.Empty;
 
             int orderColumnIndex = 0; // default to column 0 (Date)
-            var orderColIdxStr = q["order[0][column]"].ToString();
+            var orderColIdxStr = GetVal("order[0][column]");
             if (int.TryParse(orderColIdxStr, out var idx))
             {
                 orderColumnIndex = idx;
             }
 
-            var dir = q["order[0][dir]"].ToString();
+            var dir = GetVal("order[0][dir]");
             var orderDir = "ASC";
             if (!string.IsNullOrWhiteSpace(dir) &&
                 (dir.Equals("asc", StringComparison.OrdinalIgnoreCase) ||
@@ -402,6 +415,20 @@ namespace Haniya.Controllers.PortalAdmin
             }
 
             return (draw, start, length, searchValue, orderColumnIndex, orderDir);
+        }
+
+        private string GetAttendanceOrderByColumn(int orderColumnIndex)
+        {
+            return orderColumnIndex switch
+            {
+                0 => "ay.start_date",
+                1 => "ay.semester",
+                2 => "a.attendance_date",
+                3 => "c.class_name",
+                4 => "t.first_name",
+                5 => "SUM(CASE WHEN d.status='PRESENT' THEN 1 ELSE 0 END)",
+                _ => "a.attendance_date"
+            };
         }
 
         [HttpGet]

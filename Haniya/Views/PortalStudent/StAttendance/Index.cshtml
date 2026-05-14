@@ -55,7 +55,7 @@
 
         $('#attendance-table').DataTable({
             processing: true,
-            serverSide: false,
+            serverSide: true,
             searching: true,
             lengthChange: true,
             ordering: true,
@@ -63,14 +63,7 @@
 
             ajax: {
                 url: '/StAttendance/GetMyAttendance',
-                type: 'GET',
-                dataSrc: function (res) {
-                    if (!res.success) {
-                        alert(res.message);
-                        return [];
-                    }
-                    return res.data;
-                }
+                type: 'POST'
             },
 
             columns: [

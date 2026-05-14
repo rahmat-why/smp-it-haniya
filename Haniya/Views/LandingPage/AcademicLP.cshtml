@@ -14,18 +14,7 @@
 
 <section class="bg-slate-100 py-16 sm:py-20">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div class="grid gap-6 lg:grid-cols-3">
-            <article class="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">Curriculum</p>
-                <h2 class="mt-3 text-2xl font-black text-slate-900">SD IT HANIYA</h2>
-                <ul class="mt-6 space-y-3 text-sm leading-relaxed text-slate-600 marker:text-brand-700 sm:text-base">
-                    <li id="academic2Desc" class="list-disc"></li>
-                    <li id="academic3Desc" class="list-disc"></li>
-                    <li id="academic4Desc" class="list-disc"></li>
-                    <li id="academic5Desc" class="list-disc"></li>
-                    <li id="academic6Desc" class="list-disc"></li>
-                </ul>
-            </article>
+        <div class="mx-auto grid max-w-5xl gap-6 lg:grid-cols-2">
             <article class="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">Curriculum</p>
                 <h2 class="mt-3 text-2xl font-black text-slate-900">SMP IT HANIYA</h2>
@@ -67,12 +56,6 @@
 
             document.getElementById("academic1Name").innerText = data["ACADEMIC_BANNER1_NAME"] || "";
             document.getElementById("academic1Desc").innerText = data["ACADEMIC_BANNER1_DESC"] || "";
-
-            document.getElementById("academic2Desc").innerText = data["ACADEMIC_CURRIC_SD1_DESC"] || "";
-            document.getElementById("academic3Desc").innerText = data["ACADEMIC_CURRIC_SD2_DESC"] || "";
-            document.getElementById("academic4Desc").innerText = data["ACADEMIC_CURRIC_SD3_DESC"] || "";
-            document.getElementById("academic5Desc").innerText = data["ACADEMIC_CURRIC_SD4_DESC"] || "";
-            document.getElementById("academic6Desc").innerText = data["ACADEMIC_CURRIC_SD5_DESC"] || "";
 
             document.getElementById("academic7Desc").innerText = data["ACADEMIC_CURRIC_SMP1_DESC"] || "";
             document.getElementById("academic8Desc").innerText = data["ACADEMIC_CURRIC_SMP2_DESC"] || "";

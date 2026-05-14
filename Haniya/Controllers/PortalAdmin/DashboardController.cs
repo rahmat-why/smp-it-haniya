@@ -98,14 +98,15 @@ namespace Haniya.Controllers.PortalAdmin
 
             using var cmd = new SqlCommand(@"
                 SELECT 
-                    SUBSTRING(sc.academic_class_id, 4, 1) AS ClassNumber, 
+                    mc.class_level AS ClassNumber, 
                     COUNT(*) AS TotalStudents
                 FROM mst_student_classes sc
                 JOIN mst_academic_classes ac 
                     ON sc.academic_class_id = ac.academic_class_id
-                WHERE SUBSTRING(sc.academic_class_id, 4, 1) IN ('7','8','9') 
+                JOIN mst_classes mc
+                    ON ac.class_id = mc.class_id
                 AND ac.academic_year_id = @academicYear
-                GROUP BY SUBSTRING(sc.academic_class_id, 4, 1)
+                GROUP BY mc.class_level
                 ORDER BY ClassNumber;
             ", conn);
 
@@ -406,6 +407,79 @@ namespace Haniya.Controllers.PortalAdmin
             }
         }
 
+        [HttpGet]
+        public IActionResult GetTeacherClassTabs(string? academicYear, string? classLevel)
+        {
+            try
+            {
+                var teacherId = User.FindFirst("TeacherId")?.Value;
+                if (string.IsNullOrEmpty(teacherId))
+                {
+                    return Json(new { success = false, message = "Invalid teacher session" });
+                }
+
+                using var conn = GetConn();
+                conn.Open();
+
+                if (string.IsNullOrEmpty(academicYear))
+                {
+                    academicYear = GetLatestActiveAcademicYear(conn);
+                }
+
+                if (string.IsNullOrEmpty(academicYear))
+                {
+                    return Json(new { success = false, message = "Academic year tidak ditemukan" });
+                }
+
+                var classes = GetTeacherClasses(conn, academicYear, classLevel, teacherId);
+                return Json(new { success = true, data = classes });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        private List<dynamic> GetTeacherClasses(SqlConnection conn, string academicYear, string? classLevel, string teacherId)
+        {
+            var list = new List<dynamic>();
+
+            var sql = @"
+                SELECT DISTINCT
+                    cls.class_id,
+                    cls.class_name
+                FROM mst_schedules s
+                JOIN mst_schedule_details sd ON s.schedule_id = sd.schedule_id
+                JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
+                JOIN mst_classes cls ON ac.class_id = cls.class_id
+                WHERE ac.academic_year_id = @academicYear
+                  AND sd.teacher_id = @teacherId
+                  AND (
+                        @classLevel = ''
+                        OR cls.class_name = @classLevel
+                        OR LEFT(LTRIM(RTRIM(ISNULL(cls.class_name, ''))), 1) = @classLevel
+                        OR CONVERT(VARCHAR(10), cls.class_level) = @classLevel
+                  )
+                ORDER BY cls.class_name";
+
+            using var cmd = new SqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@academicYear", academicYear);
+            cmd.Parameters.AddWithValue("@teacherId", teacherId);
+            cmd.Parameters.AddWithValue("@classLevel", string.IsNullOrWhiteSpace(classLevel) ? "" : classLevel.Trim());
+
+            using var rd = cmd.ExecuteReader();
+            while (rd.Read())
+            {
+                list.Add(new
+                {
+                    id = rd["class_id"]?.ToString(),
+                    text = rd["class_name"]?.ToString()
+                });
+            }
+
+            return list;
+        }
+
         private List<dynamic> GetWeeklySchedule(SqlConnection conn, string academicYear, string? classLevel, string teacherid)
         {
             var list = new List<dynamic>();
@@ -432,7 +506,8 @@ namespace Haniya.Controllers.PortalAdmin
                 AND (
                     @classLevel = ''
                     OR cls.class_name = @classLevel
-                    OR (TRY_CONVERT(int, @classLevel) IS NOT NULL AND cls.class_level = TRY_CONVERT(int, @classLevel))
+                    OR LEFT(LTRIM(RTRIM(ISNULL(cls.class_name, ''))), 1) = @classLevel
+                    OR CONVERT(VARCHAR(10), cls.class_level) = @classLevel
                 )
                 ORDER BY
                     CASE s.day
@@ -446,7 +521,7 @@ namespace Haniya.Controllers.PortalAdmin
 
             var cmd = new SqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@academicYear", academicYear);
-            cmd.Parameters.AddWithValue("@classLevel", string.IsNullOrEmpty(classLevel) ? "" : classLevel);
+            cmd.Parameters.AddWithValue("@classLevel", string.IsNullOrWhiteSpace(classLevel) ? "" : classLevel.Trim());
             cmd.Parameters.AddWithValue("@teacherId",teacherid);
 
             using var rd = cmd.ExecuteReader();
@@ -489,14 +564,15 @@ namespace Haniya.Controllers.PortalAdmin
         AND (
             @classLevel = ''
             OR cls.class_name = @classLevel
-            OR (TRY_CONVERT(int, @classLevel) IS NOT NULL AND cls.class_level = TRY_CONVERT(int, @classLevel))
+            OR LEFT(LTRIM(RTRIM(ISNULL(cls.class_name, ''))), 1) = @classLevel
+            OR CONVERT(VARCHAR(10), cls.class_level) = @classLevel
         )
         GROUP BY ac.academic_class_id, cls.class_name, ds.detail_id, ds.item_name
         ORDER BY cls.class_name, ds.item_name";
 
             var cmd = new SqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@academicYear", academicYear);
-            cmd.Parameters.AddWithValue("@classLevel", string.IsNullOrEmpty(classLevel) ? "" : classLevel);
+            cmd.Parameters.AddWithValue("@classLevel", string.IsNullOrWhiteSpace(classLevel) ? "" : classLevel.Trim());
 
             using var rd = cmd.ExecuteReader();
             while (rd.Read())
@@ -536,14 +612,15 @@ namespace Haniya.Controllers.PortalAdmin
         AND (
             @classLevel = ''
             OR cls.class_name = @classLevel
-            OR (TRY_CONVERT(int, @classLevel) IS NOT NULL AND cls.class_level = TRY_CONVERT(int, @classLevel))
+            OR LEFT(LTRIM(RTRIM(ISNULL(cls.class_name, ''))), 1) = @classLevel
+            OR CONVERT(VARCHAR(10), cls.class_level) = @classLevel
         )
         GROUP BY ac.academic_class_id, cls.class_name, ds.detail_id, ds.item_name
         ORDER BY cls.class_name, ds.item_name";
 
             var cmd = new SqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@academicYear", academicYear);
-            cmd.Parameters.AddWithValue("@classLevel", string.IsNullOrEmpty(classLevel) ? "" : classLevel);
+            cmd.Parameters.AddWithValue("@classLevel", string.IsNullOrWhiteSpace(classLevel) ? "" : classLevel.Trim());
 
             using var rd = cmd.ExecuteReader();
             while (rd.Read())

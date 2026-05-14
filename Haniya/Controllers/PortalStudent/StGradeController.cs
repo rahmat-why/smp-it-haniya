@@ -81,6 +81,17 @@ namespace Haniya.Controllers.PortalStudent
                 }
                 var whereSql = "WHERE " + string.Join(" AND ", where);
 
+                var totalSql = @"
+            SELECT COUNT(*)
+            FROM txn_grade_details d
+            JOIN txn_grades g ON d.grade_id = g.grade_id
+            LEFT JOIN mst_academic_classes ac ON g.academic_class_id = ac.academic_class_id
+                LEFT JOIN mst_classes c ON ac.class_id = c.class_id
+                LEFT JOIN mst_subjects s ON g.subject_id = s.subject_id
+                LEFT JOIN mst_teachers t ON g.teacher_id = t.teacher_id
+                LEFT JOIN mst_detail_settings dt ON g.grade_type = dt.detail_id AND dt.header_id = 'GRADE_TYPE'
+            {WHERE_SQL}".Replace("{WHERE_SQL}", whereSql);
+
                 var sql = @"
             SELECT
                 g.grade_id,
@@ -108,6 +119,15 @@ namespace Haniya.Controllers.PortalStudent
                     .Replace("{ORDER_DIR}", orderDir);
 
                 var list = new List<object>();
+                int totalRows = 0;
+
+                using (var countCmd = new SqlCommand(totalSql, conn))
+                {
+                    countCmd.Parameters.AddWithValue("@studentId", studentId);
+                    if (!string.IsNullOrWhiteSpace(search))
+                        countCmd.Parameters.AddWithValue("@search", $"%{search.Trim()}%");
+                    totalRows = Convert.ToInt32(countCmd.ExecuteScalar() ?? 0);
+                }
 
                 using (var cmd = new SqlCommand(sql, conn))
                 {
@@ -139,7 +159,7 @@ namespace Haniya.Controllers.PortalStudent
                 var hasNextPage = list.Count > limit;
                 if (hasNextPage) list = list.Take(limit).ToList();
 
-                return Json(DTOResponse.ok(new { data = list, hasNextPage }));
+                return Json(DTOResponse.ok(new { data = list, hasNextPage, totalRows }));
             }
             catch (Exception ex)
             {

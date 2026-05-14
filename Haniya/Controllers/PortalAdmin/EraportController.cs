@@ -65,7 +65,6 @@ namespace Haniya.Controllers.PortalAdmin
                 var page = req.page <= 0 ? 1 : req.page;
                 var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
                 var offset = (page - 1) * limit;
-                var take = limit + 1;
 
                 var filters = req.filters ?? new Dictionary<string, string>();
                 filters.TryGetValue("search", out var search);
@@ -154,6 +153,24 @@ namespace Haniya.Controllers.PortalAdmin
                     ? " AND " + string.Join(" AND ", conditions)
                     : "";
 
+                var countSql = $@"
+                    SELECT COUNT(1)
+                    {baseQuery}
+                    {whereSearch}
+                ";
+
+                using var countCmd = new SqlCommand(countSql, conn);
+                if (!string.IsNullOrWhiteSpace(search))
+                    countCmd.Parameters.Add("@search", SqlDbType.NVarChar, 100)
+                        .Value = $"%{search.Trim()}%";
+                if (!string.IsNullOrEmpty(academicYearId))
+                    countCmd.Parameters.Add("@academicYearId", SqlDbType.NVarChar)
+                        .Value = academicYearId;
+                if (!string.IsNullOrEmpty(classLevel))
+                    countCmd.Parameters.Add("@classLevel", SqlDbType.NVarChar)
+                        .Value = $"%{classLevel}%";
+                var totalRows = Convert.ToInt32(countCmd.ExecuteScalar() ?? 0);
+
                 var sql = $@"
                     SELECT 
                         s.student_id,
@@ -179,12 +196,12 @@ namespace Haniya.Controllers.PortalAdmin
                     {whereSearch}
 
                     ORDER BY {orderBy} {orderDir}
-                    OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY
+                    OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
                 ";
 
                 using var cmd = new SqlCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@offset", offset);
-                cmd.Parameters.AddWithValue("@take", take);
+                cmd.Parameters.AddWithValue("@limit", limit);
 
                 if (!string.IsNullOrWhiteSpace(search))
                     cmd.Parameters.Add("@search", SqlDbType.NVarChar, 100)
@@ -225,10 +242,9 @@ namespace Haniya.Controllers.PortalAdmin
                     });
                 }
 
-                var hasNextPage = list.Count > limit;
-                if (hasNextPage) list = list.Take(limit).ToList();
+                var hasNextPage = (offset + list.Count) < totalRows;
 
-                return Json(DTOResponse.ok(new { data = list, hasNextPage }));
+                return Json(DTOResponse.ok(new { data = list, hasNextPage, totalRows }));
             }
             catch (Exception ex)
             {
@@ -561,6 +577,7 @@ namespace Haniya.Controllers.PortalAdmin
                 x => x.Key,
                 x => new Dictionary<string, string>
                 {
+                    ["final_score_rps"] = NormalizeNumericString(x.Value.FinalScoreRps, ""),
                     ["final_score_adjustment"] = NormalizeNumericString(x.Value.FinalScoreAdjustment, ""),
                     ["competency_description"] = x.Value.CompetencyDescription ?? ""
                 }

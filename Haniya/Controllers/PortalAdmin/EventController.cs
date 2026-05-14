@@ -87,26 +87,34 @@ namespace Haniya.Controllers.PortalAdmin
         private (int draw, int start, int length, string searchValue, string orderColumn, string orderDir)
             ParseDataTablesQuery(string[] columns)
         {
+            var form = Request.HasFormContentType ? Request.Form : null;
             var q = Request.Query;
-            int.TryParse(q["draw"], out var draw);
-            if (draw <= 0) draw = 1;
-            int.TryParse(q["start"], out var start);
-            if (start < 0) start = 0;
-            int.TryParse(q["length"], out var length);
-            if (length <= 0) length = 10;
-            var searchValue = q["search[value]"].ToString() ?? string.Empty;
 
-            var orderColumn = "title";
+            string GetVal(string key)
+            {
+                if (form != null && form.ContainsKey(key)) return form[key].ToString();
+                return q[key].ToString();
+            }
+
+            int.TryParse(GetVal("draw"), out var draw);
+            if (draw <= 0) draw = 1;
+            int.TryParse(GetVal("start"), out var start);
+            if (start < 0) start = 0;
+            int.TryParse(GetVal("length"), out var length);
+            if (length <= 0) length = 10;
+            var searchValue = GetVal("search[value]") ?? string.Empty;
+
+            var orderColumn = "event_name";
             var orderDir = "ASC";
 
-            var orderColIdxStr = q["order[0][column]"].ToString();
+            var orderColIdxStr = GetVal("order[0][column]");
             if (int.TryParse(orderColIdxStr, out var orderColIdx))
             {
                 if (orderColIdx >= 0 && orderColIdx < columns.Length)
                     orderColumn = columns[orderColIdx];
             }
 
-            var dir = q["order[0][dir]"].ToString();
+            var dir = GetVal("order[0][dir]");
             if (!string.IsNullOrWhiteSpace(dir) &&
                 (dir.Equals("asc", StringComparison.OrdinalIgnoreCase) ||
                  dir.Equals("desc", StringComparison.OrdinalIgnoreCase)))
@@ -117,19 +125,22 @@ namespace Haniya.Controllers.PortalAdmin
             return (draw, start, length, searchValue, orderColumn, orderDir);
         }
 
-        [HttpGet]
+        [HttpPost]
         public IActionResult GetAll()
         {
             try
             {
                 var columns = new[]
                 {
-            "profile_photo",
-            "event_name",
-            "location",
-            "status",
-            "start_date"
-        };
+                    "profile_photo", // 0
+                    "event_name",    // 1
+                    "location",      // 2
+                    "status",        // 3
+                    "description",   // 4
+                    "tags",          // 5
+                    "start_date",    // 6
+                    "event_name"     // 7 (action col fallback, usually orderable=false)
+                };
 
                 var (draw, start, length, searchValue, orderColumn, orderDir) = ParseDataTablesQuery(columns);
 

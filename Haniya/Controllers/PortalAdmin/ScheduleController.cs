@@ -50,7 +50,6 @@ namespace Haniya.Controllers.PortalAdmin
             var page = req.page <= 0 ? 1 : req.page;
             var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
             var offset = (page - 1) * limit;
-            var take = limit + 1;
 
             var filters = req.filters ?? new Dictionary<string, string>();
             filters.TryGetValue("search", out var search);
@@ -72,6 +71,48 @@ namespace Haniya.Controllers.PortalAdmin
 
             using var conn = GetConn();
             conn.Open();
+
+            if (string.IsNullOrWhiteSpace(academicYearId))
+            {
+                using var activeYearCmd = new SqlCommand(@"
+                    SELECT TOP 1 academic_year_id
+                    FROM mst_academic_years
+                    WHERE status = 'ACTIVE'
+                    ORDER BY start_date DESC", conn);
+                academicYearId = activeYearCmd.ExecuteScalar()?.ToString();
+            }
+
+            var countSql = @"
+                SELECT COUNT(1)
+                FROM mst_schedules s
+                JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
+                JOIN mst_academic_years ay ON ac.academic_year_id = ay.academic_year_id
+                JOIN mst_classes c ON ac.class_id = c.class_id
+                JOIN mst_detail_settings mds ON (s.day = mds.item_name OR s.day = mds.detail_id) AND mds.header_id = 'DAY'
+                WHERE (@classId IS NULL OR s.academic_class_id = @classId)
+                  AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
+                  AND (@search IS NULL OR (
+                        c.class_name LIKE @search
+                        OR mds.item_name LIKE @search
+                        OR mds.item_desc LIKE @search
+                  ))
+                  AND (
+                        @day IS NULL
+                        OR s.day = @day
+                        OR mds.item_name = @day
+                        OR mds.item_desc = @day
+                        OR mds.detail_id = @day
+                  )";
+
+            var totalRows = 0;
+            using (var countCmd = new SqlCommand(countSql, conn))
+            {
+                countCmd.Parameters.AddWithValue("@classId", string.IsNullOrWhiteSpace(academicClassId) ? DBNull.Value : (object)academicClassId);
+                countCmd.Parameters.AddWithValue("@academicYearId", string.IsNullOrWhiteSpace(academicYearId) ? DBNull.Value : (object)academicYearId);
+                countCmd.Parameters.AddWithValue("@search", string.IsNullOrWhiteSpace(search) ? DBNull.Value : (object)$"%{search.Trim()}%");
+                countCmd.Parameters.AddWithValue("@day", string.IsNullOrWhiteSpace(day) ? DBNull.Value : (object)day);
+                totalRows = Convert.ToInt32(countCmd.ExecuteScalar() ?? 0);
+            }
 
             var sql = @"
                 SELECT 
@@ -104,17 +145,17 @@ namespace Haniya.Controllers.PortalAdmin
                   )
                 GROUP BY s.schedule_id, ay.start_date, ay.end_date, ay.semester, c.class_name, mds.item_name
                 ORDER BY " + orderBy + " " + orderDir + @"
-                OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY";
+                OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY";
 
             var list = new List<object>();
             using (var cmd = new SqlCommand(sql, conn))
             {
-                cmd.Parameters.AddWithValue("@classId", (object)academicClassId ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@academicYearId", (object)academicYearId ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@classId", string.IsNullOrWhiteSpace(academicClassId) ? DBNull.Value : (object)academicClassId);
+                cmd.Parameters.AddWithValue("@academicYearId", string.IsNullOrWhiteSpace(academicYearId) ? DBNull.Value : (object)academicYearId);
                 cmd.Parameters.AddWithValue("@search", string.IsNullOrWhiteSpace(search) ? DBNull.Value : $"%{search.Trim()}%");
-                cmd.Parameters.AddWithValue("@day", (object)day ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@day", string.IsNullOrWhiteSpace(day) ? DBNull.Value : (object)day);
                 cmd.Parameters.AddWithValue("@offset", offset);
-                cmd.Parameters.AddWithValue("@take", take);
+                cmd.Parameters.AddWithValue("@limit", limit);
 
                 using var r = cmd.ExecuteReader();
                 while (r.Read())
@@ -132,10 +173,9 @@ namespace Haniya.Controllers.PortalAdmin
                 }
             }
 
-            var hasNextPage = list.Count > limit;
-            if (hasNextPage) list = list.Take(limit).ToList();
+            var hasNextPage = (offset + list.Count) < totalRows;
 
-            return Json(DTOResponse.ok(new { data = list, hasNextPage }));
+            return Json(DTOResponse.ok(new { data = list, hasNextPage, totalRows }));
         }
 
         [HttpGet]

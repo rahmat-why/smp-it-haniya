@@ -138,6 +138,7 @@ namespace Haniya.Controllers.LandingPage
                     SELECT detail_id, item_name, item_desc
                     FROM mst_detail_setting_landingpages
                     WHERE header_id = 'ACADEMIC'
+                    AND detail_id NOT LIKE 'ACADEMIC_CURRIC_SD%'
                     AND status = 'ACTIVE'
                 ";
 

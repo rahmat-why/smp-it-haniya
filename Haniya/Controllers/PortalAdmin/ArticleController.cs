@@ -102,26 +102,34 @@ namespace Haniya.Controllers.PortalAdmin
         private (int draw, int start, int length, string searchValue, string orderColumn, string orderDir)
             ParseDataTablesQuery(string[] columns)
         {
+            var form = Request.HasFormContentType ? Request.Form : null;
             var q = Request.Query;
-            int.TryParse(q["draw"], out var draw);
+
+            string GetVal(string key)
+            {
+                if (form != null && form.ContainsKey(key)) return form[key].ToString();
+                return q[key].ToString();
+            }
+
+            int.TryParse(GetVal("draw"), out var draw);
             if (draw <= 0) draw = 1;
-            int.TryParse(q["start"], out var start);
+            int.TryParse(GetVal("start"), out var start);
             if (start < 0) start = 0;
-            int.TryParse(q["length"], out var length);
+            int.TryParse(GetVal("length"), out var length);
             if (length <= 0) length = 10;
-            var searchValue = q["search[value]"].ToString() ?? string.Empty;
+            var searchValue = GetVal("search[value]") ?? string.Empty;
 
             var orderColumn = "title";
             var orderDir = "ASC";
 
-            var orderColIdxStr = q["order[0][column]"].ToString();
+            var orderColIdxStr = GetVal("order[0][column]");
             if (int.TryParse(orderColIdxStr, out var orderColIdx))
             {
                 if (orderColIdx >= 0 && orderColIdx < columns.Length)
                     orderColumn = columns[orderColIdx];
             }
 
-            var dir = q["order[0][dir]"].ToString();
+            var dir = GetVal("order[0][dir]");
             if (!string.IsNullOrWhiteSpace(dir) &&
                 (dir.Equals("asc", StringComparison.OrdinalIgnoreCase) ||
                  dir.Equals("desc", StringComparison.OrdinalIgnoreCase)))
@@ -132,19 +140,22 @@ namespace Haniya.Controllers.PortalAdmin
             return (draw, start, length, searchValue, orderColumn, orderDir);
         }
 
-        [HttpGet]
+        [HttpPost]
         public IActionResult GetAll()
         {
             try
             {
                 var columns = new[]
                 {
-            "image",
-            "title",
-            "slug",
-            "status",
-            "created_at"
-        };
+                    "image",       // 0
+                    "title",       // 1
+                    "slug",        // 2
+                    "status",      // 3
+                    "content",     // 4
+                    "tags",        // 5
+                    "created_at",  // 6
+                    "title"        // 7 action fallback
+                };
 
                 var (draw, start, length, searchValue, orderColumn, orderDir) = ParseDataTablesQuery(columns);
 

@@ -53,7 +53,6 @@ namespace Haniya.Controllers.PortalAdmin
             var page = req.page <= 0 ? 1 : req.page;
             var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
             var offset = (page - 1) * limit;
-            var take = limit + 1;
 
             var filters = req.filters ?? new Dictionary<string, string>();
             filters.TryGetValue("search", out var search);
@@ -92,6 +91,27 @@ namespace Haniya.Controllers.PortalAdmin
             }
             var whereSql = "WHERE " + string.Join(" AND ", where);
 
+            var countSql = @"
+        SELECT COUNT(1)
+        FROM txn_payments p
+        LEFT JOIN mst_student_classes sc ON p.student_class_id = sc.student_class_id
+        LEFT JOIN mst_students s ON sc.student_id = s.student_id
+        LEFT JOIN mst_academic_classes ac ON sc.academic_class_id = ac.academic_class_id
+        LEFT JOIN mst_classes c ON ac.class_id = c.class_id
+        LEFT JOIN mst_detail_settings pt ON p.payment_type = pt.detail_id AND pt.header_id = 'PAYMENT_TYPE'
+        {WHERE_SQL}"
+                .Replace("{WHERE_SQL}", whereSql);
+
+            var totalRows = 0;
+            using (var countCmd = new SqlCommand(countSql, conn))
+            {
+                if (!string.IsNullOrWhiteSpace(academicClassId)) countCmd.Parameters.AddWithValue("@classId", academicClassId.Trim());
+                if (!string.IsNullOrWhiteSpace(status)) countCmd.Parameters.AddWithValue("@status", status.Trim());
+                if (!string.IsNullOrWhiteSpace(paymentType)) countCmd.Parameters.AddWithValue("@paymentType", paymentType.Trim());
+                if (!string.IsNullOrWhiteSpace(search)) countCmd.Parameters.AddWithValue("@searchPattern", $"%{search.Trim()}%");
+                totalRows = Convert.ToInt32(countCmd.ExecuteScalar() ?? 0);
+            }
+
             var sql = @"
         SELECT 
             p.payment_id,
@@ -127,7 +147,7 @@ namespace Haniya.Controllers.PortalAdmin
             s.first_name, s.last_name, s.nis, s.profile_photo, c.class_name,
             pt.item_desc, pm.item_desc
         ORDER BY {ORDER_BY} {ORDER_DIR}
-        OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY"
+        OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY"
                 .Replace("{WHERE_SQL}", whereSql)
                 .Replace("{ORDER_BY}", orderBy)
                 .Replace("{ORDER_DIR}", orderDir);
@@ -136,7 +156,7 @@ namespace Haniya.Controllers.PortalAdmin
             using (var cmd = new SqlCommand(sql, conn))
             {
                 cmd.Parameters.AddWithValue("@offset", offset);
-                cmd.Parameters.AddWithValue("@take", take);
+                cmd.Parameters.AddWithValue("@limit", limit);
                 if (!string.IsNullOrWhiteSpace(academicClassId)) cmd.Parameters.AddWithValue("@classId", academicClassId.Trim());
                 if (!string.IsNullOrWhiteSpace(status)) cmd.Parameters.AddWithValue("@status", status.Trim());
                 if (!string.IsNullOrWhiteSpace(paymentType)) cmd.Parameters.AddWithValue("@paymentType", paymentType.Trim());
@@ -165,9 +185,8 @@ namespace Haniya.Controllers.PortalAdmin
                 }
             }
 
-            var hasNextPage = list.Count > limit;
-            if (hasNextPage) list = list.Take(limit).ToList();
-            return Json(DTOResponse.ok(new { data = list, hasNextPage }));
+            var hasNextPage = (offset + list.Count) < totalRows;
+            return Json(DTOResponse.ok(new { data = list, hasNextPage, totalRows }));
         }
 
         [HttpGet]
@@ -896,6 +915,7 @@ namespace Haniya.Controllers.PortalAdmin
             rd.Close();
 
             var paidDate = GetLatestInstalmentDate(conn, paymentId) ?? DateTime.Now.Date;
+            var latestNotes = GetLatestInstalmentNotes(conn, paymentId);
             return new ReceiptItemViewModel
             {
                 PaymentId = paymentId,
@@ -906,7 +926,7 @@ namespace Haniya.Controllers.PortalAdmin
                 TotalPayment = total,
                 PaymentTypeDescription = paymentTypeDesc,
                 Terbilang = ToTerbilang(total),
-                KeteranganText = "PELUNASAN AKHIRUSANAH",
+                KeteranganText = string.IsNullOrWhiteSpace(latestNotes) ? "PELUNASAN AKHIRUSANAH" : latestNotes.Trim(),
                 PaymentLines = new List<string> { paymentTypeDesc }
             };
         }
@@ -973,6 +993,20 @@ namespace Haniya.Controllers.PortalAdmin
             var raw = cmd.ExecuteScalar();
             if (raw == null || raw == DBNull.Value) return null;
             return Convert.ToDateTime(raw).Date;
+        }
+
+        private string? GetLatestInstalmentNotes(SqlConnection conn, string paymentId)
+        {
+            var sql = @"
+                SELECT TOP 1 notes
+                FROM txn_payment_instalments
+                WHERE payment_id = @id
+                ORDER BY payment_date DESC, instalment_number DESC";
+            using var cmd = new SqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@id", paymentId);
+            var raw = cmd.ExecuteScalar();
+            if (raw == null || raw == DBNull.Value) return null;
+            return raw.ToString();
         }
 
         private static string ToTerbilang(decimal amount)
