@@ -170,8 +170,11 @@
     </form>
 </div>
 
+@await Html.PartialAsync("_TailwindConfirmModal")
+
 @section Scripts {
     <script>
+        const returnUrl = new URLSearchParams(window.location.search).get('returnUrl') || '/Subject';
         function toggleSection(id) {
             const section = document.getElementById(id);
             const icon = document.getElementById('icon-' + id);
@@ -270,7 +273,7 @@
         }
 
         function goBack() {
-            window.location.href = "/Subject";
+            window.location.href = returnUrl;
         }
 
         $(document).ready(function () {
@@ -283,7 +286,7 @@
 
             $.get("/Subject/GetById", { id: id }, function (res) {
                 if (!res.success) {
-                    alert(res.message || "Failed to load subject");
+                    tailwindMessageModal('Failed', res.message || 'Failed to load subject');
                     return;
                 }
                 const d = res.data;
@@ -296,8 +299,15 @@
             });
         }
 
-        function updateSubject() {
+        async function updateSubject() {
             if (!validateForm()) return;
+            const yes = await tailwindConfirmModal({
+                title: 'Update Confirmation',
+                message: 'Are you sure you want to update this data?',
+                confirmText: 'Update',
+                cancelText: 'Cancel'
+            });
+            if (!yes) return;
 
             const fd = new FormData();
             fd.append("subject_id", $('#subject_id').val());
@@ -311,16 +321,15 @@
                 data: fd,
                 processData: false,
                 contentType: false,
-                success: res => {
+                success: async res => {
                     if (res.success) {
-                        window.location.href = "/Subject";
+                        await tailwindMessageModal('Success', res.message || 'Subject updated successfully.');
+                        window.location.href = returnUrl;
                     } else {
-                        alert(res.message || "Failed to update subject");
+                        await tailwindMessageModal('Failed', res.message || 'Failed to update subject');
                     }
                 },
-                error: function () {
-                    alert("An error occurred while updating the subject.");
-                }
+                error: async function () { await tailwindMessageModal('Error', 'An error occurred while updating the subject.'); }
             });
         }
     </script>

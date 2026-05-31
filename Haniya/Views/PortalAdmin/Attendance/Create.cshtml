@@ -7,44 +7,27 @@
 
 <div class="bg-white p-6 rounded-xl shadow-lg w-full">
     <form id="attendanceForm" class="space-y-8">
-        <!-- Header Fields -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Date -->
             <div>
-                <label for="attendance_date" class="block text-sm font-medium text-gray-700 mb-2">
-                    Attendance Date <span class="text-red-600">*</span>
-                </label>
-                <input type="date" id="attendance_date"
-                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                       required data-testid="attendance-date-input" />
+                <label for="attendance_date" class="block text-sm font-medium text-gray-700 mb-2">Attendance Date <span class="text-red-600">*</span></label>
+                <input type="date" id="attendance_date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" required />
                 <p id="error-date" class="mt-1 text-sm text-red-600 hidden"></p>
             </div>
 
-            <!-- Class -->
             <div>
-                <label for="academic_class_id" class="block text-sm font-medium text-gray-700 mb-2">
-                    Class <span class="text-red-600">*</span>
-                </label>
-                <select id="academic_class_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                        data-placeholder="-- Select Class --"
-                        data-testid="attendance-class-select"></select>
+                <label for="academic_class_id" class="block text-sm font-medium text-gray-700 mb-2">Class <span class="text-red-600">*</span></label>
+                <select id="academic_class_id" class="w-full"></select>
                 <p id="error-class" class="mt-1 text-sm text-red-600 hidden"></p>
             </div>
 
-            <!-- Teacher (Display Only) -->
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                    Teacher <span class="text-red-600">*</span>
-                </label>
-                <div id="teacher_display" class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">
-                    -- Select Class First --
-                </div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Teacher <span class="text-red-600">*</span></label>
+                <div id="teacher_display" class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">-- Select Class First --</div>
                 <input type="hidden" id="teacher_id" name="teacher_id" />
                 <p id="error-teacher" class="mt-1 text-sm text-red-600 hidden"></p>
             </div>
         </div>
 
-        <!-- Attendance Table -->
         <div class="space-y-4">
             <h3 class="text-lg font-semibold text-gray-800">Attendance Detail</h3>
             <div class="overflow-x-auto border border-gray-200 rounded-lg max-h-[500px] shadow-inner">
@@ -56,251 +39,175 @@
                             <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-4/12 uppercase">Notes</th>
                         </tr>
                     </thead>
-                    <tbody id="tbody-details" data-testid="attendance-details-body"></tbody>
+                    <tbody id="tbody-details"></tbody>
                 </table>
             </div>
             <p id="error-details" class="text-sm text-red-600 hidden"></p>
         </div>
 
-        <!-- Action Buttons -->
         <div class="flex justify-end gap-4 pt-6 border-t border-gray-200">
-            <button type="button" onclick="goBackAttendance()"
-                    class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
+            <button type="button" onclick="goBackAttendance()" class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm">
                 Back
             </button>
-            <button type="button" onclick="saveAttendance()"
-                    class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
+            <button type="button" onclick="saveAttendance()" class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm">
                 Save
-                <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
             </button>
         </div>
     </form>
 </div>
 
+@await Html.PartialAsync("_TailwindConfirmModal")
+
 @section Scripts {
-    <script>
-        // Set default date to today
-        document.getElementById('attendance_date').value = new Date().toISOString().split('T')[0];
+<script>
+    const returnUrl = new URLSearchParams(window.location.search).get('returnUrl') || '/Attendance';
+    document.getElementById('attendance_date').value = new Date().toISOString().split('T')[0];
 
-        function renderStudents(students) {
-            const tbody = $('#tbody-details').empty();
+    function showError($el, message) { $el.text(message).removeClass('hidden'); }
+    function clearError($el) { $el.text('').addClass('hidden'); }
+    function clearAllErrors() {
+        clearError($('#error-date')); clearError($('#error-class')); clearError($('#error-teacher')); clearError($('#error-details'));
+    }
 
-            if (!students || students.length === 0) {
-                tbody.html(`
-                            <tr>
-                                <td colspan="3" class="px-6 py-8 text-center text-gray-500 italic">
-                                    Tidak ada siswa di kelas ini
-                                </td>
-                            </tr>
-                        `);
+    function renderStudents(students) {
+        const tbody = $('#tbody-details').empty();
+        if (!students || !students.length) {
+            tbody.html('<tr><td colspan="3" class="px-6 py-8 text-center text-gray-500 italic">Tidak ada siswa di kelas ini</td></tr>');
+            return;
+        }
+
+        students.forEach(student => {
+            const photo = student.profile_photo || '/image/no-image.png';
+            const name = student.full_name || 'Unknown Student';
+            const nis = student.nis || '-';
+            tbody.append(`
+                <tr class="hover:bg-gray-50 transition-colors border-b last:border-0">
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-3">
+                            <img src="${photo}" alt="${name}" class="w-10 h-10 rounded-full object-cover border border-gray-200 flex-shrink-0" onerror="this.src='/image/no-image.png'">
+                            <div><div class="font-medium text-gray-900">${name}</div><div class="text-xs text-gray-600">NIS: ${nis}</div></div>
+                        </div>
+                        <input type="hidden" name="student_ids" value="${student.id}" />
+                    </td>
+                    <td class="px-4 py-3">
+                        <select name="statuses" class="status-select w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                            <option value="PRESENT" selected>Hadir</option>
+                            <option value="SICK">Sakit</option>
+                            <option value="EXCUSED">Izin</option>
+                            <option value="NOINFO">Alpa</option>
+                        </select>
+                    </td>
+                    <td class="px-4 py-3"><input type="text" name="notes" class="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" /></td>
+                </tr>
+            `);
+        });
+    }
+
+    function validateForm() {
+        clearAllErrors();
+        let isValid = true;
+        if (!$('#attendance_date').val()) { showError($('#error-date'), 'Please select a date.'); isValid = false; }
+        if (!$('#academic_class_id').val()) { showError($('#error-class'), 'Please select a class.'); isValid = false; }
+        if (!$('#teacher_id').val()) { showError($('#error-teacher'), 'Teacher is required.'); isValid = false; }
+        if ($('#tbody-details tr').length === 0) { showError($('#error-details'), 'At least one student detail is required.'); isValid = false; }
+        return isValid;
+    }
+
+    function goBackAttendance() { window.location.href = returnUrl; }
+
+    async function saveAttendance() {
+        if (!validateForm()) return;
+
+        const yes = await tailwindConfirmModal({
+            title: 'Create Confirmation',
+            message: 'Are you sure you want to create this data?',
+            confirmText: 'Create',
+            cancelText: 'Cancel'
+        });
+        if (!yes) return;
+
+        const formData = new FormData();
+        formData.append('attendance_date', $('#attendance_date').val());
+        formData.append('academic_class_id', $('#academic_class_id').val());
+        formData.append('teacher_id', $('#teacher_id').val());
+
+        const studentIds = [];
+        const statuses = [];
+        const notes = [];
+        $('#tbody-details tr').each(function () {
+            const $row = $(this);
+            studentIds.push($row.find('input[name="student_ids"]').val());
+            statuses.push($row.find('.status-select').val());
+            notes.push($row.find('input[name="notes"]').val() || '');
+        });
+
+        formData.append('student_ids', JSON.stringify(studentIds));
+        formData.append('statuses', JSON.stringify(statuses));
+        formData.append('notes', JSON.stringify(notes));
+
+        $.ajax({
+            url: '/Attendance/Create',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: async function (res) {
+                if (res.success) {
+                    await tailwindMessageModal('Success', res.message || 'Attendance created successfully.');
+                    window.location.href = returnUrl;
+                } else {
+                    await tailwindMessageModal('Failed', res.message || 'Failed to save attendance.');
+                }
+            },
+            error: async function () { await tailwindMessageModal('Error', 'An error occurred while saving attendance.'); }
+        });
+    }
+
+    $(document).ready(function () {
+        $('#academic_class_id').select2({
+            placeholder: '-- Select Academic Class --',
+            allowClear: true,
+            width: '100%',
+            ajax: {
+                url: '/Select2/AcademicClasses',
+                dataType: 'json',
+                delay: 250,
+                data: params => ({ q: params.term || '', page: params.page || 1, activeOnly: true }),
+                processResults: data => ({ results: data.results, pagination: data.pagination }),
+                cache: true
+            },
+            minimumInputLength: 0
+        });
+
+        $('#academic_class_id').on('change', function () {
+            const classId = $(this).val();
+            if (!classId) {
+                $('#teacher_display').text('-- Select Class First --');
+                $('#teacher_id').val('');
+                $('#tbody-details').empty();
                 return;
             }
 
-            students.forEach(student => {
-                const photo = student.profile_photo || '/image/no-image.png';
-                const name = student.full_name || 'Unknown Student';
-                const nis = student.nis || '-';
-
-                const rowHtml = `
-                            <tr class="hover:bg-gray-50 transition-colors border-b last:border-0">
-                                <td class="px-4 py-3">
-                                    <div class="flex items-center gap-3">
-                                        <img src="${photo}" alt="${name}"
-                                             class="w-10 h-10 rounded-full object-cover border border-gray-200 flex-shrink-0"
-                                             onerror="this.src='/image/no-image.png'">
-                                        <div>
-                                            <div class="font-medium text-gray-900">${name}</div>
-                                            <div class="text-xs text-gray-600">NIS: ${nis}</div>
-                                        </div>
-                                    </div>
-                                    <input type="hidden" name="student_ids" value="${student.id}" />
-                                </td>
-                                <td class="px-4 py-3">
-                                    <select name="statuses" class="status-select w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                                        <option value="PRESENT" selected>Hadir</option>
-                                        <option value="SICK">Sakit</option>
-                                        <option value="EXCUSED">Izin</option>
-                                        <option value="NOINFO">Alpa</option>
-                                    </select>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <input type="text" name="notes"
-                                           class="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
-                                </td>
-                            </tr>
-                        `;
-
-                $(rowHtml).appendTo(tbody);
-            });
-        }
-
-        // Validation Helpers
-        function showError($el, message) {
-            $el.text(message).removeClass('hidden');
-        }
-
-        function clearError($el) {
-            $el.text('').addClass('hidden');
-        }
-
-        function clearAllErrors() {
-            clearError($('#error-date'));
-            clearError($('#error-class'));
-            clearError($('#error-teacher'));
-            clearError($('#error-details'));
-        }
-
-        function validateForm() {
-            clearAllErrors();
-            let isValid = true;
-
-            if (!$('#attendance_date').val()) {
-                showError($('#error-date'), 'Please select a date.');
-                isValid = false;
-            }
-            if (!$('#academic_class_id').val()) {
-                showError($('#error-class'), 'Please select a class.');
-                isValid = false;
-            }
-            if (!$('#teacher_id').val()) {
-                showError($('#error-teacher'), 'Teacher is required.');
-                isValid = false;
-            }
-
-            // Check all students have status
-            let allHaveStatus = true;
-            $('.status-select').each(function () {
-                if (!$(this).val()) {
-                    allHaveStatus = false;
-                    return false;
-                }
-            });
-
-            if (!allHaveStatus) {
-                showError($('#error-details'), 'Please select a status for all students.');
-                isValid = false;
-            }
-
-            return isValid;
-        }
-
-        function goBackAttendance() {
-            window.location.href = "/Attendance";
-        }
-
-        function saveAttendance() {
-            if (!validateForm()) return;
-
-            const formData = new FormData();
-            formData.append("attendance_date", $('#attendance_date').val());
-            formData.append("academic_class_id", $('#academic_class_id').val());
-            formData.append("teacher_id", $('#teacher_id').val());
-
-            const studentIds = [];
-            const statuses = [];
-            const notes = [];
-
-            $('#tbody-details tr').each(function () {
-                const $row = $(this);
-                studentIds.push($row.find('input[name="student_ids"]').val());
-                statuses.push($row.find('.status-select').val());
-                notes.push($row.find('input[name="notes"]').val() || '');
-            });
-
-            formData.append("student_ids", JSON.stringify(studentIds));
-            formData.append("statuses", JSON.stringify(statuses));
-            formData.append("notes", JSON.stringify(notes));
-
-            $.ajax({
-                url: "/Attendance/Create",
-                type: "POST",
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function (res) {
-                    if (res.success) {
-                        window.location.href = "/Attendance";
-                    } else {
-                        alert(res.message || "Failed to save attendance.");
-                    }
-                },
-                error: function () {
-                    alert("An error occurred while saving attendance.");
-                }
-            });
-        }
-
-        $(document).ready(function () {
-            // Initialize Class Select2
-            $('#academic_class_id').select2({
-                placeholder: "-- Select Academic Class --",
-                allowClear: true,
-                ajax: {
-                    url: '/Select2/AcademicClasses',
-                    dataType: 'json',
-                    delay: 250,
-                    data: params => ({ q: params.term || '', page: params.page || 1, activeOnly: true }),
-                    processResults: data => ({
-                        results: data.results,
-                        pagination: data.pagination
-                    }),
-                    cache: true
-                },
-                minimumInputLength: 0
-            });
-
-            // When class changes ? load teacher & students
-            $('#academic_class_id').on('change', function () {
-                const classId = $(this).val();
-
-                if (!classId) {
-                    $('#teacher_display').text('-- Select Class First --');
+            $.getJSON(`/Attendance/GetTeacherByClass?academicClassId=${classId}`, function (res) {
+                if (res.success && res.data) {
+                    $('#teacher_display').text(res.data.text);
+                    $('#teacher_id').val(res.data.id);
+                } else {
+                    $('#teacher_display').text('No homeroom teacher assigned');
                     $('#teacher_id').val('');
-                    $('#tbody-details').empty();
-                    return;
                 }
+            }).fail(function () { $('#teacher_display').text('Error loading teacher'); });
 
-                // Load homeroom teacher
-                $.getJSON(`/Attendance/GetTeacherByClass?academicClassId=${classId}`, function (res) {
-                    if (res.success && res.data) {
-                        $('#teacher_display').text(res.data.text);
-                        $('#teacher_id').val(res.data.id);
-                    } else {
-                        $('#teacher_display').text('No homeroom teacher assigned');
-                        $('#teacher_id').val('');
-                    }
-                }).fail(function () {
-                    $('#teacher_display').text('Error loading teacher');
-                });
-
-                // Load students
-                $.getJSON(`/Attendance/GetStudentsByClass?academicClassId=${classId}`, function (res) {
-                    if (res.success) {
-                        renderStudents(res.data || []);
-                    } else {
-                        $('#tbody-details').html(`
-                                    <tr>
-                                        <td colspan="3" class="px-6 py-8 text-center text-red-600">
-                                            Error loading students
-                                        </td>
-                                    </tr>
-                                `);
-                    }
-                }).fail(function () {
-                    $('#tbody-details').html(`
-                                <tr>
-                                    <td colspan="3" class="px-6 py-8 text-center text-red-600">
-                                        Error loading students
-                                    </td>
-                                </tr>
-                            `);
-                });
+            $.getJSON(`/Attendance/GetStudentsByClass?academicClassId=${classId}`, function (res) {
+                if (res.success) {
+                    renderStudents(res.data || []);
+                } else {
+                    $('#tbody-details').html('<tr><td colspan="3" class="px-6 py-8 text-center text-red-600">Error loading students</td></tr>');
+                }
+            }).fail(function () {
+                $('#tbody-details').html('<tr><td colspan="3" class="px-6 py-8 text-center text-red-600">Error loading students</td></tr>');
             });
         });
-    </script>
+    });
+</script>
 }

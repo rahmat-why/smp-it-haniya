@@ -71,8 +71,11 @@
     </form>
 </div>
 
+@await Html.PartialAsync("_TailwindConfirmModal")
+
 @section Scripts {
     <script>
+        const returnUrl = new URLSearchParams(window.location.search).get('returnUrl') || '/Schedule';
         function addDetailRow() {
             const row = `
                         <tr class="hover:bg-gray-50 border-b last:border-0">
@@ -182,11 +185,14 @@
         }
 
         function goBackSchedule() {
-            window.location.href = "/Schedule";
+            window.location.href = returnUrl;
         }
 
         async function saveSchedule() {
-            if (!validateForm()) return;
+            if (!validateForm()) {
+                await tailwindMessageModal('Validation Error', 'Please complete all required fields.');
+                return;
+            }
 
             const yes = await tailwindConfirmModal({
                 title: 'Create Confirmation',
@@ -207,8 +213,15 @@
                 data: fd,
                 processData: false,
                 contentType: false,
-                success: res => res.success ? location.href = "/Schedule" : tailwindMessageModal('Failed', res.message || "Save failed"), 
-                error: () => tailwindMessageModal('Error', "Error saving schedule")
+                success: async res => {
+                    if (res.success) {
+                        await tailwindMessageModal('Success', res.message || 'Schedule created successfully.');
+                        location.href = returnUrl;
+                    } else {
+                        await tailwindMessageModal('Failed', res.message || 'Save failed');
+                    }
+                },
+                error: async () => await tailwindMessageModal('Error', 'Error saving schedule')
             });
         }
 

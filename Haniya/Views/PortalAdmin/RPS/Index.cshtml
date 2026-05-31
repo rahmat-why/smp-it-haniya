@@ -1,4 +1,3 @@
-<!-- ~/Views/PortalAdmin/RPS/Index.cshtml -->
 @{
     Layout = "_LayoutAdmin";
     ViewData["Title"] = "RPS (Rencana Pembelajaran Study)";
@@ -6,7 +5,7 @@
 
 <div class="flex justify-between items-center mb-4">
     <h2 class="text-xl font-semibold">RPS List</h2>
-    <a href="/RPS/Create"
+    <a id="rps-add-link" href="/RPS/Create"
        class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
         + Add RPS
     </a>
@@ -17,19 +16,24 @@
         <div id="rps-table-toolbar" class="flex flex-col md:flex-row md:items-center md:justify-between gap-3"></div>
     </div>
 
-    <div class="overflow-x-auto px-4 pt-4">
-        <table id="rps-table"
-               class="min-w-full text-sm text-left text-gray-700 border-collapse">
+    <div class="relative overflow-x-auto px-4 pt-4">
+        <div id="rps-table-loading" class="hidden absolute inset-0 z-20 bg-white/80 backdrop-blur-[1px] flex items-center justify-center">
+            <div class="flex flex-col items-center gap-3 text-gray-600">
+                <div class="w-8 h-8 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin"></div>
+                <p class="text-sm font-medium">Loading RPS data...</p>
+            </div>
+        </div>
+        <table id="rps-table" class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Academic Year</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Semester</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Subject</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Teacher</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Class</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center">Minimum Value</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center">Meetings</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right" style="width: 70px;">Action</th>
+                    <th data-sort="academicYear" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Academic Year</th>
+                    <th data-sort="semester" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Semester</th>
+                    <th data-sort="subject" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Subject</th>
+                    <th data-sort="teacher" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Teacher</th>
+                    <th data-sort="class" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Class</th>
+                    <th data-sort="minimum" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center cursor-pointer select-none">Minimum Value</th>
+                    <th data-sort="meetings" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center cursor-pointer select-none">Meetings</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 110px;">Action</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100"></tbody>
@@ -44,376 +48,420 @@
     </div>
 </div>
 
+@await Html.PartialAsync("_TailwindConfirmModal")
+
 @section Scripts {
-    <script>
-        let rpsTable = null;
-        let currentAcademicYearId = '';
-        let currentAcademicClassId = '';
-        let currentSubjectId = '';
-        let currentTeacherId = '';
+<script>
+    const pageState = {
+        page: 1,
+        limit: 10,
+        filters: {
+            search: '',
+            academic_year_id: '',
+            academic_class_id: '',
+            subject_id: '',
+            teacher_id: ''
+        },
+        sort: { field: 'academicYear', order: 'desc' },
+        hasNextPage: false,
+        totalRows: 0
+    };
+    let lastRequestKey = '';
+    let searchDebounce = null;
 
-        $(document).ready(function () {
-            initRPSTable();
+    function formatYearShort(d) {
+        if (!d) return '';
+        const date = new Date(d);
+        if (isNaN(date.getTime())) return '';
+        return date.getFullYear();
+    }
 
-            $(document).on('click', function (e) {
-                if (!$(e.target).closest('.rps-actions-wrapper').length) {
-                    $('.rps-actions-menu').addClass('hidden');
-                }
-            });
+    function getStateQuery() {
+        return `page=${pageState.page}&limit=${pageState.limit}&search=${encodeURIComponent(pageState.filters.search || '')}&academic_year_id=${encodeURIComponent(pageState.filters.academic_year_id || '')}&academic_class_id=${encodeURIComponent(pageState.filters.academic_class_id || '')}&subject_id=${encodeURIComponent(pageState.filters.subject_id || '')}&teacher_id=${encodeURIComponent(pageState.filters.teacher_id || '')}&sortField=${encodeURIComponent(pageState.sort.field)}&sortOrder=${encodeURIComponent(pageState.sort.order)}`;
+    }
+
+    function syncStateToUrl() {
+        history.replaceState({ ...pageState }, '', `?${getStateQuery()}`);
+        $('#rps-add-link').attr('href', `/RPS/Create?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+    }
+
+    function hydrateStateFromUrl() {
+        const q = new URLSearchParams(window.location.search);
+        const page = Number(q.get('page') || 1);
+        const limit = Number(q.get('limit') || 10);
+        pageState.page = Number.isFinite(page) && page > 0 ? page : 1;
+        pageState.limit = Number.isFinite(limit) && limit > 0 ? limit : 10;
+        pageState.filters.search = q.get('search') || '';
+        pageState.filters.academic_year_id = q.get('academic_year_id') || '';
+        pageState.filters.academic_class_id = q.get('academic_class_id') || '';
+        pageState.filters.subject_id = q.get('subject_id') || '';
+        pageState.filters.teacher_id = q.get('teacher_id') || '';
+        pageState.sort.field = q.get('sortField') || 'academicYear';
+        pageState.sort.order = q.get('sortOrder') || 'desc';
+    }
+
+    function renderSortIndicators() {
+        $('#rps-table thead th[data-sort]').each(function () {
+            const field = $(this).data('sort');
+            const isActive = field === pageState.sort.field;
+            const icon = isActive ? (pageState.sort.order === 'asc' ? ' ↑' : ' ↓') : '';
+            const base = $(this).text().replace(/ [↑↓]$/, '');
+            $(this).text(base + icon);
+        });
+    }
+
+    function renderToolbar() {
+        const searchValue = (pageState.filters.search || '').replace(/"/g, '&quot;');
+        $('#rps-table-toolbar').html(`
+            <div class="flex items-center gap-2 text-sm text-gray-600">
+                Show
+                <select id="list-limit" class="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:ring-2 focus:ring-blue-500">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select> rows
+            </div>
+            <div class="relative">
+                <button id="rpsFilterToggleBtn" type="button" class="flex items-center gap-2 bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
+                    Filter
+                </button>
+                <div id="rpsFilterDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl border border-gray-200 shadow-xl z-50 overflow-visible">
+                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                        <h3 class="text-lg font-bold text-gray-800">Filter</h3>
+                        <button type="button" id="rpsFilterCloseBtn" class="text-gray-400 hover:text-gray-600 transition p-1 rounded-lg hover:bg-gray-100">?</button>
+                    </div>
+                    <div class="px-5 py-4 space-y-4">
+                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_academic_year">Academic Year</label><select id="filter_academic_year" class="w-full"></select></div>
+                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_class">Class</label><select id="filter_class" class="w-full"></select></div>
+                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_subject">Subject</label><select id="filter_subject" class="w-full"></select></div>
+                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_teacher">Teacher</label><select id="filter_teacher" class="w-full"></select></div>
+                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="rps_search_filter">Search</label><input id="rps_search_filter" type="text" value="${searchValue}" class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Search..." /></div>
+                    </div>
+                    <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
+                        <button type="button" id="apply-rps-filter-btn" class="px-5 py-2 rounded-full text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 transition">Filter</button>
+                    </div>
+                </div>
+            </div>
+        `);
+
+        $('#list-limit').val(String(pageState.limit)).off('change').on('change', function () {
+            const next = Number($(this).val() || 10);
+            if (pageState.limit === next) return;
+            pageState.limit = next;
+            pageState.page = 1;
+            lastRequestKey = '';
+            fetchRps();
         });
 
-        function initRPSTable() {
-            rpsTable = $('#rps-table').DataTable({
-                processing: true,
-                serverSide: true,
-                searching: true,
-                lengthChange: true,
-                ajax: {
-                    url: '/RPS/GetAll',
-                    type: 'POST',
-                    data: function (d) {
-                        d.academic_year_id = currentAcademicYearId || null;
-                        d.subject_id = currentSubjectId || null;
-                        d.academic_class_id = currentAcademicClassId || null;
-                        d.teacher_id = currentTeacherId || null;
-                    }
-                },
-                dom: 'lftip',
-                language: {
-                    lengthMenu: "Show _MENU_ rows",
-                    search: "",
-                    searchPlaceholder: "Search...",
-                    paginate: {
-                        first: "First",
-                        last: "Last",
-                        next: "Next",
-                        previous: "Previous"
-                    },
-                    info: "Showing _START_ to _END_ of _TOTAL_ entries"
-                },
-                columns: [
-                    {
-                        data: null,
-                        className: 'py-3 text-gray-700',
-                        render: function (data, type, row) {
-                            return `${formatYearShort(row.start_date)} - ${formatYearShort(row.end_date)}`;
-                        }
-                    },
-                    {
-                        data: 'semester',
-                        className: 'py-3 text-gray-700',
-                        render: function (data) {
-                            return data ? `Semester ${data}` : '-';
-                        }
-                    },
-                    { data: 'subject_name', className: 'py-3 text-gray-900' },
-                    { data: 'teacher_name', className: 'py-3 text-gray-700' },
-                    { data: 'class_name', className: 'py-3 text-gray-700' },
-                    { data: 'minimum_value', className: 'py-3 text-center' },
-                    {
-                        data: 'meeting_count',
-                        className: 'py-3 text-center',
-                        render: data => data || 0
-                    },
-                    {
-                        data: null,
-                        orderable: false,
-                        searchable: false,
-                        className: 'text-center py-3',
-                        render: function (data, type, row) {
-                            var id = row.rps_id;
-                            var editUrl = '/RPS/Edit?id=' + id;
-                            return `
-                                        <div class="flex justify-center rps-actions-wrapper relative">
-                                            <button type="button" onclick="toggleActionsMenu(event, '${id}')"
-                                                    class="p-1.5 hover:bg-gray-100 rounded-md transition-colors duration-150">
-                                                <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                                                </svg>
-                                            </button>
-                                            <div id="actions-menu-${id}" class="rps-actions-menu hidden absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10">
-                                                <a href="${editUrl}" class="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">
-                                                    Edit
-                                                </a>
-                                                <button type="button" onclick="delRPS('${id}')"
-                                                        class="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100">
-                                                    Delete
-                                                </button>
-                                            </div>
-                                        </div>`;
-                        }
-                    }
-                ],
-                initComplete: function () {
-                    const wrapper = $('#rps-table_wrapper');
-                    const $length = wrapper.find('.dataTables_length, .dt-length');
-                    const $filter = wrapper.find('.dataTables_filter, .dt-search');
-                    const initialSearch = (rpsTable.search() || '').replace(/"/g, '&quot;');
+        const $dropdown = $('#rpsFilterDropdown');
+        $('#rpsFilterToggleBtn').off('click').on('click', function () { $dropdown.toggleClass('hidden'); });
+        $('#rpsFilterCloseBtn').off('click').on('click', function () { $dropdown.addClass('hidden'); });
+        $('#apply-rps-filter-btn').off('click').on('click', applyRpsFilter);
 
-                    $filter.hide();
+        initFilterSelect2($dropdown);
+    }
 
-                    const $toggleFilter = $(`
-                        <div class="relative">
-                            <button id="filterToggleBtn"
-                                    onclick="toggleFilter()"
-                                    class="flex items-center gap-2 bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none"
-                                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-                                </svg>
-                                Filter
+    function initSubjectFilter(classLevel, $dropdown) {
+        const $subject = $('#filter_subject');
+        if ($subject.hasClass('select2-hidden-accessible')) $subject.select2('destroy');
+        $subject.empty().val(null).trigger('change');
+
+        $subject.select2({
+            placeholder: '-- All Subjects --',
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $dropdown,
+            ajax: {
+                url: `/Select2/Subjects?classLevel=${classLevel || ''}`,
+                dataType: 'json',
+                delay: 250,
+                data: p => ({ q: p.term || '', page: p.page || 1 }),
+                processResults: d => ({ results: d.results, pagination: d.pagination }),
+                cache: true
+            },
+            minimumInputLength: 0
+        });
+
+        if (pageState.filters.subject_id) {
+            const option = new Option(pageState.filters.subject_id, pageState.filters.subject_id, true, true);
+            $subject.append(option).trigger('change');
+        }
+    }
+
+    function initFilterSelect2($dropdown) {
+        $('#filter_academic_year').select2({
+            placeholder: '-- All Academic Years --',
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $dropdown,
+            ajax: {
+                url: '/Select2/AcademicYears',
+                dataType: 'json',
+                delay: 250,
+                data: params => ({ q: params.term || '', page: params.page || 1 }),
+                processResults: data => ({ results: data.results, pagination: data.pagination }),
+                cache: true
+            },
+            minimumInputLength: 0
+        });
+
+        $('#filter_class').select2({
+            placeholder: '-- All Classes --',
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $dropdown,
+            ajax: {
+                url: '/Select2/AcademicClasses',
+                dataType: 'json',
+                delay: 250,
+                data: params => ({ q: params.term || '', page: params.page || 1 }),
+                processResults: data => ({ results: data.results, pagination: data.pagination }),
+                cache: true
+            },
+            minimumInputLength: 0
+        }).off('change').on('change', function () {
+            const cid = $(this).val();
+            if (cid) {
+                $.getJSON(`/Class/GetById?id=${cid}`).done(res => {
+                    initSubjectFilter(res?.data?.class_level || '', $dropdown);
+                }).fail(() => initSubjectFilter('', $dropdown));
+            } else {
+                initSubjectFilter('', $dropdown);
+            }
+        });
+
+        $('#filter_teacher').select2({
+            placeholder: '-- All Teachers --',
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $dropdown,
+            ajax: {
+                url: '/Select2/Teachers',
+                dataType: 'json',
+                delay: 250,
+                data: params => ({ q: params.term || '', page: params.page || 1 }),
+                processResults: data => ({ results: data.results, pagination: data.pagination }),
+                cache: true
+            },
+            minimumInputLength: 0
+        });
+
+        initSubjectFilter('', $dropdown);
+
+        if (pageState.filters.academic_year_id) {
+            const option = new Option(pageState.filters.academic_year_id, pageState.filters.academic_year_id, true, true);
+            $('#filter_academic_year').append(option).trigger('change');
+        }
+        if (pageState.filters.academic_class_id) {
+            const option = new Option(pageState.filters.academic_class_id, pageState.filters.academic_class_id, true, true);
+            $('#filter_class').append(option).trigger('change');
+        }
+        if (pageState.filters.teacher_id) {
+            const option = new Option(pageState.filters.teacher_id, pageState.filters.teacher_id, true, true);
+            $('#filter_teacher').append(option).trigger('change');
+        }
+    }
+
+    function applyRpsFilter() {
+        pageState.filters.academic_year_id = $('#filter_academic_year').val() || '';
+        pageState.filters.academic_class_id = $('#filter_class').val() || '';
+        pageState.filters.subject_id = $('#filter_subject').val() || '';
+        pageState.filters.teacher_id = $('#filter_teacher').val() || '';
+        pageState.filters.search = ($('#rps_search_filter').val() || '').trim();
+        pageState.page = 1;
+        lastRequestKey = '';
+        fetchRps();
+        $('#rpsFilterDropdown').addClass('hidden');
+    }
+
+    function renderRows(items) {
+        const $tbody = $('#rps-table tbody');
+        if (!items || !items.length) {
+            $tbody.html('<tr><td colspan="8" class="px-4 py-8 text-center text-gray-500">No data found.</td></tr>');
+            return;
+        }
+
+        let html = '';
+        items.forEach(row => {
+            const id = row.rps_id || '';
+            const editUrl = `/RPS/Edit?id=${encodeURIComponent(id)}&returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+            const academicYear = `${formatYearShort(row.start_date)} - ${formatYearShort(row.end_date)}`;
+            html += `
+                <tr class="bg-white divide-y divide-gray-100">
+                    <td class="px-4 py-3 text-gray-700">${academicYear}</td>
+                    <td class="px-4 py-3 text-gray-700">${row.semester ? `Semester ${row.semester}` : '-'}</td>
+                    <td class="px-4 py-3 text-gray-900">${row.subject_name || '-'}</td>
+                    <td class="px-4 py-3 text-gray-700">${row.teacher_name || '-'}</td>
+                    <td class="px-4 py-3 text-gray-700">${row.class_name || '-'}</td>
+                    <td class="px-4 py-3 text-center text-gray-700">${row.minimum_value || '0'}</td>
+                    <td class="px-4 py-3 text-center text-gray-700">${row.meeting_count || 0}</td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="flex flex-wrap gap-2 justify-center">
+                            <a href="${editUrl}" class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200" title="Edit">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                            </a>
+                            <button type="button" data-id="${id}" class="btn-del-rps inline-flex items-center justify-center w-8 h-8 rounded-md bg-red-100 text-red-700 hover:bg-red-200" title="Delete">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
                             </button>
-
-                            <div id="filterDropdown"
-                                 class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl border border-gray-200 shadow-xl z-50 overflow-visible">
-                                <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                                    <h3 class="text-lg font-bold text-gray-800">Filter</h3>
-                                    <button type="button"
-                                            onclick="toggleFilter()"
-                                            class="text-gray-400 hover:text-gray-600 transition p-1 rounded-lg hover:bg-gray-100">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
-                                             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                            <line x1="18" y1="6" x2="6" y2="18" />
-                                            <line x1="6" y1="6" x2="18" y2="18" />
-                                        </svg>
-                                    </button>
-                                </div>
-                                <div class="px-5 py-4 space-y-4">
-                                    <div class="w-full">
-                                        <label class="block text-xs font-medium mb-1" for="filter_academic_year">Academic Year</label>
-                                        <select id="filter_academic_year" class="w-full"></select>
-                                    </div>
-                                    <div class="w-full">
-                                        <label class="block text-xs font-medium mb-1" for="filter_class">Class</label>
-                                        <select id="filter_class" class="w-full"></select>
-                                    </div>
-                                    <div class="w-full">
-                                        <label class="block text-xs font-medium mb-1" for="filter_subject">Subject</label>
-                                        <select id="filter_subject" class="w-full"></select>
-                                    </div>
-                                    <div class="w-full">
-                                        <label class="block text-xs font-medium mb-1" for="filter_teacher">Teacher</label>
-                                        <select id="filter_teacher" class="w-full"></select>
-                                    </div>
-                                    <div class="w-full">
-                                        <label class="block text-xs font-medium mb-1" for="rps_search_filter">Search</label>
-                                        <input id="rps_search_filter"
-                                               type="text"
-                                               value="${initialSearch}"
-                                               class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                               placeholder="Search..." />
-                                    </div>
-                                </div>
-                                <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
-                                    <button type="button"
-                                            onclick="applyRPSFilter()"
-                                            class="px-5 py-2 rounded-full text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 transition">
-                                        Filter
-                                    </button>
-                                </div>
-                            </div>
                         </div>
-                    `);
+                    </td>
+                </tr>
+            `;
+        });
+        $tbody.html(html);
+    }
 
-                    $('#rps-table-toolbar').empty().append($length).append($toggleFilter);
+    function renderPagination(currentCount) {
+        const start = currentCount === 0 ? 0 : ((pageState.page - 1) * pageState.limit) + 1;
+        const end = ((pageState.page - 1) * pageState.limit) + currentCount;
+        $('#table-info-container').html(`<span class="text-sm text-gray-600">Showing ${start} to ${end} of ${pageState.totalRows}</span>`);
 
-                    $length.addClass('flex items-center gap-2 text-sm text-gray-600');
-                    $length.find('label').addClass('flex items-center gap-2');
-                    $length.find('select').addClass(
-                        'border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 ' +
-                        'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-                    );
+        const prevDisabled = pageState.page <= 1;
+        const nextDisabled = !pageState.hasNextPage;
+        $('#table-pagination-container').html(`
+            <div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                <button id="page-prev" class="px-3 py-2 text-sm border-r border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Prev</button>
+                <span class="px-3 py-2 text-sm bg-blue-900 text-white font-semibold">${pageState.page}</span>
+                <button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Next</button>
+            </div>
+        `);
 
-                    $('#rps-table-toolbar').addClass('flex flex-col md:flex-row md:items-center md:justify-between gap-4');
+        $('#page-prev').off('click').on('click', function () {
+            if (pageState.page <= 1) return;
+            pageState.page -= 1;
+            lastRequestKey = '';
+            fetchRps();
+        });
+        $('#page-next').off('click').on('click', function () {
+            if (!pageState.hasNextPage) return;
+            pageState.page += 1;
+            lastRequestKey = '';
+            fetchRps();
+        });
+    }
 
-                    $('#filter_academic_year').select2({
-                        placeholder: "All Academic Years",
-                        allowClear: true,
-                        width: '100%',
-                        ajax: {
-                            url: '/Select2/AcademicYears',
-                            dataType: 'json',
-                            delay: 250,
-                            data: params => ({ q: params.term || '', page: params.page || 1 }),
-                            processResults: data => ({ results: data.results, pagination: data.pagination }),
-                            cache: true
-                        },
-                        minimumInputLength: 0
-                    });
+    function setRpsLoading(isLoading) {
+        $('#rps-table-loading').toggleClass('hidden', !isLoading);
+    }
 
-                    $('#filter_class').select2({
-                        placeholder: "-- All Classes --",
-                        allowClear: true,
-                        width: '100%',
-                        ajax: {
-                            url: '/Select2/AcademicClasses',
-                            dataType: 'json',
-                            delay: 250,
-                            data: params => ({ q: params.term || '', page: params.page || 1 }),
-                            processResults: data => ({ results: data.results, pagination: data.pagination }),
-                            cache: true
-                        },
-                        minimumInputLength: 0
-                    }).on('change', function () {
-                        const cid = $(this).val();
-                        if (cid) {
-                            $.ajax({
-                                url: `/Class/GetById?id=${cid}`,
-                                type: 'GET',
-                                dataType: 'json',
-                                success: res => {
-                                    initSubject(res.data.class_level);
-                                },
-                                error: () => {
-                                    initSubject('');
-                                }
-                            });
-                        } else {
-                            initSubject('');
-                        }
-                    });
+    async function fetchRps() {
+        const payload = {
+            page: pageState.page,
+            limit: pageState.limit,
+            filters: { ...pageState.filters },
+            sort: { ...pageState.sort }
+        };
+        const requestKey = JSON.stringify(payload);
+        if (requestKey === lastRequestKey) return;
+        lastRequestKey = requestKey;
 
-                    $('#filter_teacher').select2({
-                        placeholder: "-- All Teachers --",
-                        allowClear: true,
-                        width: '100%',
-                        ajax: {
-                            url: '/Select2/Teachers',
-                            dataType: 'json',
-                            delay: 250,
-                            data: params => ({ q: params.term || '', page: params.page || 1 }),
-                            processResults: data => ({ results: data.results, pagination: data.pagination }),
-                            cache: true
-                        },
-                        minimumInputLength: 0
-                    });
+        syncStateToUrl();
+        renderSortIndicators();
+        setRpsLoading(true);
 
-                    initSubject('');
+        try {
+            const res = await $.ajax({
+                url: '/RPS/GetAll',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(payload)
+            });
 
-                    $.ajax({
-                        url: '/RPS/GetActiveAcademicYear',
-                        type: 'GET',
-                        success: function (res) {
-                            if (!res || !res.success || !res.data || !res.data.id) return;
+            if (!res.success) {
+                lastRequestKey = '';
+                tailwindMessageModal('Failed', res.message || 'Failed to load RPS data.');
+                return;
+            }
 
-                            currentAcademicYearId = res.data.id;
+            const result = res.data || {};
+            const items = result.data || [];
+            pageState.hasNextPage = !!result.hasNextPage;
+            pageState.totalRows = Number(result.totalRows || 0);
+            renderRows(items);
+            renderPagination(items.length);
+        } catch {
+            lastRequestKey = '';
+            tailwindMessageModal('Error', 'Failed to load RPS data.');
+        } finally {
+            setRpsLoading(false);
+        }
+    }
 
-                            if ($('#filter_academic_year option[value="' + res.data.id + '"]').length === 0) {
-                                const option = new Option(res.data.text || '', res.data.id, true, true);
-                                $('#filter_academic_year').append(option);
-                            }
+    async function deleteRps(id) {
+        const confirmed = await tailwindConfirmModal({
+            title: 'Delete Confirmation',
+            message: 'Delete this RPS? This will also delete all meeting details.',
+            confirmText: 'Yes, delete',
+            cancelText: 'Cancel'
+        });
+        if (!confirmed) return;
 
-                            $('#filter_academic_year').val(res.data.id).trigger('change');
-                            rpsTable.ajax.reload(null, true);
-                        }
-                    });
-
-                    stylePagination();
-                },
-                drawCallback: function () {
-                    setTimeout(stylePagination, 50);
+        $.ajax({
+            url: '/RPS/Delete',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ id: id }),
+            success: async function (res) {
+                if (res.success) {
+                    await tailwindMessageModal('Success', res.message || 'RPS deleted.');
+                    lastRequestKey = '';
+                    fetchRps();
+                    return;
                 }
-            });
-        }
-
-        function applyRPSFilter() {
-            currentAcademicYearId = $('#filter_academic_year').val() || '';
-            currentAcademicClassId = $('#filter_class').val() || '';
-            currentSubjectId = $('#filter_subject').val() || '';
-            currentTeacherId = $('#filter_teacher').val() || '';
-            const searchKeyword = ($('#rps_search_filter').val() || '').trim();
-            rpsTable.search(searchKeyword);
-            rpsTable.ajax.reload(null, true);
-            toggleFilter();
-        }
-
-        function stylePagination() {
-            const wrapper = $('#rps-table_wrapper');
-            let $info = wrapper.find('.dataTables_info').first();
-            if ($info.length === 0) $info = wrapper.find('.dt-info').first();
-
-            let $paginate = wrapper.find('.dataTables_paginate').first();
-            if ($paginate.length === 0) $paginate = wrapper.find('.dt-paging').first();
-
-            if ($info.length > 0) {
-                $('#table-info-container').empty().append($info);
-                $info.removeClass().addClass('text-sm text-gray-600');
+                await tailwindMessageModal('Failed', res.message || 'Failed to delete RPS.');
+            },
+            error: async function () {
+                await tailwindMessageModal('Error', 'Error deleting RPS.');
             }
+        });
+    }
 
-            if ($paginate.length > 0) {
-                $('#table-pagination-container').empty().append($paginate);
+    $(document).ready(function () {
+        hydrateStateFromUrl();
+        renderToolbar();
+        renderSortIndicators();
+        fetchRps();
+
+        $(document).on('click', function (e) {
+            const $dropdown = $('#rpsFilterDropdown');
+            const isToggle = $(e.target).closest('#rpsFilterToggleBtn').length > 0;
+            const isInsideDropdown = $(e.target).closest('#rpsFilterDropdown').length > 0;
+            const isSelect2 = $(e.target).closest('.select2-container, .select2-dropdown').length > 0;
+            if (!isToggle && !isInsideDropdown && !isSelect2) $dropdown.addClass('hidden');
+        });
+
+        $('#rps-table thead').on('click', 'th[data-sort]', function () {
+            const field = $(this).data('sort');
+            if (!field) return;
+            if (pageState.sort.field === field) {
+                pageState.sort.order = pageState.sort.order === 'asc' ? 'desc' : 'asc';
+            } else {
+                pageState.sort.field = field;
+                pageState.sort.order = 'asc';
             }
+            pageState.page = 1;
+            lastRequestKey = '';
+            fetchRps();
+        });
 
-            $('#table-pagination-container').addClass('w-full flex justify-end overflow-x-auto whitespace-nowrap');
-            if (typeof applyAdminPaginationStyle === 'function') {
-                applyAdminPaginationStyle($('#table-pagination-container'));
-            }
-        }
+        $(document).on('click', '.btn-del-rps', function () {
+            const id = ($(this).data('id') || '').toString();
+            if (!id) return;
+            deleteRps(id);
+        });
 
-        function toggleActionsMenu(event, id) {
-            event.stopPropagation();
-            $('.rps-actions-menu').addClass('hidden');
-            $('#actions-menu-' + id).toggleClass('hidden');
-        }
-
-        function delRPS(id) {
-            $('.rps-actions-menu').addClass('hidden');
-            if (!confirm("Delete this RPS? This will also delete all meeting details.")) return;
-
-            $.ajax({
-                url: "/RPS/Delete",
-                type: "POST",
-                contentType: "application/json",
-                data: JSON.stringify({ id: id }),
-                success: res => {
-                    if (res.success) {
-                        $('#rps-table').DataTable().ajax.reload(null, false);
-                    } else {
-                        alert(res.message || "Failed to delete RPS");
-                    }
-                },
-                error: () => alert("Error deleting RPS")
-            });
-        }
-
-        function formatYearShort(d) {
-            if (!d) return "";
-            const date = new Date(d);
-            if (isNaN(date.getTime())) return "";
-            return date.getFullYear();
-        }
-
-        function initSubject(classLevel) {
-
-            const $subject = $('#filter_subject');
-
-            // Destroy select2 dulu kalau sudah pernah dibuat
-            if ($subject.hasClass("select2-hidden-accessible")) {
-                $subject.select2('destroy');
-            }
-
-            $subject.empty().val(null).trigger('change');
-
-            $subject.select2({
-                placeholder: "-- All Subjects --",
-                allowClear: true,
-                width: '100%',
-                ajax: {
-                    url: `/Select2/Subjects?classLevel=${classLevel}`,
-                    dataType: 'json',
-                    delay: 250,
-                    data: p => ({
-                        q: p.term || '',
-                        page: p.page || 1
-                    }),
-                    processResults: d => ({
-                        results: d.results,
-                        pagination: d.pagination
-                    }),
-                    cache: true
-                },
-                minimumInputLength: 0
-            });
-        }
-    </script>
+        $(document).on('input', '#rps_search_filter', function () {
+            const val = ($(this).val() || '').trim();
+            if ((pageState.filters.search || '') === val) return;
+            clearTimeout(searchDebounce);
+            searchDebounce = setTimeout(() => {
+                pageState.filters.search = val;
+                pageState.page = 1;
+                lastRequestKey = '';
+                fetchRps();
+            }, 300);
+        });
+    });
+</script>
 }

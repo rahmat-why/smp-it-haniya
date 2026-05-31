@@ -131,8 +131,11 @@
     </form>
 </div>
 
+@await Html.PartialAsync("_TailwindConfirmModal")
+
 @section Scripts {
     <script>
+        const returnUrl = new URLSearchParams(window.location.search).get('returnUrl') || '/Class';
         function toggleSection(id) {
             const section = document.getElementById(id);
             const icon = document.getElementById('icon-' + id);
@@ -148,7 +151,7 @@
         }
 
         function goBack() {
-            window.location.href = "/Class";
+            window.location.href = returnUrl;
         }
 
         function showError($el, message) {
@@ -265,7 +268,8 @@
                 contentType: false,
                 success: res => {
                     if (res.success) {
-                        window.location.href = "/Class";
+                        tailwindMessageModal('Success', res.message || 'Class created successfully.')
+                            .then(() => { window.location.href = returnUrl; });
                     } else {
                         tailwindMessageModal('Failed', res.message || "Failed to create class");
                     }

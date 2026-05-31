@@ -27,50 +27,31 @@ namespace Haniya.Controllers.PortalStudent
             return View("~/Views/PortalStudent/StAttendance/Index.cshtml");
         }
 
-        private (int draw, int start, int length, string searchValue, int orderColumnIndex, string orderDir) ParseDataTablesQuery()
+        public class ListSort
         {
-            var form = Request.HasFormContentType ? Request.Form : null;
-            var q = Request.Query;
-
-            string GetVal(string key)
-            {
-                if (form != null && form.ContainsKey(key)) return form[key].ToString();
-                return q[key].ToString();
-            }
-
-            int.TryParse(GetVal("draw"), out var draw);
-            if (draw <= 0) draw = 1;
-            int.TryParse(GetVal("start"), out var start);
-            if (start < 0) start = 0;
-            int.TryParse(GetVal("length"), out var length);
-            if (length <= 0) length = 10;
-            var searchValue = GetVal("search[value]") ?? string.Empty;
-            int.TryParse(GetVal("order[0][column]"), out var orderColumnIndex);
-            var rawDir = (GetVal("order[0][dir]") ?? "").ToUpper();
-            var orderDir = rawDir is "ASC" or "DESC" ? rawDir : "DESC";
-
-            return (draw, start, length, searchValue, orderColumnIndex, orderDir);
+            public string field { get; set; } = "date";
+            public string order { get; set; } = "desc";
         }
 
-        private string GetAttendanceOrderByColumn(int orderColumnIndex)
+        public class ListRequest
         {
-            return orderColumnIndex switch
-            {
-                0 => "a.attendance_date",
-                1 => "cl.class_name",
-                2 => "t.full_name",
-                3 => "d.status",
-                4 => "d.notes",
-                _ => "a.attendance_date"
-            };
+            public int page { get; set; } = 1;
+            public int limit { get; set; } = 10;
+            public Dictionary<string, string>? filters { get; set; }
+            public ListSort? sort { get; set; }
         }
 
         [HttpPost]
-        public IActionResult GetMyAttendance()
+        public IActionResult GetMyAttendance([FromBody] ListRequest? req)
         {
             try
             {
-                var (draw, start, length, search, orderColumnIndex, orderDir) = ParseDataTablesQuery();
+                req ??= new ListRequest();
+                var page = req.page <= 0 ? 1 : req.page;
+                var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
+                var offset = (page - 1) * limit;
+                var filters = req.filters ?? new Dictionary<string, string>();
+                filters.TryGetValue("search", out var search);
 
                 // Ambil student_id dari Claims Login
                 var studentId = User.FindFirst("StudentId")?.Value;
@@ -81,6 +62,21 @@ namespace Haniya.Controllers.PortalStudent
                 conn.Open();
 
                 var searchPattern = string.IsNullOrWhiteSpace(search) ? null : $"%{search.Trim()}%";
+                var sortMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["date"] = "a.attendance_date",
+                    ["class"] = "cl.class_name",
+                    ["teacher"] = "t.full_name",
+                    ["status"] = "d.status",
+                    ["notes"] = "d.notes"
+                };
+                var sort = req.sort ?? new ListSort();
+                var orderBy = sortMap.TryGetValue(sort.field ?? "", out var mapped) ? mapped : "a.attendance_date";
+                var orderDir = string.Equals(sort.order, "asc", StringComparison.OrdinalIgnoreCase) ? "ASC" : "DESC";
+                var secondaryOrder = string.Equals(orderBy, "a.attendance_date", StringComparison.OrdinalIgnoreCase)
+                    ? "a.attendance_id DESC"
+                    : "a.attendance_date DESC";
+
                 var whereSql = @"
                     WHERE d.student_id = @student_id
                       AND (
@@ -124,7 +120,6 @@ namespace Haniya.Controllers.PortalStudent
                     recordsFiltered = Convert.ToInt32(filteredCmd.ExecuteScalar() ?? 0);
                 }
 
-                var orderBy = GetAttendanceOrderByColumn(orderColumnIndex);
                 var sql = @"
                     SELECT
                         a.attendance_id,
@@ -151,15 +146,15 @@ namespace Haniya.Controllers.PortalStudent
                         ON a.teacher_id = t.teacher_id
 
                     " + whereSql + @"
-                    ORDER BY " + orderBy + " " + orderDir + @", a.attendance_date DESC
+                    ORDER BY " + orderBy + " " + orderDir + @", " + secondaryOrder + @"
                     OFFSET @start ROWS FETCH NEXT @length ROWS ONLY
                 ";
 
                 using var cmd = new SqlCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@student_id", studentId);
                 cmd.Parameters.AddWithValue("@search", (object)searchPattern ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@start", start);
-                cmd.Parameters.AddWithValue("@length", length);
+                cmd.Parameters.AddWithValue("@start", offset);
+                cmd.Parameters.AddWithValue("@length", limit);
 
                 using var rd = cmd.ExecuteReader();
 
@@ -179,15 +174,18 @@ namespace Haniya.Controllers.PortalStudent
                     });
                 }
 
-                return Json(new { draw, recordsTotal, recordsFiltered, data = list });
+                var hasNextPage = (offset + list.Count) < recordsFiltered;
+                return Json(DTOResponse.ok(new
+                {
+                    data = list,
+                    hasNextPage,
+                    totalRows = recordsFiltered,
+                    totalAll = recordsTotal
+                }));
             }
             catch (Exception ex)
             {
-                return Json(new
-                {
-                    success = false,
-                    message = ex.Message
-                });
+                return Json(DTOResponse.fail(ex.Message, 500));
             }
         }
     }

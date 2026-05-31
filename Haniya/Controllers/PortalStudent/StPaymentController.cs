@@ -25,56 +25,33 @@ namespace Haniya.Controllers.PortalStudent
             return View("~/Views/PortalStudent/StPayment/Index.cshtml");
         }
 
-        private (int draw, int start, int length, string searchValue, int orderColumnIndex, string orderDir) ParseDataTablesQuery()
+        public class ListSort
         {
-            var form = Request.HasFormContentType ? Request.Form : null;
-            var q = Request.Query;
-
-            string GetVal(string key)
-            {
-                if (form != null && form.ContainsKey(key)) return form[key].ToString();
-                return q[key].ToString();
-            }
-
-            int.TryParse(GetVal("draw"), out var draw);
-            if (draw <= 0) draw = 1;
-            int.TryParse(GetVal("start"), out var start);
-            if (start < 0) start = 0;
-            int.TryParse(GetVal("length"), out var length);
-            if (length <= 0) length = 10;
-
-            var searchValue = GetVal("search[value]") ?? string.Empty;
-
-            int.TryParse(GetVal("order[0][column]"), out var orderColumnIndex);
-            var rawDir = (GetVal("order[0][dir]") ?? "").ToUpper();
-            var orderDir = rawDir is "ASC" or "DESC" ? rawDir : "DESC";
-
-            return (draw, start, length, searchValue, orderColumnIndex, orderDir);
+            public string field { get; set; } = "date";
+            public string order { get; set; } = "desc";
         }
 
-        private string GetPaymentOrderByColumn(int orderColumnIndex)
+        public class ListRequest
         {
-            return orderColumnIndex switch
-            {
-                0 => "p.payment_date",
-                1 => "c.class_name",
-                2 => "COALESCE(pt.item_desc, p.payment_type)",
-                3 => "p.total_price",
-                4 => "p.total_payment",
-                5 => "p.remaining_payment",
-                6 => "p.status",
-                7 => "COALESCE(pm.item_desc, p.payment_method)",
-                _ => "p.payment_date"
-            };
+            public int page { get; set; } = 1;
+            public int limit { get; set; } = 10;
+            public Dictionary<string, string>? filters { get; set; }
+            public ListSort? sort { get; set; }
         }
 
         // Get payment list (by logged student)
         [HttpPost]
-        public IActionResult GetMyPayments()
+        public IActionResult GetMyPayments([FromBody] ListRequest? req)
         {
             try
             {
-                var (draw, start, length, search, orderColumnIndex, orderDir) = ParseDataTablesQuery();
+                req ??= new ListRequest();
+                var page = req.page <= 0 ? 1 : req.page;
+                var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
+                var offset = (page - 1) * limit;
+
+                var filters = req.filters ?? new Dictionary<string, string>();
+                filters.TryGetValue("search", out var search);
 
                 // Ambil StudentId dari login
                 var studentId = User.FindFirst("StudentId")?.Value;
@@ -87,6 +64,25 @@ namespace Haniya.Controllers.PortalStudent
                 conn.Open();
 
                 var searchPattern = string.IsNullOrWhiteSpace(search) ? null : $"%{search.Trim()}%";
+
+                var sortMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["date"] = "p.payment_date",
+                    ["class"] = "c.class_name",
+                    ["type"] = "COALESCE(pt.item_desc, p.payment_type)",
+                    ["total"] = "p.total_price",
+                    ["paid"] = "p.total_payment",
+                    ["remaining"] = "p.remaining_payment",
+                    ["status"] = "p.status",
+                    ["method"] = "COALESCE(pm.item_desc, p.payment_method)"
+                };
+                var sort = req.sort ?? new ListSort();
+                var orderBy = sortMap.TryGetValue(sort.field ?? "", out var mapped) ? mapped : "p.payment_date";
+                var orderDir = string.Equals(sort.order, "asc", StringComparison.OrdinalIgnoreCase) ? "ASC" : "DESC";
+                var secondaryOrder = string.Equals(orderBy, "p.payment_date", StringComparison.OrdinalIgnoreCase)
+                    ? "p.payment_id DESC"
+                    : "p.payment_date DESC";
+
                 var whereSql = @"
                 WHERE s.student_id = @studentId
                   AND (
@@ -96,8 +92,6 @@ namespace Haniya.Controllers.PortalStudent
                         OR c.class_name LIKE @search
                         OR p.status LIKE @search
                   )";
-
-                var orderBy = GetPaymentOrderByColumn(orderColumnIndex);
 
                 var totalSql = @"
                 SELECT COUNT(*)
@@ -175,7 +169,7 @@ namespace Haniya.Controllers.PortalStudent
                    AND pm.header_id = 'PAYMENT_METHOD'
 
                 " + whereSql + @"
-                ORDER BY " + orderBy + " " + orderDir + @", p.payment_date DESC
+                ORDER BY " + orderBy + " " + orderDir + @", " + secondaryOrder + @"
                 OFFSET @start ROWS FETCH NEXT @length ROWS ONLY
                 ";
 
@@ -186,8 +180,8 @@ namespace Haniya.Controllers.PortalStudent
                 {
                     cmd.Parameters.AddWithValue("@studentId", studentId);
                     cmd.Parameters.AddWithValue("@search", (object)searchPattern ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@start", start);
-                    cmd.Parameters.AddWithValue("@length", length);
+                    cmd.Parameters.AddWithValue("@start", offset);
+                    cmd.Parameters.AddWithValue("@length", limit);
 
                     using var r = cmd.ExecuteReader();
 
@@ -216,13 +210,14 @@ namespace Haniya.Controllers.PortalStudent
                     }
                 }
 
-                return Json(new
+                var hasNextPage = (offset + list.Count) < recordsFiltered;
+                return Json(DTOResponse.ok(new
                 {
-                    draw,
-                    recordsTotal,
-                    recordsFiltered,
-                    data = list
-                });
+                    data = list,
+                    hasNextPage,
+                    totalRows = recordsFiltered,
+                    totalAll = recordsTotal
+                }));
             }
             catch (Exception ex)
             {

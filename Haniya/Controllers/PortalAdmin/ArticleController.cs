@@ -99,65 +99,46 @@ namespace Haniya.Controllers.PortalAdmin
         }
 
         /* ===================== API ===================== */
-        private (int draw, int start, int length, string searchValue, string orderColumn, string orderDir)
-            ParseDataTablesQuery(string[] columns)
+        public class ListSort
         {
-            var form = Request.HasFormContentType ? Request.Form : null;
-            var q = Request.Query;
+            public string field { get; set; } = "createdAt";
+            public string order { get; set; } = "desc";
+        }
 
-            string GetVal(string key)
-            {
-                if (form != null && form.ContainsKey(key)) return form[key].ToString();
-                return q[key].ToString();
-            }
-
-            int.TryParse(GetVal("draw"), out var draw);
-            if (draw <= 0) draw = 1;
-            int.TryParse(GetVal("start"), out var start);
-            if (start < 0) start = 0;
-            int.TryParse(GetVal("length"), out var length);
-            if (length <= 0) length = 10;
-            var searchValue = GetVal("search[value]") ?? string.Empty;
-
-            var orderColumn = "title";
-            var orderDir = "ASC";
-
-            var orderColIdxStr = GetVal("order[0][column]");
-            if (int.TryParse(orderColIdxStr, out var orderColIdx))
-            {
-                if (orderColIdx >= 0 && orderColIdx < columns.Length)
-                    orderColumn = columns[orderColIdx];
-            }
-
-            var dir = GetVal("order[0][dir]");
-            if (!string.IsNullOrWhiteSpace(dir) &&
-                (dir.Equals("asc", StringComparison.OrdinalIgnoreCase) ||
-                 dir.Equals("desc", StringComparison.OrdinalIgnoreCase)))
-            {
-                orderDir = dir.ToUpper();
-            }
-
-            return (draw, start, length, searchValue, orderColumn, orderDir);
+        public class ListRequest
+        {
+            public int page { get; set; } = 1;
+            public int limit { get; set; } = 10;
+            public Dictionary<string, string>? filters { get; set; }
+            public ListSort? sort { get; set; }
         }
 
         [HttpPost]
-        public IActionResult GetAll()
+        public IActionResult GetAll([FromBody] ListRequest? req)
         {
             try
             {
-                var columns = new[]
-                {
-                    "image",       // 0
-                    "title",       // 1
-                    "slug",        // 2
-                    "status",      // 3
-                    "content",     // 4
-                    "tags",        // 5
-                    "created_at",  // 6
-                    "title"        // 7 action fallback
-                };
+                req ??= new ListRequest();
+                var page = req.page <= 0 ? 1 : req.page;
+                var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
+                var offset = (page - 1) * limit;
 
-                var (draw, start, length, searchValue, orderColumn, orderDir) = ParseDataTablesQuery(columns);
+                var filters = req.filters ?? new Dictionary<string, string>();
+                filters.TryGetValue("search", out var searchValue);
+                filters.TryGetValue("status", out var statusFilter);
+
+                var sortMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["title"] = "a.title",
+                    ["slug"] = "a.slug",
+                    ["status"] = "a.status",
+                    ["content"] = "a.content",
+                    ["tags"] = "STRING_AGG(t.tag_code, ', ')",
+                    ["createdAt"] = "a.created_at"
+                };
+                var sort = req.sort ?? new ListSort();
+                var orderColumn = sortMap.TryGetValue(sort.field ?? "", out var mapped) ? mapped : "a.created_at";
+                var orderDir = string.Equals(sort.order, "asc", StringComparison.OrdinalIgnoreCase) ? "ASC" : "DESC";
 
                 using var conn = GetConn();
                 conn.Open();
@@ -167,19 +148,23 @@ namespace Haniya.Controllers.PortalAdmin
                 var recordsTotal = (int)totalCmd.ExecuteScalar();
 
                 // Filtered count
-                string whereSearch = "";
+                string whereSearch = " WHERE 1=1 ";
                 if (!string.IsNullOrWhiteSpace(searchValue))
                 {
-                    whereSearch = @" WHERE (
+                    whereSearch += @" AND (
                 title LIKE @search OR
                 slug LIKE @search OR
                 status LIKE @search
             )";
                 }
+                if (!string.IsNullOrWhiteSpace(statusFilter))
+                    whereSearch += " AND status = @statusFilter ";
 
                 var filteredCmd = new SqlCommand("SELECT COUNT(*) FROM mst_articles" + whereSearch, conn);
                 if (!string.IsNullOrWhiteSpace(searchValue))
                     filteredCmd.Parameters.AddWithValue("@search", $"%{searchValue}%");
+                if (!string.IsNullOrWhiteSpace(statusFilter))
+                    filteredCmd.Parameters.AddWithValue("@statusFilter", statusFilter);
                 var recordsFiltered = (int)filteredCmd.ExecuteScalar();
 
                 // Main data query - now includes tags and content
@@ -208,10 +193,12 @@ namespace Haniya.Controllers.PortalAdmin
             OFFSET @start ROWS FETCH NEXT @length ROWS ONLY";
 
                 using var cmd = new SqlCommand(sql, conn);
-                cmd.Parameters.AddWithValue("@start", start);
-                cmd.Parameters.AddWithValue("@length", length);
+                cmd.Parameters.AddWithValue("@start", offset);
+                cmd.Parameters.AddWithValue("@length", limit);
                 if (!string.IsNullOrWhiteSpace(searchValue))
                     cmd.Parameters.AddWithValue("@search", $"%{searchValue}%");
+                if (!string.IsNullOrWhiteSpace(statusFilter))
+                    cmd.Parameters.AddWithValue("@statusFilter", statusFilter);
 
                 var list = new List<object>();
                 using var rd = cmd.ExecuteReader();
@@ -230,13 +217,14 @@ namespace Haniya.Controllers.PortalAdmin
                     });
                 }
 
-                return Json(new
+                var hasNextPage = (offset + list.Count) < recordsFiltered;
+                return Json(DTOResponse.ok(new
                 {
-                    draw,
-                    recordsTotal,
-                    recordsFiltered,
-                    data = list
-                });
+                    data = list,
+                    hasNextPage,
+                    totalRows = recordsFiltered,
+                    totalAll = recordsTotal
+                }));
             }
             catch (Exception ex)
             {

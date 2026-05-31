@@ -16,7 +16,13 @@
         <div id="payment-table-toolbar" class="flex flex-col md:flex-row md:items-center md:justify-between gap-3"></div>
     </div>
 
-    <div class="overflow-x-auto px-4 pt-4">
+    <div class="relative overflow-x-auto px-4 pt-4">
+        <div id="payment-table-loading" class="hidden absolute inset-0 z-20 bg-white/80 backdrop-blur-[1px] flex items-center justify-center">
+            <div class="flex flex-col items-center gap-3 text-gray-600">
+                <div class="w-8 h-8 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin"></div>
+                <p class="text-sm font-medium">Loading payment data...</p>
+            </div>
+        </div>
         <table id="payment-table"
                class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
@@ -115,8 +121,8 @@
         $('#payment-table thead th[data-sort]').each(function () {
             const field = $(this).data('sort');
             const isActive = field === pageState.sort.field;
-            const icon = isActive ? (pageState.sort.order === 'asc' ? ' ▲' : ' ▼') : '';
-            const base = $(this).text().replace(/ [▲▼]$/, '');
+            const icon = isActive ? (pageState.sort.order === 'asc' ? ' ↑' : ' ↓') : '';
+            const base = $(this).text().replace(/ [↑↓]$/, '');
             $(this).text(base + icon);
         });
     }
@@ -408,6 +414,10 @@
         });
     }
 
+    function setPaymentLoading(isLoading) {
+        $('#payment-table-loading').toggleClass('hidden', !isLoading);
+    }
+
     async function fetchPayments() {
         const payload = {
             page: pageState.page,
@@ -421,6 +431,7 @@
 
         syncStateToUrl();
         renderSortIndicators();
+        setPaymentLoading(true);
 
         try {
             const res = await $.ajax({
@@ -445,6 +456,8 @@
         } catch {
             lastRequestKey = '';
             tailwindMessageModal('Error', 'Failed to load payment data.');
+        } finally {
+            setPaymentLoading(false);
         }
     }
 

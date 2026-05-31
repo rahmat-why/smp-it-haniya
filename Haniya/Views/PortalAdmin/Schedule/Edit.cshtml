@@ -72,9 +72,12 @@
     </form>
 </div>
 
+@await Html.PartialAsync("_TailwindConfirmModal")
+
 @section Scripts {
     <script>
         let preloadedDay = null;
+        const returnUrl = new URLSearchParams(window.location.search).get('returnUrl') || '/Schedule';
 
         function addDetailRow(prefill = {}) {
             const row = `
@@ -191,11 +194,14 @@
         }
 
         function goBackSchedule() {
-            window.location.href = "/Schedule";
+            window.location.href = returnUrl;
         }
 
         async function updateSchedule() {
-            if (!validateForm()) return;
+            if (!validateForm()) {
+                await tailwindMessageModal('Validation Error', 'Please complete all required fields.');
+                return;
+            }
 
             const yes = await tailwindConfirmModal({
                 title: 'Update Confirmation',
@@ -217,8 +223,15 @@
                 data: fd,
                 processData: false,
                 contentType: false,
-                success: res => res.success ? location.href = "/Schedule" : tailwindMessageModal('Failed', res.message || "Update failed"), 
-                error: () => tailwindMessageModal('Error', "Error updating schedule")
+                success: async res => {
+                    if (res.success) {
+                        await tailwindMessageModal('Success', res.message || 'Schedule updated successfully.');
+                        location.href = returnUrl;
+                    } else {
+                        await tailwindMessageModal('Failed', res.message || 'Update failed');
+                    }
+                },
+                error: async () => await tailwindMessageModal('Error', 'Error updating schedule')
             });
         }
 

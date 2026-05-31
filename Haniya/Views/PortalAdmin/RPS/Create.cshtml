@@ -163,9 +163,12 @@
     </form>
 </div>
 
+@await Html.PartialAsync("_TailwindConfirmModal")
+
 @section Scripts {
     <script>
         let meetingCounter = 0;
+        const returnUrl = new URLSearchParams(window.location.search).get('returnUrl') || '/RPS';
 
         function calculateTotalWeight() {
             const attendance = parseFloat($('#weight_attendance').val() || 0);
@@ -309,11 +312,22 @@
         }
 
         function goBackRPS() {
-            window.location.href = "/RPS";
+            window.location.href = returnUrl;
         }
 
-        function saveRPS() {
-            if (!validateForm()) return;
+        async function saveRPS() {
+            if (!validateForm()) {
+                await tailwindMessageModal('Validation Error', 'Please complete all required fields.');
+                return;
+            }
+
+            const confirmed = await tailwindConfirmModal({
+                title: 'Save Confirmation',
+                message: 'Are you sure you want to save this RPS?',
+                confirmText: 'Yes, save',
+                cancelText: 'Cancel'
+            });
+            if (!confirmed) return;
 
             const fd = new FormData();
             fd.append("subject_id", $('#subject_id').val());
@@ -334,8 +348,15 @@
                 data: fd,
                 processData: false,
                 contentType: false,
-                success: res => res.success ? location.href = "/RPS" : alert(res.message || "Save failed"),
-                error: () => alert("Error saving RPS")
+                success: async res => {
+                    if (res.success) {
+                        await tailwindMessageModal('Success', res.message || 'RPS created successfully.');
+                        location.href = returnUrl;
+                    } else {
+                        await tailwindMessageModal('Failed', res.message || 'Save failed');
+                    }
+                },
+                error: async () => await tailwindMessageModal('Error', 'Error saving RPS')
             });
         }
 

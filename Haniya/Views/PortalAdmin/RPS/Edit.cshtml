@@ -165,9 +165,12 @@
     </form>
 </div>
 
+@await Html.PartialAsync("_TailwindConfirmModal")
+
 @section Scripts {
     <script>
         let meetingCounter = 0;
+        const returnUrl = new URLSearchParams(window.location.search).get('returnUrl') || '/RPS';
 
         function calculateTotalWeight() {
             const attendance = parseFloat($('#weight_attendance').val() || 0);
@@ -311,14 +314,22 @@
         }
 
         function goBackRPS() {
-            window.location.href = "/RPS";
+            window.location.href = returnUrl;
         }
 
-        function updateRPS() {
+        async function updateRPS() {
             if (!validateForm()) {
-                alert('Please complete all required fields');
+                await tailwindMessageModal('Validation Error', 'Please complete all required fields');
                 return;
             }
+
+            const confirmed = await tailwindConfirmModal({
+                title: 'Update Confirmation',
+                message: 'Are you sure you want to update this RPS?',
+                confirmText: 'Yes, update',
+                cancelText: 'Cancel'
+            });
+            if (!confirmed) return;
 
             const fd = new FormData();
             fd.append("rps_id", $('#rps_id').val());
@@ -340,8 +351,15 @@
                 data: fd,
                 processData: false,
                 contentType: false,
-                success: res => res.success ? location.href = "/RPS" : alert(res.message || "Update failed"),
-                error: () => alert("Error updating RPS")
+                success: async res => {
+                    if (res.success) {
+                        await tailwindMessageModal('Success', res.message || 'RPS updated successfully.');
+                        location.href = returnUrl;
+                    } else {
+                        await tailwindMessageModal('Failed', res.message || 'Update failed');
+                    }
+                },
+                error: async () => await tailwindMessageModal('Error', 'Error updating RPS')
             });
         }
 
@@ -391,7 +409,7 @@
         function loadRPS() {
             const id = $('#rps_id').val().trim();
             if (!id) {
-                alert("Invalid RPS ID");
+                tailwindMessageModal('Error', 'Invalid RPS ID');
                 return;
             }
 
@@ -401,7 +419,7 @@
                 dataType: 'json',
                 success: res => {
                     if (!res.success) {
-                        alert(res.message || "Failed to load RPS");
+                        tailwindMessageModal('Failed', res.message || 'Failed to load RPS');
                         return;
                     }
                     const d = res.data;
@@ -448,7 +466,7 @@
                         addMeetingRow();
                     }
                 },
-                error: () => alert("Error loading RPS data")
+                error: () => tailwindMessageModal('Error', 'Error loading RPS data')
             });
         }
 
@@ -482,7 +500,7 @@
                             initSubject(res.data.class_level);
                         },
                         error: () => {
-                            alert('Error loading class information');
+                            tailwindMessageModal('Error', 'Error loading class information');
                         }
                     });
                 }

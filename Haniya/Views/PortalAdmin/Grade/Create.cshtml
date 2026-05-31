@@ -8,64 +8,18 @@
 <div class="bg-white p-6 rounded-xl shadow-lg w-full">
     <form id="gradeForm" class="space-y-8">
         <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
-            <div>
-                <label for="grade_date" class="block text-sm font-medium text-gray-700 mb-2">
-                    Grade Date <span class="text-red-600">*</span>
-                </label>
-                <input type="date" id="grade_date" required
-                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
-                <p id="error-date" class="mt-1 text-sm text-red-600 hidden"></p>
-            </div>
-
-            <div>
-                <label for="academic_class_id" class="block text-sm font-medium text-gray-700 mb-2">
-                    Class <span class="text-red-600">*</span>
-                </label>
-                <select id="academic_class_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                        data-placeholder="-- Select Class --" required></select>
-                <p id="error-class" class="mt-1 text-sm text-red-600 hidden"></p>
-            </div>
-
-            <div>
-                <label for="subject_id" class="block text-sm font-medium text-gray-700 mb-2">
-                    Subject <span class="text-red-600">*</span>
-                </label>
-                <select id="subject_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                        data-placeholder="-- Select Subject --" required></select>
-                <p id="error-subject" class="mt-1 text-sm text-red-600 hidden"></p>
-            </div>
-
-            <div>
-                <label for="teacher_id" class="block text-sm font-medium text-gray-700 mb-2">
-                    Teacher <span class="text-red-600">*</span>
-                </label>
-                <select id="teacher_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                        data-placeholder="-- Select Teacher --" required></select>
-                <p id="error-teacher" class="mt-1 text-sm text-red-600 hidden"></p>
-            </div>
-
-            <div>
-                <label for="grade_type" class="block text-sm font-medium text-gray-700 mb-2">
-                    Grade Type <span class="text-red-600">*</span>
-                </label>
-                <select id="grade_type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                        data-placeholder="-- Select Grade Type --" required></select>
-                <p id="error-type" class="mt-1 text-sm text-red-600 hidden"></p>
-            </div>
+            <div><label for="grade_date" class="block text-sm font-medium text-gray-700 mb-2">Grade Date <span class="text-red-600">*</span></label><input type="date" id="grade_date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg" /><p id="error-date" class="mt-1 text-sm text-red-600 hidden"></p></div>
+            <div><label for="academic_class_id" class="block text-sm font-medium text-gray-700 mb-2">Class <span class="text-red-600">*</span></label><select id="academic_class_id" class="w-full"></select><p id="error-class" class="mt-1 text-sm text-red-600 hidden"></p></div>
+            <div><label for="subject_id" class="block text-sm font-medium text-gray-700 mb-2">Subject <span class="text-red-600">*</span></label><select id="subject_id" class="w-full"></select><p id="error-subject" class="mt-1 text-sm text-red-600 hidden"></p></div>
+            <div><label for="teacher_id" class="block text-sm font-medium text-gray-700 mb-2">Teacher <span class="text-red-600">*</span></label><select id="teacher_id" class="w-full"></select><p id="error-teacher" class="mt-1 text-sm text-red-600 hidden"></p></div>
+            <div><label for="grade_type" class="block text-sm font-medium text-gray-700 mb-2">Grade Type <span class="text-red-600">*</span></label><select id="grade_type" class="w-full"></select><p id="error-type" class="mt-1 text-sm text-red-600 hidden"></p></div>
         </div>
 
         <div class="space-y-4">
             <h3 class="text-lg font-semibold text-gray-800">Grade Detail</h3>
             <div class="overflow-x-auto border border-gray-200 rounded-lg max-h-[500px] shadow-inner">
                 <table class="min-w-full divide-y divide-gray-200 table-fixed">
-                    <thead class="bg-gray-100 sticky top-0 z-10">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-5/12 uppercase">Student</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-2/12 uppercase">Min Value</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-2/12 uppercase">Grade Value</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-3/12 uppercase">Notes</th>
-                        </tr>
-                    </thead>
+                    <thead class="bg-gray-100 sticky top-0 z-10"><tr><th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-5/12 uppercase">Student</th><th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-2/12 uppercase">Min Value</th><th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-2/12 uppercase">Grade Value</th><th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-3/12 uppercase">Notes</th></tr></thead>
                     <tbody id="tbody-details"></tbody>
                 </table>
             </div>
@@ -73,283 +27,118 @@
         </div>
 
         <div class="flex justify-end gap-4 pt-6 border-t border-gray-200">
-            <button type="button" onclick="goBackGrade()" class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
-                Back
-            </button>
-            <button type="button" onclick="saveGrade()" class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
-                Save
-                <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-            </button>
+            <button type="button" onclick="goBackGrade()" class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm">Back</button>
+            <button type="button" onclick="saveGrade()" class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm">Save</button>
         </div>
     </form>
 </div>
 
+@await Html.PartialAsync("_TailwindConfirmModal")
+
 @section Scripts {
-    <script>
-        let currentMinValue = null;
-        let academicClassId = null;
+<script>
+    const returnUrl = new URLSearchParams(window.location.search).get('returnUrl') || '/Grade';
+    let currentMinValue = null;
+    let academicClassId = null;
+    let academicYearId = null;
 
-        function updateMinCells() {
-            $('.min-passing-cell').text(currentMinValue ?? '-');
+    function updateMinCells() { $('.min-passing-cell').text(currentMinValue ?? '-'); }
+    function goBackGrade() { window.location.href = returnUrl; }
+
+    function renderStudents(students) {
+        const tbody = $('#tbody-details').empty();
+        if (!students || students.length === 0) {
+            tbody.html('<tr><td colspan="4" class="px-6 py-8 text-center text-gray-500 italic">No students in this class</td></tr>');
+            return;
         }
+        students.forEach(s => {
+            tbody.append(`<tr class="hover:bg-gray-50 border-b last:border-0"><td class="px-4 py-3"><div class="flex items-center gap-3"><img src="${s.profile_photo || '/image/no-image.png'}" alt="${s.full_name || 'Unknown'}" class="w-10 h-10 rounded-full object-cover border border-gray-200" onerror="this.src='/image/no-image.png'"><div><div class="font-medium text-gray-900">${s.full_name || 'Unknown'}</div><div class="text-xs text-gray-600">NIS: ${s.nis || '-'}</div></div></div><input type="hidden" name="student_ids" value="${s.id}" /></td><td class="px-4 py-3 text-center"><div class="min-passing-cell font-medium text-gray-700">${currentMinValue ?? '-'}</div></td><td class="px-4 py-3"><input type="number" name="grade_values" step="0.01" min="0" max="100" class="w-full px-3 py-1.5 border border-gray-300 rounded" /></td><td class="px-4 py-3"><input type="text" name="notes" class="w-full px-3 py-1.5 border border-gray-300 rounded" /></td></tr>`);
+        });
+    }
 
-        function renderStudents(students) {
-            const tbody = $('#tbody-details').empty();
-            if (!students || students.length === 0) {
-                tbody.html('<tr><td colspan="4" class="px-6 py-8 text-center text-gray-500 italic">No students in this class</td></tr>');
-                return;
-            }
+    function validateForm() {
+        $('#error-date,#error-class,#error-subject,#error-teacher,#error-type,#error-details').addClass('hidden');
+        let valid = true;
+        if (!$('#grade_date').val()) { $('#error-date').text('Please select grade date').removeClass('hidden'); valid = false; }
+        if (!$('#academic_class_id').val()) { $('#error-class').text('Class is required').removeClass('hidden'); valid = false; }
+        if (!$('#subject_id').val()) { $('#error-subject').text('Subject is required').removeClass('hidden'); valid = false; }
+        if (!$('#teacher_id').val()) { $('#error-teacher').text('Teacher is required').removeClass('hidden'); valid = false; }
+        if (!$('#grade_type').val()) { $('#error-type').text('Grade type is required').removeClass('hidden'); valid = false; }
+        let filled = true;
+        $('input[name="grade_values"]').each(function () { if ($(this).val() === '') filled = false; });
+        if (!filled) { $('#error-details').text('Please enter a grade value for all students').removeClass('hidden'); valid = false; }
+        return valid;
+    }
 
-            students.forEach(s => {
-                const photo = s.profile_photo || '/image/no-image.png';
-                const name = s.full_name || 'Unknown';
-                const nis = s.nis || '-';
+    async function saveGrade() {
+        if (!validateForm()) return;
+        const yes = await tailwindConfirmModal({ title: 'Create Confirmation', message: 'Are you sure you want to create this data?', confirmText: 'Create', cancelText: 'Cancel' });
+        if (!yes) return;
 
-                const row = `
-                            <tr class="hover:bg-gray-50 border-b last:border-0">
-                                <td class="px-4 py-3">
-                                    <div class="flex items-center gap-3">
-                                        <img src="${photo}" alt="${name}" class="w-10 h-10 rounded-full object-cover border border-gray-200" onerror="this.src='/image/no-image.png'">
-                                        <div>
-                                            <div class="font-medium text-gray-900">${name}</div>
-                                            <div class="text-xs text-gray-600">NIS: ${nis}</div>
-                                        </div>
-                                    </div>
-                                    <input type="hidden" name="student_ids" value="${s.id}" />
-                                </td>
-                                <td class="px-4 py-3 text-center">
-                                    <div class="min-passing-cell font-medium text-gray-700">${currentMinValue ?? '-'}</div>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <input type="number" name="grade_values" step="0.01" min="0" max="100"
-                                           class="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" />
-                                </td>
-                                <td class="px-4 py-3">
-                                    <input type="text" name="notes"
-                                           class="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" />
-                                </td>
-                            </tr>`;
-                tbody.append(row);
-            });
-        }
+        const fd = new FormData();
+        fd.append('grade_date', $('#grade_date').val());
+        fd.append('academic_class_id', $('#academic_class_id').val());
+        fd.append('subject_id', $('#subject_id').val());
+        fd.append('teacher_id', $('#teacher_id').val());
+        fd.append('grade_type', $('#grade_type').val());
 
-        function validateForm() {
-            $('.text-red-600').addClass('hidden');
-            let valid = true;
+        const studentIds = [], gradeValues = [], notes = [];
+        $('#tbody-details tr').each(function () {
+            const r = $(this);
+            studentIds.push(r.find('input[name="student_ids"]').val());
+            gradeValues.push(r.find('input[name="grade_values"]').val());
+            notes.push(r.find('input[name="notes"]').val() || '');
+        });
 
-            if (!$('#grade_date').val()) { $('#error-date').text('Please select grade date').removeClass('hidden'); valid = false; }
-            if (!$('#academic_class_id').val()) { $('#error-class').removeClass('hidden'); valid = false; }
-            if (!$('#subject_id').val()) { $('#error-subject').removeClass('hidden'); valid = false; }
-            if (!$('#teacher_id').val()) { $('#error-teacher').removeClass('hidden'); valid = false; }
-            if (!$('#grade_type').val()) { $('#error-type').removeClass('hidden'); valid = false; }
+        fd.append('student_ids', JSON.stringify(studentIds));
+        fd.append('grade_values', JSON.stringify(gradeValues));
+        fd.append('notes', JSON.stringify(notes));
 
-            let allFilled = true;
-            $('input[name="grade_values"]').each(function () {
-                if ($(this).val() === '') allFilled = false;
-            });
-            if (!allFilled) { $('#error-details').text('Please enter a grade value for all students').removeClass('hidden'); valid = false; }
+        $.ajax({
+            url: '/Grade/Create', type: 'POST', data: fd, processData: false, contentType: false,
+            success: async res => {
+                if (res.success) { await tailwindMessageModal('Success', res.message || 'Grade created successfully.'); window.location.href = returnUrl; }
+                else await tailwindMessageModal('Failed', res.message || 'Save failed');
+            },
+            error: async () => await tailwindMessageModal('Error', 'Error saving grade')
+        });
+    }
 
-            return valid;
-        }
+    function initSubject(classLevel) {
+        const $subject = $('#subject_id');
+        if ($subject.hasClass('select2-hidden-accessible')) $subject.select2('destroy');
+        $subject.empty().val(null).trigger('change');
+        $subject.select2({ placeholder: '-- Select --', allowClear: false, ajax: { url: `/Select2/Subjects?classLevel=${classLevel}`, dataType: 'json', delay: 250, data: p => ({ q: p.term || '', page: p.page || 1 }), processResults: d => ({ results: d.results, pagination: d.pagination }), cache: true }, minimumInputLength: 0 });
+    }
 
-        function goBackGrade() { window.location.href = "/Grade"; }
+    $(document).ready(function () {
+        $('#grade_date').val(new Date().toISOString().split('T')[0]);
 
-        function saveGrade() {
-            if (!validateForm()) return;
+        $('#academic_class_id').select2({ placeholder: '-- Select --', allowClear: false, ajax: { url: '/Select2/AcademicClasses', dataType: 'json', delay: 250, data: p => ({ q: p.term || '', page: p.page || 1, activeOnly: true }), processResults: d => ({ results: d.results, pagination: d.pagination }), cache: true }, minimumInputLength: 0 });
+        $('#teacher_id').select2({ placeholder: '-- Select --', allowClear: false, ajax: { url: '/Select2/Teachers', dataType: 'json', delay: 250, data: p => ({ q: p.term || '', page: p.page || 1 }), processResults: d => ({ results: d.results, pagination: d.pagination }), cache: true }, minimumInputLength: 0 });
+        $('#grade_type').select2({ placeholder: '-- Select --', allowClear: false, ajax: { url: '/Select2/GradeTypes', dataType: 'json', delay: 250, data: p => ({ q: p.term || '', page: p.page || 1 }), processResults: d => ({ results: d.results, pagination: d.pagination }), cache: true }, minimumInputLength: 0 });
 
-            const fd = new FormData();
-            fd.append("grade_date", $('#grade_date').val());
-            fd.append("academic_class_id", $('#academic_class_id').val());
-            fd.append("subject_id", $('#subject_id').val());
-            fd.append("teacher_id", $('#teacher_id').val());
-            fd.append("grade_type", $('#grade_type').val());
+        $('#academic_class_id').on('change', function () {
+            const cid = $(this).val(); academicClassId = cid; $('#tbody-details').empty();
+            if (!cid) return;
 
-            const studentIds = [], gradeValues = [], notes = [];
-            $('#tbody-details tr').each(function () {
-                const r = $(this);
-                studentIds.push(r.find('input[name="student_ids"]').val());
-                gradeValues.push(r.find('input[name="grade_values"]').val());
-                notes.push(r.find('input[name="notes"]').val() || '');
-            });
+            $.getJSON(`/Attendance/GetStudentsByClass?academicClassId=${cid}`, function (res) {
+                if (res.success) { renderStudents(res.data || []); updateMinCells(); }
+                else $('#tbody-details').html('<tr><td colspan="4" class="px-6 py-8 text-center text-red-600">Error loading students</td></tr>');
+            }).fail(function () { $('#tbody-details').html('<tr><td colspan="4" class="px-6 py-8 text-center text-red-600">Error loading students</td></tr>'); });
 
-            fd.append("student_ids", JSON.stringify(studentIds));
-            fd.append("grade_values", JSON.stringify(gradeValues));
-            fd.append("notes", JSON.stringify(notes));
-
-            $.ajax({
-                url: "/Grade/Create",
-                type: "POST",
-                data: fd,
-                processData: false,
-                contentType: false,
-                success: res => res.success ? location.href = "/Grade" : alert(res.message || "Save failed"),
-                error: () => alert("Error saving grade")
-            });
-        }
-
-        $(document).ready(function () {
-            $('#grade_date').val(new Date().toISOString().split('T')[0]);
-
-            // Academic Class
-            $('#academic_class_id').select2({
-                placeholder: "-- Select --",
-                allowClear: false,
-                ajax: {
-                    url: '/Select2/AcademicClasses',
-                    dataType: 'json',
-                    delay: 250,
-                    data: p => ({
-                        q: p.term || '',
-                        page: p.page || 1,
-                        activeOnly: true
-                    }),
-                    processResults: d => ({
-                        results: d.results,
-                        pagination: d.pagination
-                    }),
-                    cache: true
-                },
-                minimumInputLength: 0
-            });
-
-            // Teacher
-            $('#teacher_id').select2({
-                placeholder: "-- Select --",
-                allowClear: false,
-                ajax: {
-                    url: '/Select2/Teachers',
-                    dataType: 'json',
-                    delay: 250,
-                    data: p => ({
-                        q: p.term || '',
-                        page: p.page || 1
-                    }),
-                    processResults: d => ({
-                        results: d.results,
-                        pagination: d.pagination
-                    }),
-                    cache: true
-                },
-                minimumInputLength: 0
-            });
-
-
-            // Grade Type
-            $('#grade_type').select2({
-                placeholder: "-- Select --",
-                allowClear: false,
-                ajax: {
-                    url: '/Select2/GradeTypes',
-                    dataType: 'json',
-                    delay: 250,
-                    data: p => ({
-                        q: p.term || '',
-                        page: p.page || 1
-                    }),
-                    processResults: d => ({
-                        results: d.results,
-                        pagination: d.pagination
-                    }),
-                    cache: true
-                },
-                minimumInputLength: 0
-            });
-
-            $('#academic_class_id').on('change', function () {
-                const cid = $(this).val();
-                academicClassId = cid;
-                $('#tbody-details').empty();
-                if (cid) {
-                    $.ajax({
-                        url: `/Attendance/GetStudentsByClass?academicClassId=${cid}`,
-                        type: 'GET',
-                        dataType: 'json',
-                        success: res => {
-                            if (res.success) {
-                                renderStudents(res.data || []);
-                                updateMinCells();
-                            }
-                        },
-                        error: () => {
-                            $('#tbody-details').html('<tr><td colspan="4" class="px-6 py-8 text-center text-red-600">Error loading students</td></tr>');
-                        }
-                    });
-
-                    $.ajax({
-                        url: `/Class/GetById?id=${cid}`,
-                        type: 'GET',
-                        dataType: 'json',
-                        success: res => {
-                            academicYearId = res.data.academic_year_id;
-                            initSubject(res.data.class_level);
-                        },
-                        error: () => {
-                            $('#tbody-details').html('<tr><td colspan="4" class="px-6 py-8 text-center text-red-600">Error loading students</td></tr>');
-                        }
-                    });
-                }
-
-            });
-
-            $('#subject_id').on('change', function () {
-                const sid = $(this).val();
-                currentMinValue = null;
-                updateMinCells();
-                if (academicYearId && sid) {
-                    $.ajax({
-                        url: `/Grade/GetSubjectMinValue?academicClassId=${academicClassId}&subjectId=${sid}`,
-                        type: 'GET',
-                        dataType: 'json',
-                        success: res => {
-                            if (res.success) {
-                                currentMinValue = res.data?.min_value;
-                                updateMinCells();
-                            }
-                        },
-                        error: () => {
-                            currentMinValue = null;
-                            updateMinCells();
-                        }
-                    });
-                }
+            $.getJSON(`/Class/GetById?id=${cid}`, function (res) {
+                if (res && res.success && res.data) { academicYearId = res.data.academic_year_id; initSubject(res.data.class_level); }
             });
         });
 
-        function initSubject(classLevel) {
-
-            const $subject = $('#subject_id');
-
-            // Destroy select2 dulu kalau sudah pernah dibuat
-            if ($subject.hasClass("select2-hidden-accessible")) {
-                $subject.select2('destroy');
-            }
-
-            $subject.empty().val(null).trigger('change');
-
-            $subject.select2({
-                placeholder: "-- Select --",
-                allowClear: false,
-                ajax: {
-                    url: `/Select2/Subjects?classLevel=${classLevel}`,
-                    dataType: 'json',
-                    delay: 250,
-                    data: p => ({
-                        q: p.term || '',
-                        page: p.page || 1
-                    }),
-                    processResults: d => ({
-                        results: d.results,
-                        pagination: d.pagination
-                    }),
-                    cache: true
-                },
-                minimumInputLength: 0
+        $('#subject_id').on('change', function () {
+            const sid = $(this).val(); currentMinValue = null; updateMinCells();
+            if (!academicClassId || !sid) return;
+            $.getJSON(`/Grade/GetSubjectMinValue?academicClassId=${academicClassId}&subjectId=${sid}`, function (res) {
+                if (res.success) { currentMinValue = res.data?.min_value; updateMinCells(); }
             });
-        }
-    </script>
+        });
+    });
+</script>
 }

@@ -29,60 +29,31 @@ namespace Haniya.Controllers.PortalStudent
 
 
         /* ===================== API ===================== */
-
-        private (int draw, int start, int length, string searchValue, int orderColumnIndex, string orderDir) ParseDataTablesQuery()
+        public class ListSort
         {
-            var form = Request.HasFormContentType ? Request.Form : null;
-            var q = Request.Query;
-
-            string GetVal(string key)
-            {
-                if (form != null && form.ContainsKey(key)) return form[key].ToString();
-                return q[key].ToString();
-            }
-
-            int.TryParse(GetVal("draw"), out var draw);
-            if (draw <= 0) draw = 1;
-            int.TryParse(GetVal("start"), out var start);
-            if (start < 0) start = 0;
-            int.TryParse(GetVal("length"), out var length);
-            if (length <= 0) length = 10;
-            var searchValue = GetVal("search[value]") ?? string.Empty;
-            int.TryParse(GetVal("order[0][column]"), out var orderColumnIndex);
-            var rawDir = (GetVal("order[0][dir]") ?? "").ToUpper();
-            var orderDir = rawDir is "ASC" or "DESC" ? rawDir : "ASC";
-
-            return (draw, start, length, searchValue, orderColumnIndex, orderDir);
+            public string field { get; set; } = "day";
+            public string order { get; set; } = "asc";
         }
 
-        private string GetScheduleOrderByColumn(int orderColumnIndex)
+        public class ListRequest
         {
-            return orderColumnIndex switch
-            {
-                0 => @"CASE sch.day
-                            WHEN 'DAY_MON' THEN 1
-                            WHEN 'DAY_TUE' THEN 2
-                            WHEN 'DAY_WED' THEN 3
-                            WHEN 'DAY_THU' THEN 4
-                            WHEN 'DAY_FRI' THEN 5
-                            WHEN 'DAY_SAT' THEN 6
-                            WHEN 'DAY_SUN' THEN 7
-                            ELSE 99
-                        END",
-                1 => "sd.start_time",
-                2 => "sub.subject_name",
-                3 => "ht.full_name",
-                4 => "c.class_name",
-                _ => "sd.start_time"
-            };
+            public int page { get; set; } = 1;
+            public int limit { get; set; } = 10;
+            public Dictionary<string, string>? filters { get; set; }
+            public ListSort? sort { get; set; }
         }
 
         [HttpPost]
-        public IActionResult GetMySchedule()
+        public IActionResult GetMySchedule([FromBody] ListRequest? req)
         {
             try
             {
-                var (draw, start, length, search, orderColumnIndex, orderDir) = ParseDataTablesQuery();
+                req ??= new ListRequest();
+                var page = req.page <= 0 ? 1 : req.page;
+                var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
+                var offset = (page - 1) * limit;
+                var filters = req.filters ?? new Dictionary<string, string>();
+                filters.TryGetValue("search", out var search);
                 // Ambil student_id dari login
                 var studentId = User.FindFirst("StudentId")?.Value;
 
@@ -93,10 +64,22 @@ namespace Haniya.Controllers.PortalStudent
                 using var conn = GetConn();
                 conn.Open();
 
+                var currentClassFilterSql = @"
+                      AND sc.student_class_id = (
+                            SELECT TOP 1 sc2.student_class_id
+                            FROM mst_student_classes sc2
+                            JOIN mst_academic_classes ac2 ON sc2.academic_class_id = ac2.academic_class_id
+                            JOIN mst_academic_years ay2 ON ac2.academic_year_id = ay2.academic_year_id
+                            WHERE sc2.student_id = @studentId
+                              AND ay2.status = 'ACTIVE'
+                            ORDER BY sc2.student_class_id DESC
+                      )";
+
                 var whereSql = @"
                     WHERE sc.student_id = @studentId
                       AND ay.status = 'ACTIVE'
                       AND sch.day IN ('DAY_MON','DAY_TUE','DAY_WED','DAY_THU','DAY_FRI')
+                    " + currentClassFilterSql + @"
                       AND (
                             @search IS NULL
                             OR sub.subject_name LIKE @search
@@ -105,7 +88,26 @@ namespace Haniya.Controllers.PortalStudent
                             OR sch.day LIKE @search
                           )";
                 var searchPattern = string.IsNullOrWhiteSpace(search) ? null : $"%{search.Trim()}%";
-                var orderBy = GetScheduleOrderByColumn(orderColumnIndex);
+                var sortMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["day"] = @"CASE sch.day
+                                    WHEN 'DAY_MON' THEN 1
+                                    WHEN 'DAY_TUE' THEN 2
+                                    WHEN 'DAY_WED' THEN 3
+                                    WHEN 'DAY_THU' THEN 4
+                                    WHEN 'DAY_FRI' THEN 5
+                                    WHEN 'DAY_SAT' THEN 6
+                                    WHEN 'DAY_SUN' THEN 7
+                                    ELSE 99
+                                END",
+                    ["time"] = "sd.start_time",
+                    ["subject"] = "sub.subject_name",
+                    ["teacher"] = "ht.full_name",
+                    ["class"] = "c.class_name"
+                };
+                var sort = req.sort ?? new ListSort();
+                var orderBy = sortMap.TryGetValue(sort.field ?? "", out var mapped) ? mapped : sortMap["day"];
+                var orderDir = string.Equals(sort.order, "desc", StringComparison.OrdinalIgnoreCase) ? "DESC" : "ASC";
 
                 var totalSql = @"
                     SELECT COUNT(*)
@@ -119,7 +121,8 @@ namespace Haniya.Controllers.PortalStudent
                     JOIN mst_classes c ON ac.class_id = c.class_id
                     WHERE sc.student_id = @studentId
                       AND ay.status = 'ACTIVE'
-                      AND sch.day IN ('DAY_MON','DAY_TUE','DAY_WED','DAY_THU','DAY_FRI')";
+                      AND sch.day IN ('DAY_MON','DAY_TUE','DAY_WED','DAY_THU','DAY_FRI')
+                    " + currentClassFilterSql;
 
                 var filteredSql = @"
                     SELECT COUNT(*)
@@ -185,8 +188,8 @@ namespace Haniya.Controllers.PortalStudent
                 {
                     cmd.Parameters.AddWithValue("@studentId", studentId);
                     cmd.Parameters.AddWithValue("@search", (object)searchPattern ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@start", start);
-                    cmd.Parameters.AddWithValue("@length", length);
+                    cmd.Parameters.AddWithValue("@start", offset);
+                    cmd.Parameters.AddWithValue("@length", limit);
 
                     using var r = cmd.ExecuteReader();
 
@@ -215,7 +218,14 @@ namespace Haniya.Controllers.PortalStudent
                     }
                 }
 
-                return Json(new { draw, recordsTotal, recordsFiltered, data = list });
+                var hasNextPage = (offset + list.Count) < recordsFiltered;
+                return Json(DTOResponse.ok(new
+                {
+                    data = list,
+                    hasNextPage,
+                    totalRows = recordsFiltered,
+                    totalAll = recordsTotal
+                }));
             }
             catch (Exception ex)
             {

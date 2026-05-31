@@ -5,9 +5,8 @@
 
 <div class="flex justify-between items-center mb-4">
     <h2 class="text-xl font-semibold">Attendance List</h2>
-    <a href="/Attendance/Create"
-       class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900"
-       data-testid="attendance-add-button">
+    <a id="attendance-add-link" href="/Attendance/Create"
+       class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
         + Add Attendance
     </a>
 </div>
@@ -17,25 +16,29 @@
         <div id="attendance-table-toolbar" class="flex flex-col md:flex-row md:items-center md:justify-between gap-3"></div>
     </div>
 
-    <div class="overflow-x-auto px-4 pt-4">
-        <table id="attendance-table"
-               class="min-w-full text-sm text-left text-gray-700 border-collapse">
+    <div class="relative overflow-x-auto px-4 pt-4">
+        <div id="attendance-table-loading" class="hidden absolute inset-0 z-20 bg-white/80 backdrop-blur-[1px] flex items-center justify-center">
+            <div class="flex flex-col items-center gap-3 text-gray-600">
+                <div class="w-8 h-8 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin"></div>
+                <p class="text-sm font-medium">Loading attendance data...</p>
+            </div>
+        </div>
+        <table id="attendance-table" class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Academic Year</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Semester</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Date</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Class</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Teacher</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 200px;">Summary</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 70px;">Action</th>
+                    <th data-sort="academicYear" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Academic Year</th>
+                    <th data-sort="semester" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Semester</th>
+                    <th data-sort="date" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Date</th>
+                    <th data-sort="class" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Class</th>
+                    <th data-sort="teacher" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Teacher</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Summary</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 110px;">Action</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100"></tbody>
         </table>
     </div>
 
-    <!-- Info + pagination -->
     <div class="px-4 pb-4 pt-3">
         <div id="attendance-table-footer" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div id="table-info-container"></div>
@@ -44,336 +47,337 @@
     </div>
 </div>
 
+@await Html.PartialAsync("_TailwindConfirmModal")
+
 @section Scripts {
-    <script>
-        let attendanceTable = null;
-        let currentAttendanceMonth = '';
-        let currentAcademicYearId = '';
-        let currentAcademicClassId = '';
+<script>
+    const now = new Date();
+    const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const pageState = {
+        page: 1,
+        limit: 10,
+        filters: { academic_year_id: '', academic_class_id: '', attendance_month: defaultMonth },
+        sort: { field: 'date', order: 'desc' },
+        hasNextPage: false,
+        totalRows: 0
+    };
+    let lastRequestKey = '';
 
-        $(document).ready(function () {
-            // Default to current month (yyyy-MM)
-            const today = new Date();
-            currentAttendanceMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    function getStateQuery() {
+        return `page=${pageState.page}&limit=${pageState.limit}&academicYear=${encodeURIComponent(pageState.filters.academic_year_id || '')}&academicClass=${encodeURIComponent(pageState.filters.academic_class_id || '')}&month=${encodeURIComponent(pageState.filters.attendance_month || '')}&sortField=${encodeURIComponent(pageState.sort.field)}&sortOrder=${encodeURIComponent(pageState.sort.order)}`;
+    }
 
-            initAttendanceTable();
+    function syncStateToUrl() {
+        history.replaceState({ ...pageState }, '', `?${getStateQuery()}`);
+        $('#attendance-add-link').attr('href', `/Attendance/Create?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+    }
 
-            // Close menu when clicking outside
-            $(document).on('click', function (e) {
-                if (!$(e.target).closest('.attendance-actions-wrapper').length) {
-                    $('.attendance-actions-menu').addClass('hidden');
-                }
-            });
+    function hydrateStateFromUrl() {
+        const q = new URLSearchParams(window.location.search);
+        const page = Number(q.get('page') || 1);
+        const limit = Number(q.get('limit') || 10);
+        pageState.page = Number.isFinite(page) && page > 0 ? page : 1;
+        pageState.limit = Number.isFinite(limit) && limit > 0 ? limit : 10;
+        pageState.filters.academic_year_id = q.get('academicYear') || '';
+        pageState.filters.academic_class_id = q.get('academicClass') || '';
+        pageState.filters.attendance_month = q.get('month') || defaultMonth;
+        pageState.sort.field = q.get('sortField') || 'date';
+        pageState.sort.order = q.get('sortOrder') || 'desc';
+    }
+
+    function renderToolbar() {
+        $('#attendance-table-toolbar').html(`
+            <div class="flex items-center gap-2 text-sm text-gray-600">
+                Show
+                <select id="list-limit" class="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:ring-2 focus:ring-blue-500">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select> rows
+            </div>
+            <div class="relative">
+                <button id="attendanceFilterToggleBtn" type="button" class="flex items-center gap-2 bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
+                    Filter
+                </button>
+                <div id="attendanceFilterDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl border border-gray-200 shadow-xl z-50 overflow-visible">
+                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                        <h3 class="text-lg font-bold text-gray-800">Filter</h3>
+                        <button type="button" id="attendanceFilterCloseBtn" class="text-gray-400 hover:text-gray-600 transition p-1 rounded-lg hover:bg-gray-100">?</button>
+                    </div>
+                    <div class="px-5 py-4 space-y-4">
+                        <div><label class="block text-xs font-medium mb-1" for="filter_academic_year">Academic Year</label><select id="filter_academic_year" class="w-full"></select></div>
+                        <div><label class="block text-xs font-medium mb-1" for="filter_month">Attendance Month</label><input type="month" id="filter_month" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" /></div>
+                        <div><label class="block text-xs font-medium mb-1" for="filter_class">Class</label><select id="filter_class" class="w-full"></select></div>
+                    </div>
+                    <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
+                        <button type="button" id="apply-attendance-filter-btn" class="px-5 py-2 rounded-full text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 transition">Filter</button>
+                    </div>
+                </div>
+            </div>
+        `);
+
+        $('#list-limit').val(String(pageState.limit)).off('change').on('change', function () {
+            const next = Number($(this).val() || 10);
+            if (pageState.limit === next) return;
+            pageState.limit = next;
+            pageState.page = 1;
+            lastRequestKey = '';
+            fetchAttendances();
         });
 
-        function initAttendanceTable() {
-            attendanceTable = $('#attendance-table').DataTable({
-                processing: true,
-                serverSide: true,
-                searching: false,
-                lengthChange: true,
-                ajax: {
-                    url: '/Attendance/GetAll',
-                    type: 'POST',
-                    data: function (d) {
-                        d.academic_year_id = currentAcademicYearId || null;
-                        d.academic_class_id = currentAcademicClassId || null;
-                        d.attendance_month = currentAttendanceMonth || null;
-                    }
-                },
-                dom: 'lftip',
-                language: {
-                    lengthMenu: "Show _MENU_ rows",
-                    search: "",
-                    searchPlaceholder: "Search...",
-                    paginate: {
-                        first: "First",
-                        last: "Last",
-                        next: "Next",
-                        previous: "Previous"
-                    },
-                    info: "Showing _START_ to _END_ of _TOTAL_ entries"
-                },
-                columns: [
-                    {
-                        data: null,
-                        className: 'py-3',
-                        render: function (data, type, row) {
-                            return `${formatYearShort(row.start_date)} - ${formatYearShort(row.end_date)}`;
-                        }
-                    },
-                    {
-                        data: 'semester',
-                        className: 'py-3',
-                        render: function (data) {
-                            return data ? `Semester ${data}` : '-';
-                        }
-                    },
-                    {
-                        data: 'attendance_date',
-                        className: 'py-3 text-gray-900',
-                        render: function (data) {
-                            if (!data) return '-';
-                            return new Date(data).toLocaleDateString('id-ID', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
-                            });
-                        }
-                    },
-                    {
-                        data: 'class_name',
-                        className: 'py-3 text-gray-700'
-                    },
-                    {
-                        data: 'teacher_name',
-                        className: 'py-3 text-gray-700'
-                    },
-                    {
-                        data: null,
-                        className: 'py-3',
-                        render: function (row) {
-                            return `Hadir: ${row.present || 0} | Sakit: ${row.sick || 0} | Izin: ${row.permit || 0} | Alpa: ${row.alpha || 0}`;
-                        }
-                    },
-                    {
-                        data: null,
-                        orderable: false,
-                        searchable: false,
-                        className: 'text-center py-3',
-                        render: function (data, type, row) {
-                            var id = row.attendance_id;
-                            var editUrl = '/Attendance/Edit?id=' + id;
-                            return `
-                                        <div class="flex justify-center attendance-actions-wrapper relative">
-                                            <button type="button"
-                                                    onclick="toggleActionsMenu(event, '${id}')"
-                                                    class="p-1.5 hover:bg-gray-100 rounded-md transition-colors duration-150"
-                                                    data-testid="attendance-actions-toggle-${id}">
-                                                <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                                                </svg>
-                                            </button>
-                                            <div id="actions-menu-${id}" class="attendance-actions-menu hidden absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10">
-                                                <a href="${editUrl}"
-                                                   class="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50"
-                                                   data-testid="attendance-edit-action-${id}">
-                                                    <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                    </svg>
-                                                    Edit
-                                                </a>
-                                                <button type="button"
-                                                        onclick="delAttendance('${id}')"
-                                                        class="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100"
-                                                        data-testid="attendance-delete-action-${id}">
-                                                    <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                    Delete
-                                                </button>
-                                            </div>
-                                        </div>`;
-                        }
-                    }
-                ],
-                initComplete: function () {
-                    const wrapper = $('#attendance-table_wrapper');
+        const $dropdown = $('#attendanceFilterDropdown');
+        $('#attendanceFilterToggleBtn').off('click').on('click', function () { $dropdown.toggleClass('hidden'); });
+        $('#attendanceFilterCloseBtn').off('click').on('click', function () { $dropdown.addClass('hidden'); });
+        $('#apply-attendance-filter-btn').off('click').on('click', applyAttendanceFilter);
 
-                    const $length = wrapper.find('.dataTables_length, .dt-length');
-                    const $filter = wrapper.find('.dataTables_filter, .dt-search');
+        $('#filter_month').val(pageState.filters.attendance_month || defaultMonth);
 
-                    $filter.hide();
+        $('#filter_academic_year').select2({
+            placeholder: 'All Academic Years',
+            allowClear: true,
+            width: '100%',
+            ajax: {
+                url: '/Select2/AcademicYears',
+                dataType: 'json',
+                delay: 250,
+                data: params => ({ q: params.term || '', page: params.page || 1 }),
+                processResults: data => ({ results: data.results, pagination: data.pagination }),
+                cache: true
+            },
+            minimumInputLength: 0
+        });
 
-                    const $toggleFilter = $(`
-                        <div class="relative">
-                            <button id="filterToggleBtn"
-                                    onclick="toggleFilter()"
-                                    class="flex items-center gap-2 bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none"
-                                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-                                </svg>
-                                Filter
+        $('#filter_class').select2({
+            placeholder: '-- All Classes --',
+            allowClear: true,
+            width: '100%',
+            ajax: {
+                url: '/Select2/AcademicClasses',
+                dataType: 'json',
+                delay: 250,
+                data: params => ({ q: params.term || '', page: params.page || 1, activeOnly: true }),
+                processResults: data => ({ results: data.results, pagination: data.pagination }),
+                cache: true
+            },
+            minimumInputLength: 0
+        });
+    }
+
+    function upsertSelect2Value(selector, id, text) {
+        if (!id) return;
+        if ($(selector + ` option[value="${id}"]`).length === 0) {
+            const option = new Option(text || id, id, true, true);
+            $(selector).append(option);
+        }
+        $(selector).val(id).trigger('change');
+    }
+
+    async function initDefaultAcademicYear() {
+        try {
+            const res = await $.get('/Attendance/GetActiveAcademicYear');
+            if (!res || !res.success || !res.data || !res.data.id) return;
+            if (!pageState.filters.academic_year_id) {
+                pageState.filters.academic_year_id = res.data.id;
+            }
+            upsertSelect2Value('#filter_academic_year', pageState.filters.academic_year_id, res.data.text || pageState.filters.academic_year_id);
+        } catch { }
+    }
+
+    function applyAttendanceFilter() {
+        pageState.filters.academic_year_id = $('#filter_academic_year').val() || '';
+        pageState.filters.academic_class_id = $('#filter_class').val() || '';
+        pageState.filters.attendance_month = $('#filter_month').val() || defaultMonth;
+        pageState.page = 1;
+        lastRequestKey = '';
+        fetchAttendances();
+        $('#attendanceFilterDropdown').addClass('hidden');
+    }
+
+    function renderSortIndicators() {
+        $('#attendance-table thead th[data-sort]').each(function () {
+            const field = $(this).data('sort');
+            const isActive = field === pageState.sort.field;
+            const icon = isActive ? (pageState.sort.order === 'asc' ? ' ↑' : ' ↓') : '';
+            const base = $(this).text().replace(/ [↑↓]$/, '');
+            $(this).text(base + icon);
+        });
+    }
+
+    function formatDate(value) {
+        if (!value) return '-';
+        const date = new Date(value);
+        if (isNaN(date.getTime())) return '-';
+        return date.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+
+    function renderRows(items) {
+        const $tbody = $('#attendance-table tbody');
+        if (!items || !items.length) {
+            $tbody.html('<tr><td colspan="7" class="px-4 py-8 text-center text-gray-500">No data found.</td></tr>');
+            return;
+        }
+
+        let html = '';
+        const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+        items.forEach(row => {
+            const id = row.attendance_id || '';
+            html += `
+                <tr>
+                    <td class="px-4 py-3">${new Date(row.start_date).getFullYear()} - ${new Date(row.end_date).getFullYear()}</td>
+                    <td class="px-4 py-3">${row.semester ? `Semester ${row.semester}` : '-'}</td>
+                    <td class="px-4 py-3">${formatDate(row.attendance_date)}</td>
+                    <td class="px-4 py-3">${row.class_name || '-'}</td>
+                    <td class="px-4 py-3">${row.teacher_name || '-'}</td>
+                    <td class="px-4 py-3">Hadir: ${row.present || 0} | Sakit: ${row.sick || 0} | Izin: ${row.permit || 0} | Alpa: ${row.alpha || 0}</td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="flex flex-wrap gap-2 justify-center">
+                            <a href="/Attendance/Edit?id=${encodeURIComponent(id)}&returnUrl=${returnUrl}" class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200" title="Edit">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+                            </a>
+                            <button type="button" onclick="delAttendance('${id}')" class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-red-100 text-red-700 hover:bg-red-200" title="Delete">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path></svg>
                             </button>
-
-                            <div id="filterDropdown"
-                                 class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl border border-gray-200 shadow-xl z-50 overflow-visible">
-                                <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                                    <h3 class="text-lg font-bold text-gray-800">Filter</h3>
-                                    <button type="button"
-                                            onclick="toggleFilter()"
-                                            class="text-gray-400 hover:text-gray-600 transition p-1 rounded-lg hover:bg-gray-100">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
-                                             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                            <line x1="18" y1="6" x2="6" y2="18" />
-                                            <line x1="6" y1="6" x2="18" y2="18" />
-                                        </svg>
-                                    </button>
-                                </div>
-                                <div class="px-5 py-4 space-y-4">
-                                    <div class="w-full">
-                                        <label class="block text-xs font-medium mb-1" for="filter_academic_year">Academic Year</label>
-                                        <select id="filter_academic_year" class="w-full"></select>
-                                    </div>
-                                    <div class="w-full">
-                                        <label class="block text-xs font-medium mb-1" for="filter_month">Attendance Month</label>
-                                        <input type="month" id="filter_month"
-                                               value="${currentAttendanceMonth}"
-                                               class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-                                    </div>
-                                    <div class="w-full">
-                                        <label class="block text-xs font-medium mb-1" for="filter_class">Class</label>
-                                        <select id="filter_class" class="w-full"></select>
-                                    </div>
-                                </div>
-                                <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
-                                    <button type="button"
-                                            onclick="applyAttendanceFilter()"
-                                            class="px-5 py-2 rounded-full text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 transition">
-                                        Filter
-                                    </button>
-                                </div>
-                            </div>
                         </div>
-                    `);
+                    </td>
+                </tr>
+            `;
+        });
+        $tbody.html(html);
+    }
 
-                    $('#attendance-table-toolbar').empty().append($length).append($toggleFilter);
+    function renderPagination(currentCount) {
+        const start = currentCount === 0 ? 0 : ((pageState.page - 1) * pageState.limit) + 1;
+        const end = ((pageState.page - 1) * pageState.limit) + currentCount;
+        $('#table-info-container').html(`<span class="text-sm text-gray-600">Showing ${start} to ${end} of ${pageState.totalRows}</span>`);
 
-                    $length.addClass('flex items-center gap-2 text-sm text-gray-600');
-                    $length.find('label').addClass('flex items-center gap-2');
-                    $length.find('select').addClass(
-                        'border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 ' +
-                        'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-                    );
+        const prevDisabled = pageState.page <= 1;
+        const nextDisabled = !pageState.hasNextPage;
+        $('#table-pagination-container').html(`
+            <div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                <button id="page-prev" class="px-3 py-2 text-sm border-r border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Prev</button>
+                <span class="px-3 py-2 text-sm bg-blue-900 text-white font-semibold">${pageState.page}</span>
+                <button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Next</button>
+            </div>
+        `);
 
-                    $('#attendance-table-toolbar').addClass('flex flex-col md:flex-row md:items-center md:justify-between gap-4');
+        $('#page-prev').off('click').on('click', function () {
+            if (pageState.page <= 1) return;
+            pageState.page -= 1;
+            lastRequestKey = '';
+            fetchAttendances();
+        });
+        $('#page-next').off('click').on('click', function () {
+            if (!pageState.hasNextPage) return;
+            pageState.page += 1;
+            lastRequestKey = '';
+            fetchAttendances();
+        });
+    }
 
-                    $('#filter_academic_year').select2({
-                        placeholder: "All Academic Years",
-                        allowClear: true,
-                        width: '100%',
-                        ajax: {
-                            url: '/Select2/AcademicYears',
-                            dataType: 'json',
-                            delay: 250,
-                            data: params => ({ q: params.term || '', page: params.page || 1 }),
-                            processResults: data => ({ results: data.results, pagination: data.pagination }),
-                            cache: true
-                        },
-                        minimumInputLength: 0
-                    });
+    function setAttendanceLoading(isLoading) {
+        $('#attendance-table-loading').toggleClass('hidden', !isLoading);
+    }
 
-                    $('#filter_class').select2({
-                        placeholder: "-- All Classes --",
-                        allowClear: true,
-                        width: '100%',
-                        ajax: {
-                            url: '/Select2/AcademicClasses',
-                            dataType: 'json',
-                            delay: 250,
-                            data: params => ({ q: params.term || '', page: params.page || 1, activeOnly: true }),
-                            processResults: data => ({ results: data.results, pagination: data.pagination }),
-                            cache: true
-                        },
-                        minimumInputLength: 0
-                    });
+    async function fetchAttendances() {
+        const payload = {
+            page: pageState.page,
+            limit: pageState.limit,
+            filters: { ...pageState.filters },
+            sort: { ...pageState.sort }
+        };
+        const requestKey = JSON.stringify(payload);
+        if (requestKey === lastRequestKey) return;
+        lastRequestKey = requestKey;
 
-                    $.ajax({
-                        url: '/Attendance/GetActiveAcademicYear',
-                        type: 'GET',
-                        success: function (res) {
-                            if (!res || !res.success || !res.data || !res.data.id) return;
+        syncStateToUrl();
+        renderSortIndicators();
+        setAttendanceLoading(true);
 
-                            currentAcademicYearId = res.data.id;
-
-                            if ($('#filter_academic_year option[value="' + res.data.id + '"]').length === 0) {
-                                const option = new Option(res.data.text || '', res.data.id, true, true);
-                                $('#filter_academic_year').append(option);
-                            }
-
-                            $('#filter_academic_year').val(res.data.id).trigger('change');
-                            attendanceTable.ajax.reload(null, true);
-                        }
-                    });
-
-                    stylePagination();
-                },
-                drawCallback: function () {
-                    setTimeout(stylePagination, 50);
-                }
+        try {
+            const res = await $.ajax({
+                url: '/Attendance/GetAll',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(payload)
             });
-        }
 
-        function applyAttendanceFilter() {
-            currentAcademicYearId = $('#filter_academic_year').val() || '';
-            currentAttendanceMonth = $('#filter_month').val() || '';
-            currentAcademicClassId = $('#filter_class').val() || '';
-            attendanceTable.ajax.reload(null, true);
-            toggleFilter();
-        }
-
-        function formatYearShort(d) {
-            if (!d) return "";
-            const date = new Date(d);
-            if (isNaN(date.getTime())) return "";
-            return date.getFullYear();
-        }
-
-        function stylePagination() {
-            const wrapper = $('#attendance-table_wrapper');
-            let $info = wrapper.find('.dataTables_info').first();
-            if ($info.length === 0) $info = wrapper.find('.dt-info').first();
-
-            let $paginate = wrapper.find('.dataTables_paginate').first();
-            if ($paginate.length === 0) $paginate = wrapper.find('.dt-paging').first();
-
-            if ($info.length > 0) {
-                $('#table-info-container').empty().append($info);
-                $info.removeClass().addClass('text-sm text-gray-600');
+            if (!res || !res.success) {
+                lastRequestKey = '';
+                await tailwindMessageModal('Failed', (res && res.message) ? res.message : 'Failed to load attendance data.');
+                return;
             }
 
-            if ($paginate.length > 0) {
-                $('#table-pagination-container').empty().append($paginate);
-            }
-
-            $('#table-pagination-container').addClass('w-full flex justify-end overflow-x-auto whitespace-nowrap');
-            if (typeof applyAdminPaginationStyle === 'function') {
-                applyAdminPaginationStyle($('#table-pagination-container'));
-            }
+            const result = res.data || {};
+            const items = result.data || [];
+            pageState.hasNextPage = !!result.hasNextPage;
+            pageState.totalRows = Number(result.totalRows || 0);
+            renderRows(items);
+            renderPagination(items.length);
+        } catch {
+            lastRequestKey = '';
+            await tailwindMessageModal('Error', 'An error occurred while loading attendance data.');
+        } finally {
+            setAttendanceLoading(false);
         }
+    }
 
-        function toggleActionsMenu(event, id) {
-            event.stopPropagation();
-            $('.attendance-actions-menu').addClass('hidden');
-            const menu = $('#actions-menu-' + id);
-            menu.toggleClass('hidden');
-        }
+    async function delAttendance(id) {
+        const yes = await tailwindConfirmModal({
+            title: 'Delete Confirmation',
+            message: 'Are you sure you want to delete this attendance record?',
+            confirmText: 'Delete',
+            cancelText: 'Cancel'
+        });
+        if (!yes) return;
 
-        function delAttendance(id) {
-            $('.attendance-actions-menu').addClass('hidden');
-            if (!confirm("Delete this attendance record?")) return;
-
-            $.ajax({
-                url: "/Attendance/Delete",
-                type: "POST",
-                contentType: "application/json",
-                data: JSON.stringify({
-                    action: "delete",
-                    id: id,
-                    data: null
-                }),
-                success: res => {
-                    if (res.success) {
-                        $('#attendance-table').DataTable().ajax.reload(null, false);
-                    } else {
-                        alert(res.message || "Failed to delete attendance record");
-                    }
-                },
-                error: function () {
-                    alert("An error occurred while deleting the attendance record.");
-                }
+        try {
+            const res = await $.ajax({
+                url: '/Attendance/Delete',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ action: 'delete', id: id, data: null })
             });
+            if (!res || !res.success) {
+                await tailwindMessageModal('Failed', (res && res.message) ? res.message : 'Delete failed.');
+                return;
+            }
+            lastRequestKey = '';
+            await fetchAttendances();
+            await tailwindMessageModal('Deleted', 'Attendance has been deleted.');
+        } catch {
+            await tailwindMessageModal('Error', 'An error occurred while deleting the attendance.');
         }
-    </script>
+    }
+
+    $(document).ready(async function () {
+        hydrateStateFromUrl();
+        renderToolbar();
+        await initDefaultAcademicYear();
+        renderSortIndicators();
+        fetchAttendances();
+
+        $(document).on('click', function (e) {
+            const $dropdown = $('#attendanceFilterDropdown');
+            const isToggle = $(e.target).closest('#attendanceFilterToggleBtn').length > 0;
+            const isInsideDropdown = $(e.target).closest('#attendanceFilterDropdown').length > 0;
+            const isSelect2 = $(e.target).closest('.select2-container, .select2-dropdown').length > 0;
+            if (!isToggle && !isInsideDropdown && !isSelect2) $dropdown.addClass('hidden');
+        });
+
+        $('#attendance-table thead').on('click', 'th[data-sort]', function () {
+            const field = $(this).data('sort');
+            if (!field) return;
+            if (pageState.sort.field === field) {
+                pageState.sort.order = pageState.sort.order === 'asc' ? 'desc' : 'asc';
+            } else {
+                pageState.sort.field = field;
+                pageState.sort.order = 'asc';
+            }
+            pageState.page = 1;
+            lastRequestKey = '';
+            fetchAttendances();
+        });
+    });
+</script>
 }

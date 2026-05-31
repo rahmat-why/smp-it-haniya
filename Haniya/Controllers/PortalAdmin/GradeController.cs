@@ -23,10 +23,33 @@ namespace Haniya.Controllers.PortalAdmin
             return View("~/Views/PortalAdmin/Grade/Edit.cshtml");
         }
 
-        [HttpPost]
-        public IActionResult GetAll(string academic_year_id = null, string academic_class_id = null, string grade_type = null)
+        public class ListSort
         {
-            var (draw, start, length, search, orderColumnIndex, orderDir) = ParseDataTablesQuery();
+            public string field { get; set; } = "date";
+            public string order { get; set; } = "desc";
+        }
+
+        public class ListRequest
+        {
+            public int page { get; set; } = 1;
+            public int limit { get; set; } = 10;
+            public Dictionary<string, string>? filters { get; set; }
+            public ListSort? sort { get; set; }
+        }
+
+        [HttpPost]
+        public IActionResult GetAll([FromBody] ListRequest? req)
+        {
+            req ??= new ListRequest();
+            var page = req.page <= 0 ? 1 : req.page;
+            var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
+            var offset = (page - 1) * limit;
+
+            var filters = req.filters ?? new Dictionary<string, string>();
+            filters.TryGetValue("academic_year_id", out var academic_year_id);
+            filters.TryGetValue("academic_class_id", out var academic_class_id);
+            filters.TryGetValue("grade_type", out var grade_type);
+            filters.TryGetValue("search", out var search);
 
             using var conn = GetConn();
             conn.Open();
@@ -64,9 +87,25 @@ namespace Haniya.Controllers.PortalAdmin
             }
 
 
-            var orderBy = GetGradeOrderByColumn(orderColumnIndex);
-            if (string.IsNullOrWhiteSpace(orderBy))
-                orderBy = "g.grade_date";
+            var sortMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["academicYear"] = "ay.start_date",
+                ["semester"] = "ay.semester",
+                ["date"] = "g.grade_date",
+                ["class"] = "c.class_name",
+                ["subject"] = "s.subject_name",
+                ["teacher"] = "t.first_name",
+                ["gradeType"] = "COALESCE(dt.item_desc, g.grade_type)",
+                ["minimumValue"] = "ISNULL(r.minimum_value, 0)",
+                ["passed"] = "SUM(CASE WHEN TRY_CAST(REPLACE(d.grade_value, ',', '.') AS FLOAT) >= ISNULL(r.minimum_value,0) THEN 1 ELSE 0 END)",
+                ["remedial"] = "SUM(CASE WHEN TRY_CAST(REPLACE(d.grade_value, ',', '.') AS FLOAT) < ISNULL(r.minimum_value,0) OR TRY_CAST(REPLACE(d.grade_value, ',', '.') AS FLOAT) IS NULL THEN 1 ELSE 0 END)"
+            };
+            var sort = req.sort ?? new ListSort();
+            var orderBy = sortMap.TryGetValue(sort.field ?? "", out var mapped) ? mapped : "g.grade_date";
+            var orderDir = string.Equals(sort.order, "asc", StringComparison.OrdinalIgnoreCase) ? "ASC" : "DESC";
+            var secondaryOrder = string.Equals(orderBy, "g.grade_date", StringComparison.OrdinalIgnoreCase)
+                ? "g.grade_id DESC"
+                : "g.grade_date DESC";
 
             // ================= MAIN QUERY =================
             var sql = @"
@@ -157,7 +196,7 @@ namespace Haniya.Controllers.PortalAdmin
 
         ORDER BY 
             " + orderBy + " " + orderDir + @",
-            g.grade_date DESC,
+            " + secondaryOrder + @",
             MAX(g.created_at) DESC
 
         OFFSET @start ROWS FETCH NEXT @length ROWS ONLY";
@@ -228,8 +267,8 @@ namespace Haniya.Controllers.PortalAdmin
                 cmd.Parameters.AddWithValue("@academicYearId", (object)academic_year_id ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@gradeType", (object)grade_type ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@search", (object)searchKeyword ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@start", start);
-                cmd.Parameters.AddWithValue("@length", length);
+                cmd.Parameters.AddWithValue("@start", offset);
+                cmd.Parameters.AddWithValue("@length", limit);
 
                 using var r = cmd.ExecuteReader();
 
@@ -261,13 +300,14 @@ namespace Haniya.Controllers.PortalAdmin
             }
 
 
-            return Json(new
+            var hasNextPage = (offset + list.Count) < recordsFiltered;
+            return Json(DTOResponse.ok(new
             {
-                draw,
-                recordsTotal,
-                recordsFiltered,
-                data = list
-            });
+                data = list,
+                hasNextPage,
+                totalRows = recordsFiltered,
+                totalAll = recordsTotal
+            }));
         }
 
         [HttpGet]
@@ -304,43 +344,6 @@ namespace Haniya.Controllers.PortalAdmin
             }
         }
 
-        private (int draw, int start, int length, string searchValue, int orderColumnIndex, string orderDir) ParseDataTablesQuery()
-        {
-            var form = Request.HasFormContentType ? Request.Form : null;
-            var q = Request.Query;
-
-            string GetVal(string key)
-            {
-                if (form != null && form.ContainsKey(key)) return form[key].ToString();
-                return q[key].ToString();
-            }
-
-            int.TryParse(GetVal("draw"), out var draw); draw = draw > 0 ? draw : 1;
-            int.TryParse(GetVal("start"), out var start);
-            int.TryParse(GetVal("length"), out var length); length = length > 0 ? length : 10;
-            var searchValue = GetVal("search[value]") ?? "";
-            int.TryParse(GetVal("order[0][column]"), out var orderColumnIndex);
-            var rawOrderDir = (GetVal("order[0][dir]") ?? "").ToUpper();
-            var orderDir = rawOrderDir is "ASC" or "DESC" ? rawOrderDir : "ASC";
-            return (draw, start, length, searchValue, orderColumnIndex, orderDir);
-        }
-
-        private string GetGradeOrderByColumn(int orderColumnIndex)
-        {
-            return orderColumnIndex switch
-            {
-                0 => "ay.start_date",
-                1 => "ay.semester",
-                2 => "g.grade_date",
-                3 => "c.class_name",
-                4 => "s.subject_name",
-                5 => "t.first_name",
-                6 => "COALESCE(dt.item_desc, g.grade_type)",
-                7 => "ISNULL(r.minimum_value, 0)",
-                8 => "SUM(CASE WHEN TRY_CAST(REPLACE(d.grade_value, ',', '.') AS FLOAT) >= ISNULL(r.minimum_value,0) THEN 1 ELSE 0 END)",
-                _ => "g.grade_date"
-            };
-        }
 
         [HttpGet]
         public IActionResult GetById(string id)

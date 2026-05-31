@@ -1,285 +1,58 @@
-﻿@{
+@{
     Layout = "_LayoutAdmin";
     ViewData["Title"] = "Articles";
 }
 
 <div class="flex justify-between items-center mb-4">
     <h2 class="text-xl font-semibold">Article List</h2>
-    <a href="/Article/Create"
-       class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900"
-       data-testid="article-add-button">
-        + Add Article
-    </a>
+    <a id="article-add-link" href="/Article/Create" class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm">+ Add Article</a>
 </div>
 
 <div class="bg-white rounded-lg shadow">
-    <!-- Toolbar & search -->
-    <div class="px-4 pt-4">
-        <div id="article-table-toolbar" class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <!-- DataTables akan inject length & search di sini -->
+    <div class="px-4 pt-4"><div id="article-table-toolbar" class="flex flex-col md:flex-row md:items-center md:justify-between gap-3"></div></div>
+    <div class="relative overflow-x-auto px-4 pt-4">
+        <div id="article-table-loading" class="hidden absolute inset-0 z-20 bg-white/80 backdrop-blur-[1px] flex items-center justify-center">
+            <div class="flex flex-col items-center gap-3 text-gray-600">
+                <div class="w-8 h-8 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin"></div>
+                <p class="text-sm font-medium">Loading article data...</p>
+            </div>
         </div>
-    </div>
-
-    <div class="overflow-x-auto px-4 pt-4">
-        <table id="article-table"
-               class="min-w-full text-sm text-left text-gray-700 border-collapse">
+        <table id="article-table" class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 120px;">Image</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Title</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Slug</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 120px;">Status</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Content</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Tag</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 160px;">Created Date</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right" style="width: 70px;">Action</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width:120px;">Image</th>
+                    <th data-sort="title" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Title</th>
+                    <th data-sort="slug" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Slug</th>
+                    <th data-sort="status" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Status</th>
+                    <th data-sort="content" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Content</th>
+                    <th data-sort="tags" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Tag</th>
+                    <th data-sort="createdAt" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Created Date</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width:110px;">Action</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100"></tbody>
         </table>
     </div>
-
-    <!-- Info + pagination -->
-    <div class="px-4 pb-4 pt-3">
-        <div id="article-table-footer" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div id="table-info-container"></div>
-            <div id="table-pagination-container"></div>
-        </div>
-    </div>
+    <div class="px-4 pb-4 pt-3"><div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"><div id="table-info-container"></div><div id="table-pagination-container"></div></div></div>
 </div>
 
+@await Html.PartialAsync("_TailwindConfirmModal")
+
 @section Scripts {
-    <script>
-        $(document).ready(function () {
-            initArticleTable();
-
-            // Close menu when clicking outside
-            $(document).on('click', function (e) {
-                if (!$(e.target).closest('.article-actions-wrapper').length) {
-                    $('.article-actions-menu').addClass('hidden');
-                }
-            });
-        });
-
-        function initArticleTable() {
-            const table = $('#article-table').DataTable({
-                processing: true,
-                serverSide: true,
-                searching: true,
-                lengthChange: true,
-                ajax: {
-                    url: '/Article/GetAll',
-                    type: 'POST'
-                },
-                dom: 'lftip',
-                language: {
-                    lengthMenu: "Show _MENU_ rows",
-                    search: "",
-                    searchPlaceholder: "Search...",
-                    paginate: {
-                        first: "First",
-                        last: "Last",
-                        next: "Next",
-                        previous: "Previous"
-                    },
-                    info: "Showing _START_ to _END_ of _TOTAL_ entries"
-                },
-                columns: [
-                    {
-                        data: 'image',
-                        className: 'py-3',
-                        render: function (data) {
-                            var src = data || '/image/no-image.png';
-                            return `
-                                        <img src="${src}"
-                                             class="w-16 h-16 rounded object-cover border border-gray-200 shadow-sm"
-                                             alt="Article Image">
-                                    `;
-                        }
-                    },
-                    {
-                        data: 'title',
-                        className: 'py-3 text-gray-900'
-                    },
-                    {
-                        data: 'slug',
-                        className: 'py-3 text-gray-600'
-                    },
-                    {
-                        data: 'status',
-                        className: 'py-3',
-                        render: function (data) {
-                            var badgeClass = data === 'Published' ? 'bg-green-100 text-green-800' :
-                                data === 'Draft' ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-gray-100 text-gray-800';
-                            return `<span class="inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${badgeClass}">${data || '-'}</span>`;
-                        }
-                    },
-                    {
-                        data: 'content',
-                        className: 'py-3 text-gray-600',
-                        render: function (data) {
-                            if (!data) return '-';
-                            var preview = data.length > 200 ? data.substring(0, 197) + '...' : data;
-                            return `<div class="line-clamp-2" title="${data.replace(/"/g, '&quot;')}">${preview}</div>`;
-                        }
-                    },
-                    {
-                        data: 'tags',
-                        className: 'py-3',
-                        render: function (data) {
-                            if (!data || data.trim() === '') return '-';
-
-                            var tagsArray = data.split(',').map(t => t.trim());
-                            var badges = tagsArray.map(tag => {
-                                return `<span class="inline-flex px-2.5 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 mr-1 mb-1">${tag}</span>`;
-                            });
-
-                            return `<div class="flex flex-wrap gap-1">${badges.join('')}</div>`;
-                        }
-                    },
-                    {
-                        data: 'created_at',
-                        className: 'py-3',
-                        render: function (data) {
-                            if (!data) return '-';
-                            var date = new Date(data);
-                            return date.toLocaleString('id-ID', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            });
-                        }
-                    },
-                    {
-                        data: null,
-                        orderable: false,
-                        searchable: false,
-                        className: 'text-center py-3',
-                        render: function (data, type, row) {
-                            var id = row.article_id;
-                            var editUrl = '/Article/Edit?id=' + id;
-                            return `
-                                        <div class="flex justify-center article-actions-wrapper relative">
-                                            <button type="button"
-                                                    onclick="toggleActionsMenu(event, '${id}')"
-                                                    class="p-1.5 hover:bg-gray-100 rounded-md transition-colors duration-150"
-                                                    data-testid="article-actions-toggle-${id}">
-                                                <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                                                </svg>
-                                            </button>
-                                            <div id="actions-menu-${id}" class="article-actions-menu hidden absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10">
-                                                <a href="${editUrl}"
-                                                   class="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50"
-                                                   data-testid="article-edit-action-${id}">
-                                                    <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                    </svg>
-                                                    Edit
-                                                </a>
-                                                <button type="button"
-                                                        onclick="delArticle('${id}')"
-                                                        class="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100"
-                                                        data-testid="article-delete-action-${id}">
-                                                    <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                    Delete
-                                                </button>
-                                            </div>
-                                        </div>`;
-                        }
-                    }
-                ],
-                initComplete: function () {
-                    const wrapper = $('#article-table_wrapper');
-                    const $length = wrapper.find('.dataTables_length, .dt-length');
-                    const $filter = wrapper.find('.dataTables_filter, .dt-search');
-                    $('#article-table-toolbar').empty().append($length).append($filter);
-
-                    $length.addClass('flex items-center gap-2 text-sm text-gray-600');
-                    $length.find('label').addClass('flex items-center gap-2');
-                    $length.find('select').addClass(
-                        'border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 ' +
-                        'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-                    );
-
-                    $filter.addClass('flex items-center gap-2 text-sm text-gray-600');
-                    $filter.find('label').addClass('flex items-center gap-2');
-                    const $searchInput = $filter.find('input');
-                    $searchInput
-                        .addClass(
-                            'border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 ' +
-                            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full md:w-64'
-                        )
-                        .attr('placeholder', 'Search...');
-                    $filter.addClass('w-full md:w-auto justify-end');
-
-                    stylePagination();
-                },
-                drawCallback: function () {
-                    setTimeout(stylePagination, 50);
-                }
-            });
-        }
-
-        function stylePagination() {
-            const wrapper = $('#article-table_wrapper');
-            let $info = wrapper.find('.dataTables_info').first();
-            if ($info.length === 0) $info = wrapper.find('.dt-info').first();
-
-            let $paginate = wrapper.find('.dataTables_paginate').first();
-            if ($paginate.length === 0) $paginate = wrapper.find('.dt-paging').first();
-
-            if ($info.length > 0) {
-                $('#table-info-container').empty().append($info);
-                $info.removeClass().addClass('text-sm text-gray-600');
-            }
-
-            if ($paginate.length > 0) {
-                $('#table-pagination-container').empty().append($paginate);
-            }
-
-            $('#table-pagination-container').addClass('w-full flex justify-end overflow-x-auto whitespace-nowrap');
-            if (typeof applyAdminPaginationStyle === 'function') {
-                applyAdminPaginationStyle($('#table-pagination-container'));
-            }
-        }
-
-        function toggleActionsMenu(event, id) {
-            event.stopPropagation();
-            $('.article-actions-menu').addClass('hidden');
-            const menu = $('#actions-menu-' + id);
-            menu.toggleClass('hidden');
-        }
-
-        function delArticle(id) {
-            $('.article-actions-menu').addClass('hidden');
-            if (!confirm("Delete this article?")) return;
-
-            $.ajax({
-                url: "/Article/Delete",
-                type: "POST",
-                contentType: "application/json",
-                data: JSON.stringify({
-                    action: "delete",
-                    id: id,
-                    data: null
-                }),
-                success: res => {
-                    if (res.success) {
-                        $('#article-table').DataTable().ajax.reload(null, false);
-                    } else {
-                        alert(res.message || "Failed to delete article");
-                    }
-                },
-                error: function () {
-                    alert("An error occurred while deleting the article.");
-                }
-            });
-        }
-    </script>
+<script>
+const pageState={page:1,limit:10,filters:{search:'',status:''},sort:{field:'createdAt',order:'desc'},hasNextPage:false,totalRows:0};
+let lastRequestKey=''; let searchDebounce=null;
+function syncUrl(){const q=`page=${pageState.page}&limit=${pageState.limit}&search=${encodeURIComponent(pageState.filters.search||'')}&status=${encodeURIComponent(pageState.filters.status||'')}&sortField=${encodeURIComponent(pageState.sort.field)}&sortOrder=${encodeURIComponent(pageState.sort.order)}`;history.replaceState({...pageState},'',`?${q}`);$('#article-add-link').attr('href',`/Article/Create?returnUrl=${encodeURIComponent(window.location.pathname+window.location.search)}`);}
+function hydrate(){const q=new URLSearchParams(window.location.search);pageState.page=Math.max(1,Number(q.get('page')||1));pageState.limit=Math.max(1,Number(q.get('limit')||10));pageState.filters.search=q.get('search')||'';pageState.filters.status=q.get('status')||'';pageState.sort.field=q.get('sortField')||'createdAt';pageState.sort.order=q.get('sortOrder')||'desc';}
+function toolbar(){const searchVal=(pageState.filters.search||'').replace(/"/g,'&quot;');$('#article-table-toolbar').html(`<div class="flex items-center gap-2 text-sm text-gray-600">Show <select id="list-limit" class="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700"><option value="10">10</option><option value="25">25</option><option value="50">50</option></select> rows</div><div class="relative"><button id="articleFilterToggleBtn" type="button" class="flex items-center gap-2 bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>Filter</button><div id="articleFilterDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl border border-gray-200 shadow-xl z-50 overflow-visible"><div class="flex items-center justify-between px-5 py-4 border-b border-gray-100"><h3 class="text-lg font-bold text-gray-800">Filter</h3><button type="button" id="articleFilterCloseBtn" class="text-gray-400 hover:text-gray-600 transition p-1 rounded-lg hover:bg-gray-100">✕</button></div><div class="px-5 py-4 space-y-4"><div><label class="block text-xs font-medium mb-1" for="article_search_filter">Search</label><input id="article_search_filter" type="text" value="${searchVal}" class="w-full border border-gray-300 rounded-md p-2 text-sm" placeholder="Search..." /></div><div><label class="block text-xs font-medium mb-1" for="article_status_filter">Status</label><select id="article_status_filter" class="w-full border border-gray-300 rounded-md p-2 text-sm"><option value="">All Status</option><option value="PUBLISHED">Published</option><option value="DRAFT">Draft</option></select></div></div><div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100"><button type="button" id="apply-article-filter-btn" class="px-5 py-2 rounded-full text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 transition">Filter</button></div></div></div>`);
+$('#list-limit').val(String(pageState.limit)).off('change').on('change',function(){pageState.limit=Number($(this).val()||10);pageState.page=1;lastRequestKey='';fetchArticles();});$('#article_status_filter').val(pageState.filters.status||'');const $d=$('#articleFilterDropdown');$('#articleFilterToggleBtn').off('click').on('click',()=>$d.toggleClass('hidden'));$('#articleFilterCloseBtn').off('click').on('click',()=>$d.addClass('hidden'));$('#apply-article-filter-btn').off('click').on('click',()=>{pageState.filters.search=($('#article_search_filter').val()||'').trim();pageState.filters.status=$('#article_status_filter').val()||'';pageState.page=1;lastRequestKey='';fetchArticles();$d.addClass('hidden');});}
+function sortMarks(){$('#article-table thead th[data-sort]').each(function(){const f=$(this).data('sort');const a=f===pageState.sort.field;const i=a?(pageState.sort.order==='asc'?' ↑':' ↓'):'';const b=$(this).text().replace(/ [↑↓]$/,'');$(this).text(b+i);});}
+function fmtDate(x){if(!x)return '-';const d=new Date(x);return isNaN(d.getTime())?'-':d.toLocaleString('id-ID',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});} 
+function rows(items){const $tb=$('#article-table tbody');if(!items||!items.length){$tb.html('<tr><td colspan="8" class="px-4 py-8 text-center text-gray-500">No data found.</td></tr>');return;}let html='';const returnUrl=encodeURIComponent(window.location.pathname+window.location.search);items.forEach(r=>{const src=r.image||'/image/no-image.png';const content=(r.content||'');const preview=content.length>200?`${content.substring(0,197)}...`:content;const raw=(r.tags||'').trim();const tags=raw?raw.split(',').map(t=>t.trim()).filter(Boolean):[];const tagHtml=tags.length?`<div class="flex flex-wrap gap-1">${tags.map(t=>`<span class="inline-flex px-2.5 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">${t}</span>`).join('')}</div>`:'-';const st=(r.status||'').toString();const badge=st.toUpperCase()==='PUBLISHED'?'bg-green-100 text-green-800':st.toUpperCase()==='DRAFT'?'bg-yellow-100 text-yellow-800':'bg-gray-100 text-gray-800';html+=`<tr><td class="px-4 py-3"><img src="${src}" class="w-16 h-16 rounded object-cover border border-gray-200 shadow-sm" alt="Article Image"></td><td class="px-4 py-3">${r.title||'-'}</td><td class="px-4 py-3">${r.slug||'-'}</td><td class="px-4 py-3"><span class="inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${badge}">${st||'-'}</span></td><td class="px-4 py-3"><div class="line-clamp-2" title="${content.replace(/"/g,'&quot;')}">${preview||'-'}</div></td><td class="px-4 py-3">${tagHtml}</td><td class="px-4 py-3">${fmtDate(r.created_at)}</td><td class="px-4 py-3 text-center"><div class="flex flex-wrap gap-2 justify-center"><a href="/Article/Edit?id=${encodeURIComponent(r.article_id||'')}&returnUrl=${returnUrl}" class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200" title="Edit">E</a><button type="button" onclick="delArticle('${r.article_id||''}')" class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-red-100 text-red-700 hover:bg-red-200" title="Delete">D</button></div></td></tr>`;});$tb.html(html);} 
+function pager(c){const s=c===0?0:((pageState.page-1)*pageState.limit)+1;const e=((pageState.page-1)*pageState.limit)+c;$('#table-info-container').html(`<span class="text-sm text-gray-600">Showing ${s} to ${e} of ${pageState.totalRows}</span>`);const pd=pageState.page<=1,nd=!pageState.hasNextPage;$('#table-pagination-container').html(`<div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm"><button id="page-prev" class="px-3 py-2 text-sm border-r border-gray-200 ${pd?'bg-gray-50 text-gray-400 cursor-not-allowed':'bg-white text-gray-700 hover:bg-gray-50'}" ${pd?'disabled':''}>Prev</button><span class="px-3 py-2 text-sm bg-blue-900 text-white font-semibold">${pageState.page}</span><button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nd?'bg-gray-50 text-gray-400 cursor-not-allowed':'bg-white text-gray-700 hover:bg-gray-50'}" ${nd?'disabled':''}>Next</button></div>`);$('#page-prev').off('click').on('click',()=>{if(pageState.page<=1)return;pageState.page--;lastRequestKey='';fetchArticles();});$('#page-next').off('click').on('click',()=>{if(!pageState.hasNextPage)return;pageState.page++;lastRequestKey='';fetchArticles();});}
+function setArticleLoading(isLoading){$('#article-table-loading').toggleClass('hidden',!isLoading);}
+async function fetchArticles(){const payload={page:pageState.page,limit:pageState.limit,filters:{...pageState.filters},sort:{...pageState.sort}};const key=JSON.stringify(payload);if(key===lastRequestKey)return;lastRequestKey=key;syncUrl();sortMarks();setArticleLoading(true);try{const res=await $.ajax({url:'/Article/GetAll',type:'POST',contentType:'application/json',data:JSON.stringify(payload)});if(!res||!res.success){lastRequestKey='';await tailwindMessageModal('Failed',(res&&res.message)?res.message:'Failed to load article data.');return;}const result=res.data||{};const items=result.data||[];pageState.hasNextPage=!!result.hasNextPage;pageState.totalRows=Number(result.totalRows||0);rows(items);pager(items.length);}catch{lastRequestKey='';await tailwindMessageModal('Error','An error occurred while loading article data.');}finally{setArticleLoading(false);}}
+async function delArticle(id){const yes=await tailwindConfirmModal({title:'Delete Confirmation',message:'Are you sure you want to delete this article?',confirmText:'Delete',cancelText:'Cancel'});if(!yes)return;try{const res=await $.ajax({url:'/Article/Delete',type:'POST',contentType:'application/json',data:JSON.stringify({action:'delete',id:id,data:null})});if(!res||!res.success){await tailwindMessageModal('Failed',(res&&res.message)?res.message:'Delete failed.');return;}lastRequestKey='';await fetchArticles();await tailwindMessageModal('Deleted','Article has been deleted.');}catch{await tailwindMessageModal('Error','An error occurred while deleting the article.');}}
+$(document).ready(function(){hydrate();toolbar();sortMarks();fetchArticles();$(document).on('click',function(e){const t=$(e.target);if(!t.closest('#articleFilterToggleBtn').length&&!t.closest('#articleFilterDropdown').length){$('#articleFilterDropdown').addClass('hidden');}});$('#article-table thead').on('click','th[data-sort]',function(){const f=$(this).data('sort');if(!f)return;if(pageState.sort.field===f)pageState.sort.order=pageState.sort.order==='asc'?'desc':'asc';else{pageState.sort.field=f;pageState.sort.order='asc';}pageState.page=1;lastRequestKey='';fetchArticles();});$(document).on('input','#article_search_filter',function(){const v=($(this).val()||'').trim();if((pageState.filters.search||'')===v)return;clearTimeout(searchDebounce);searchDebounce=setTimeout(()=>{pageState.filters.search=v;pageState.page=1;lastRequestKey='';fetchArticles();},300);});});
+</script>
 }

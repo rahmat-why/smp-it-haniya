@@ -297,6 +297,7 @@
 
 @section Scripts {
     <script>
+        const returnUrl = new URLSearchParams(window.location.search).get('returnUrl') || '/Student';
         function toggleSection(id) {
             const section = document.getElementById(id);
             const icon = document.getElementById('icon-' + id);
@@ -395,6 +396,7 @@
         }
 
         $(document).ready(function () {
+            $('#student-back-link').attr('href', returnUrl);
             loadStudent();
 
             $('#gender').select2({
@@ -520,11 +522,15 @@
                 data: fd,
                 processData: false,
                 contentType: false,
-                success: res => {
-                    if (res.success) window.location.href = "/Student";
-                    else tailwindMessageModal('Failed', res.message || 'Failed to update student');
+                success: async res => {
+                    if (res.success) {
+                        await tailwindMessageModal('Success', res.message || 'Student updated successfully.');
+                        window.location.href = returnUrl;
+                    } else {
+                        await tailwindMessageModal('Failed', res.message || 'Failed to update student');
+                    }
                 },
-                error: () => tailwindMessageModal('Error', 'An error occurred while updating student data.')
+                error: async () => await tailwindMessageModal('Error', 'An error occurred while updating student data.')
             });
         }
     </script>

@@ -1,73 +1,25 @@
-﻿@{
+@{
     Layout = "_LayoutAdmin";
     ViewData["Title"] = "E-Raport";
 }
+
 <div class="flex justify-between items-center mb-4">
     <h2 class="text-xl font-semibold">E - Raport</h2>
-
-    <!-- FILTER BUTTON -->
-    <div class="relative">
-        <button id="filterToggleBtn"
-                onclick="toggleEraportFilter()"
-                class="flex items-center gap-2 bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-            </svg>
-            Filter
-        </button>
-        <!-- FILTER DROPDOWN -->
-        <div id="filterDropdown"
-             class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl border border-gray-200 shadow-xl z-50 overflow-visible">
-            <!-- Header -->
-            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                <h3 class="text-lg font-bold text-gray-800">Filter</h3>
-                <button onclick="toggleEraportFilter()"
-                        class="text-gray-400 hover:text-gray-600 transition p-1 rounded-lg hover:bg-gray-100">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
-                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                </button>
-            </div>
-            <!-- Fields -->
-            <div class="px-5 py-4 space-y-4">
-                <div class="w-full">
-                    <label class="text-xs font-medium" for="academic_year_filter">Academic Year</label>
-                    <select id="academic_year_filter" class="w-full"></select>
-                </div>
-                <div class="w-full">
-                    <label class="text-xs font-medium" for="class_level_filter">Class</label>
-                    <select id="class_level_filter" class="w-full"></select>
-                </div>
-            </div>
-            <!-- Footer Buttons -->
-            <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
-                <button onclick="resetFilter()"
-                        class="px-5 py-2 rounded-full text-sm font-medium text-indigo-400 bg-indigo-50 hover:bg-indigo-100 transition">
-                    Reset
-                </button>
-                <button onclick="applyFilter()"
-                        class="px-5 py-2 rounded-full text-sm font-medium text-white bg-indigo-500 hover:bg-indigo-600 transition">
-                    Filter
-                </button>
-            </div>
-        </div>
-    </div>
 </div>
+
 <div class="bg-white rounded-lg shadow">
-    <!-- Toolbar -->
     <div class="px-4 pt-4">
-        <div id="eraport-table-toolbar"
-             class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        </div>
+        <div id="eraport-table-toolbar" class="flex flex-col md:flex-row md:items-center md:justify-between gap-3"></div>
     </div>
 
-    <!-- Table -->
-    <div class="overflow-x-auto overflow-y-visible px-4 pt-4">
-        <table id="eraport-table"
-               class="min-w-full text-sm text-left text-gray-700 border-collapse">
+    <div class="relative overflow-x-auto px-4 pt-4">
+        <div id="eraport-table-loading" class="hidden absolute inset-0 z-20 bg-white/80 backdrop-blur-[1px] flex items-center justify-center">
+            <div class="flex flex-col items-center gap-3 text-gray-600">
+                <div class="w-8 h-8 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin"></div>
+                <p class="text-sm font-medium">Loading e-raport data...</p>
+            </div>
+        </div>
+        <table id="eraport-table" class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
                     <th data-sort="student" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase align-middle whitespace-nowrap cursor-pointer select-none" style="width: 250px;">Student</th>
@@ -76,24 +28,41 @@
                     <th data-sort="class" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase align-middle whitespace-nowrap cursor-pointer select-none" style="width: 140px;">Class</th>
                     <th data-sort="summaryAttendance" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase align-middle whitespace-nowrap cursor-pointer select-none" style="width: 240px;">Summary Attendance</th>
                     <th data-sort="summaryGrade" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center align-middle whitespace-nowrap cursor-pointer select-none">Summary Grade</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right align-middle whitespace-nowrap" style="width: 90px;">Action</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center align-middle whitespace-nowrap" style="width: 110px;">Action</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100"></tbody>
         </table>
     </div>
 
-    <!-- Footer -->
     <div class="px-4 pb-4 pt-3">
-        <div id="eraport-table-footer"
-             class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div id="eraport-table-info"></div>
-            <div id="eraport-table-pagination"></div>
+        <div id="eraport-table-footer" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div id="table-info-container"></div>
+            <div id="table-pagination-container"></div>
         </div>
     </div>
 </div>
 
 @await Html.PartialAsync("_TailwindConfirmModal")
+<div id="eraport-preview-modal" class="hidden fixed inset-0 z-[120]">
+    <div class="absolute inset-0 bg-slate-900/60"></div>
+    <div class="relative h-full w-full p-3 sm:p-6">
+        <div class="mx-auto h-full w-full max-w-7xl rounded-2xl bg-white shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
+            <div class="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-slate-200 bg-slate-50">
+                <div>
+                    <h3 class="text-sm sm:text-base font-semibold text-slate-800">Preview E-Raport</h3>
+                    <p id="eraport-preview-caption" class="text-xs text-slate-500">-</p>
+                </div>
+                <button type="button" id="eraport-preview-close" class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition" aria-label="Close preview">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="flex-1 bg-slate-100">
+                <iframe id="eraport-preview-frame" class="w-full h-full border-0" title="E-Raport Preview"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
 
 @section Scripts {
 <script>
@@ -134,6 +103,7 @@
     }
 
     function renderToolbar() {
+        const searchValue = (pageState.filters.search || '').replace(/"/g, '&quot;');
         $('#eraport-table-toolbar').html(`
             <div class="flex items-center gap-2 text-sm text-gray-600">
                 Show
@@ -143,14 +113,30 @@
                     <option value="50">50</option>
                 </select> rows
             </div>
-            <div class="flex items-center gap-2 text-sm text-gray-600 w-full md:w-auto justify-end">
-                <input id="list-search" type="text" placeholder="Search..." class="border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 w-full md:w-64"/>
+            <div class="relative">
+                <button id="eraportFilterToggleBtn" type="button" class="flex items-center gap-2 bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
+                    Filter
+                </button>
+                <div id="eraportFilterDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl border border-gray-200 shadow-xl z-50 overflow-visible">
+                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                        <h3 class="text-lg font-bold text-gray-800">Filter</h3>
+                        <button type="button" id="eraportFilterCloseBtn" class="text-gray-400 hover:text-gray-600 transition p-1 rounded-lg hover:bg-gray-100">?</button>
+                    </div>
+                    <div class="px-5 py-4 space-y-4">
+                        <div class="w-full"><label class="text-xs font-medium" for="academic_year_filter">Academic Year</label><select id="academic_year_filter" class="w-full"></select></div>
+                        <div class="w-full"><label class="text-xs font-medium" for="class_level_filter">Class</label><select id="class_level_filter" class="w-full"></select></div>
+                        <div class="w-full"><label class="text-xs font-medium" for="eraport_search_filter">Search</label><input id="eraport_search_filter" type="text" value="${searchValue}" class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Search..." /></div>
+                    </div>
+                    <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
+                        <button type="button" id="reset-eraport-filter-btn" class="px-5 py-2 rounded-full text-sm font-medium text-indigo-400 bg-indigo-50 hover:bg-indigo-100 transition">Reset</button>
+                        <button type="button" id="apply-eraport-filter-btn" class="px-5 py-2 rounded-full text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 transition">Filter</button>
+                    </div>
+                </div>
             </div>
         `);
 
         $('#list-limit').val(String(pageState.limit));
-        $('#list-search').val(pageState.filters.search || '');
-
         $('#list-limit').off('change').on('change', function () {
             const next = Number($(this).val() || 10);
             if (pageState.limit === next) return;
@@ -160,25 +146,54 @@
             fetchEraports();
         });
 
-        $('#list-search').off('input').on('input', function () {
-            const val = ($(this).val() || '').toString().trim();
-            if ((pageState.filters.search || '') === val) return;
-            clearTimeout(searchDebounce);
-            searchDebounce = setTimeout(() => {
-                pageState.filters.search = val;
-                pageState.page = 1;
-                lastRequestKey = '';
-                fetchEraports();
-            }, 300);
+        const $dropdown = $('#eraportFilterDropdown');
+        $('#eraportFilterToggleBtn').off('click').on('click', function () { $dropdown.toggleClass('hidden'); });
+        $('#eraportFilterCloseBtn').off('click').on('click', function () { $dropdown.addClass('hidden'); });
+        $('#apply-eraport-filter-btn').off('click').on('click', applyFilter);
+        $('#reset-eraport-filter-btn').off('click').on('click', resetFilter);
+
+        $('#academic_year_filter').select2({
+            placeholder: 'Academic Year',
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $dropdown,
+            ajax: {
+                url: '/Select2/AcademicYears',
+                dataType: 'json',
+                delay: 250,
+                data: function (params) { return { q: params.term || '', page: params.page || 1 }; },
+                processResults: function (data) { return { results: data.results, pagination: data.pagination }; },
+                cache: true
+            },
+            minimumInputLength: 0
         });
+
+        $('#class_level_filter').select2({
+            placeholder: 'Select Class Level',
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $dropdown,
+            data: [
+                { id: '', text: 'All Levels' },
+                { id: '7', text: 'Class 7' },
+                { id: '8', text: 'Class 8' },
+                { id: '9', text: 'Class 9' }
+            ]
+        });
+
+        if (pageState.filters.academicYearId) {
+            const optionAy = new Option(pageState.filters.academicYearId, pageState.filters.academicYearId, true, true);
+            $('#academic_year_filter').append(optionAy).trigger('change');
+        }
+        $('#class_level_filter').val(pageState.filters.classLevel || '').trigger('change');
     }
 
     function renderSortIndicators() {
         $('#eraport-table thead th[data-sort]').each(function () {
             const field = $(this).data('sort');
             const isActive = field === pageState.sort.field;
-            const icon = isActive ? (pageState.sort.order === 'asc' ? ' ▲' : ' ▼') : '';
-            const base = $(this).text().replace(/ [▲▼]$/, '');
+            const icon = isActive ? (pageState.sort.order === 'asc' ? ' ↑' : ' ↓') : '';
+            const base = $(this).text().replace(/ [↑↓]$/, '');
             $(this).text(base + icon);
         });
     }
@@ -194,9 +209,7 @@
         items.forEach(row => {
             const id = row.student_id || '';
             const classId = row.academic_class_id || '';
-            const src = (typeof row.profile_photo === 'string' && row.profile_photo.trim() !== '')
-                ? row.profile_photo
-                : '/image/no-image.png';
+            const src = (typeof row.profile_photo === 'string' && row.profile_photo.trim() !== '') ? row.profile_photo : '/image/no-image.png';
             const previewUrl = `/Eraport/Preview?id=${encodeURIComponent(id)}&classId=${encodeURIComponent(classId)}`;
             const exportExcelUrl = `/Eraport/ExportExcel?id=${encodeURIComponent(id)}&classId=${encodeURIComponent(classId)}`;
 
@@ -232,17 +245,14 @@
                             <span class="inline-flex items-center rounded-full bg-rose-100 text-rose-700 text-[11px] font-semibold px-2 py-0.5">Remedial: ${row.remedial || 0}</span>
                         </div>
                     </td>
-                    <td class="px-4 py-3 text-right align-middle overflow-visible">
-                        <div class="flex justify-center eraport-actions-wrapper relative overflow-visible">
-                            <button type="button" class="eraport-action-toggle p-1.5 hover:bg-gray-100 rounded-md transition-colors duration-150 relative z-20">
-                                <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
-                                </svg>
+                    <td class="px-4 py-3 text-center align-middle">
+                        <div class="flex flex-wrap gap-2 justify-center">
+                            <button type="button" data-preview-url="${previewUrl}" data-student-name="${(row.full_name || '-').toString().replace(/"/g, '&quot;')}" class="btn-preview-eraport inline-flex items-center justify-center w-8 h-8 rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200" title="Preview">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                             </button>
-                            <div class="eraport-actions-menu hidden absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-30 border border-gray-100">
-                                <a href="${previewUrl}" target="_blank" class="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">Preview</a>
-                                <a href="${exportExcelUrl}" class="flex items-center px-4 py-2 text-sm text-emerald-700 hover:bg-emerald-50 border-t border-gray-100">Download Excel</a>
-                            </div>
+                            <a href="${exportExcelUrl}" class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-emerald-100 text-emerald-700 hover:bg-emerald-200" title="Download Excel">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M8 13h8"></path><path d="M8 17h8"></path></svg>
+                            </a>
                         </div>
                     </td>
                 </tr>
@@ -254,15 +264,15 @@
     function renderPagination(currentCount) {
         const start = currentCount === 0 ? 0 : ((pageState.page - 1) * pageState.limit) + 1;
         const end = ((pageState.page - 1) * pageState.limit) + currentCount;
-        $('#eraport-table-info').html(`<span class="text-sm text-gray-600">Showing ${start} to ${end} of ${pageState.totalRows}</span>`);
+        $('#table-info-container').html(`<span class="text-sm text-gray-600">Showing ${start} to ${end} of ${pageState.totalRows}</span>`);
 
         const prevDisabled = pageState.page <= 1;
         const nextDisabled = !pageState.hasNextPage;
-        $('#eraport-table-pagination').html(`
-            <div class="inline-flex items-center border border-gray-300 rounded-md overflow-hidden min-w-max">
-                <button id="page-prev" class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900'}" ${prevDisabled ? 'disabled' : ''}>Prev</button>
-                <span class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 bg-blue-900 text-white">${pageState.page}</span>
-                <button id="page-next" class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900'}" ${nextDisabled ? 'disabled' : ''}>Next</button>
+        $('#table-pagination-container').html(`
+            <div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                <button id="page-prev" class="px-3 py-2 text-sm border-r border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Prev</button>
+                <span class="px-3 py-2 text-sm bg-blue-900 text-white font-semibold">${pageState.page}</span>
+                <button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Next</button>
             </div>
         `);
 
@@ -280,6 +290,10 @@
         });
     }
 
+    function setEraportLoading(isLoading) {
+        $('#eraport-table-loading').toggleClass('hidden', !isLoading);
+    }
+
     async function fetchEraports() {
         const payload = {
             page: pageState.page,
@@ -293,6 +307,7 @@
 
         syncStateToUrl();
         renderSortIndicators();
+        setEraportLoading(true);
 
         try {
             const res = await $.ajax({
@@ -317,103 +332,60 @@
         } catch {
             lastRequestKey = '';
             await tailwindMessageModal('Error', 'An error occurred while loading e-raport data.');
+        } finally {
+            setEraportLoading(false);
         }
-    }
-
-    function toggleActionsMenu(event, button) {
-        event.preventDefault();
-        event.stopPropagation();
-        const $button = $(button);
-        const $menu = $button.siblings('.eraport-actions-menu');
-        const willShow = $menu.hasClass('hidden');
-        $('.eraport-actions-menu').addClass('hidden');
-        if (willShow) {
-            $menu.removeClass('hidden');
-        }
-    }
-
-    function toggleEraportFilter() {
-        $('#filterDropdown').toggleClass('hidden');
     }
 
     function applyFilter() {
         pageState.filters.academicYearId = $('#academic_year_filter').val() || '';
         pageState.filters.classLevel = $('#class_level_filter').val() || '';
+        pageState.filters.search = ($('#eraport_search_filter').val() || '').trim();
         pageState.page = 1;
         lastRequestKey = '';
         fetchEraports();
-        toggleEraportFilter();
+        $('#eraportFilterDropdown').addClass('hidden');
     }
 
     function resetFilter() {
         $('#academic_year_filter').val('').trigger('change');
         $('#class_level_filter').val('').trigger('change');
+        $('#eraport_search_filter').val('');
         pageState.filters.academicYearId = '';
         pageState.filters.classLevel = '';
+        pageState.filters.search = '';
         pageState.page = 1;
         lastRequestKey = '';
         fetchEraports();
+    }
+
+    function openPreviewModal(url, studentName) {
+        if (!url) return;
+        $('#eraport-preview-caption').text(studentName || '-');
+        $('#eraport-preview-frame').attr('src', url);
+        $('#eraport-preview-modal').removeClass('hidden');
+        $('body').addClass('overflow-hidden');
+    }
+
+    function closePreviewModal() {
+        $('#eraport-preview-modal').addClass('hidden');
+        $('#eraport-preview-frame').attr('src', 'about:blank');
+        $('body').removeClass('overflow-hidden');
     }
 
     $(document).ready(function () {
         hydrateStateFromUrl();
         renderToolbar();
         renderSortIndicators();
-
-        $('#academic_year_filter').select2({
-            placeholder: 'Academic Year',
-            allowClear: true,
-            width: '100%',
-            dropdownParent: $('#filterDropdown'),
-            ajax: {
-                url: '/Select2/AcademicYears',
-                dataType: 'json',
-                delay: 250,
-                data: function (params) {
-                    return { q: params.term || '', page: params.page || 1 };
-                },
-                processResults: function (data) {
-                    return { results: data.results, pagination: data.pagination };
-                },
-                cache: true
-            },
-            minimumInputLength: 0
-        });
-
-        $('#class_level_filter').select2({
-            placeholder: 'Select Class Level',
-            allowClear: true,
-            width: '100%',
-            dropdownParent: $('#filterDropdown'),
-            data: [
-                { id: '', text: 'All Levels' },
-                { id: '7', text: 'Class 7' },
-                { id: '8', text: 'Class 8' },
-                { id: '9', text: 'Class 9' }
-            ]
-        });
-
-        if (pageState.filters.academicYearId) {
-            const optionAy = new Option(pageState.filters.academicYearId, pageState.filters.academicYearId, true, true);
-            $('#academic_year_filter').append(optionAy).trigger('change');
-        }
-        $('#class_level_filter').val(pageState.filters.classLevel || '').trigger('change');
-
         fetchEraports();
 
-        $(document).on('click', '.eraport-action-toggle', function (e) {
-            toggleActionsMenu(e, this);
-        });
-
         $(document).on('click', function (e) {
-            if (!$(e.target).closest('.eraport-actions-wrapper').length) {
-                $('.eraport-actions-menu').addClass('hidden');
-            }
-            const isToggle = $(e.target).closest('#filterToggleBtn').length > 0;
-            const isInsideDropdown = $(e.target).closest('#filterDropdown').length > 0;
+            const $dropdown = $('#eraportFilterDropdown');
+            const isToggle = $(e.target).closest('#eraportFilterToggleBtn').length > 0;
+            const isInsideDropdown = $(e.target).closest('#eraportFilterDropdown').length > 0;
             const isSelect2 = $(e.target).closest('.select2-container, .select2-dropdown').length > 0;
             if (!isToggle && !isInsideDropdown && !isSelect2) {
-                $('#filterDropdown').addClass('hidden');
+                $dropdown.addClass('hidden');
             }
         });
 
@@ -429,6 +401,37 @@
             pageState.page = 1;
             lastRequestKey = '';
             fetchEraports();
+        });
+
+        $(document).on('input', '#eraport_search_filter', function () {
+            const val = ($(this).val() || '').trim();
+            if ((pageState.filters.search || '') === val) return;
+            clearTimeout(searchDebounce);
+            searchDebounce = setTimeout(() => {
+                pageState.filters.search = val;
+                pageState.page = 1;
+                lastRequestKey = '';
+                fetchEraports();
+            }, 300);
+        });
+
+        $(document).on('click', '.btn-preview-eraport', function () {
+            openPreviewModal(
+                (($(this).data('preview-url') || '').toString()),
+                (($(this).data('student-name') || '').toString())
+            );
+        });
+
+        $('#eraport-preview-close').on('click', closePreviewModal);
+        $('#eraport-preview-modal').on('click', function (e) {
+            if (e.target === this || $(e.target).closest('.bg-slate-900\\/60').length) {
+                closePreviewModal();
+            }
+        });
+        $(document).on('keydown', function (e) {
+            if (e.key === 'Escape' && !$('#eraport-preview-modal').hasClass('hidden')) {
+                closePreviewModal();
+            }
         });
     });
 </script>

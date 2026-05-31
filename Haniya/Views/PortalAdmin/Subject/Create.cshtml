@@ -167,8 +167,11 @@
     </form>
 </div>
 
+@await Html.PartialAsync("_TailwindConfirmModal")
+
 @section Scripts {
     <script>
+        const returnUrl = new URLSearchParams(window.location.search).get('returnUrl') || '/Subject';
         function toggleSection(id) {
             const section = document.getElementById(id);
             const icon = document.getElementById('icon-' + id);
@@ -267,11 +270,18 @@
         }
 
         function goBack() {
-            window.location.href = "/Subject";
+            window.location.href = returnUrl;
         }
 
-        function saveSubject() {
+        async function saveSubject() {
             if (!validateForm()) return;
+            const yes = await tailwindConfirmModal({
+                title: 'Create Confirmation',
+                message: 'Are you sure you want to create this data?',
+                confirmText: 'Create',
+                cancelText: 'Cancel'
+            });
+            if (!yes) return;
 
             const fd = new FormData();
             $('#frm').find('input,textarea,select').each(function () {
@@ -284,16 +294,15 @@
                 data: fd,
                 processData: false,
                 contentType: false,
-                success: res => {
+                success: async res => {
                     if (res.success) {
-                        window.location.href = "/Subject";
+                        await tailwindMessageModal('Success', res.message || 'Subject created successfully.');
+                        window.location.href = returnUrl;
                     } else {
-                        alert(res.message || "Failed to create subject");
+                        await tailwindMessageModal('Failed', res.message || 'Failed to create subject');
                     }
                 },
-                error: function () {
-                    alert("An error occurred while creating the subject.");
-                }
+                error: async function () { await tailwindMessageModal('Error', 'An error occurred while creating the subject.'); }
             });
         }
     </script>

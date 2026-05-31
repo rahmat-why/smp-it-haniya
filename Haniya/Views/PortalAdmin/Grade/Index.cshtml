@@ -5,363 +5,189 @@
 
 <div class="flex justify-between items-center mb-4">
     <h2 class="text-xl font-semibold">Grade List</h2>
-    <a href="/Grade/Create"
-       class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
-        + Add Grade
-    </a>
+    <a id="grade-add-link" href="/Grade/Create" class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm">+ Add Grade</a>
 </div>
 
 <div class="bg-white rounded-lg shadow">
-    <div class="px-4 pt-4">
-        <div id="grade-table-toolbar" class="flex flex-col md:flex-row md:items-center md:justify-between gap-3"></div>
-    </div>
-
-    <div class="overflow-x-auto px-4 pt-4">
+    <div class="px-4 pt-4"><div id="grade-table-toolbar" class="flex flex-col md:flex-row md:items-center md:justify-between gap-3"></div></div>
+    <div class="relative overflow-x-auto px-4 pt-4">
+        <div id="grade-table-loading" class="hidden absolute inset-0 z-20 bg-white/80 backdrop-blur-[1px] flex items-center justify-center">
+            <div class="flex flex-col items-center gap-3 text-gray-600">
+                <div class="w-8 h-8 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin"></div>
+                <p class="text-sm font-medium">Loading grade data...</p>
+            </div>
+        </div>
         <table id="grade-table" class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Academic Year</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Semester</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 140px;">Date</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Class</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Subject</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Teacher</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Grade Type</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 120px;">Min Value</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase" style="width: 180px;">Summary</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right" style="width: 70px;">Action</th>
+                    <th data-sort="academicYear" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Academic Year</th>
+                    <th data-sort="semester" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Semester</th>
+                    <th data-sort="date" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Date</th>
+                    <th data-sort="class" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Class</th>
+                    <th data-sort="subject" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Subject</th>
+                    <th data-sort="teacher" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Teacher</th>
+                    <th data-sort="gradeType" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Grade Type</th>
+                    <th data-sort="minimumValue" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Min Value</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase">Summary</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 110px;">Action</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100"></tbody>
         </table>
     </div>
-
-    <div class="px-4 pb-4 pt-3">
-        <div id="grade-table-footer" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div id="table-info-container"></div>
-            <div id="table-pagination-container"></div>
-        </div>
-    </div>
+    <div class="px-4 pb-4 pt-3"><div id="grade-table-footer" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"><div id="table-info-container"></div><div id="table-pagination-container"></div></div></div>
 </div>
 
+@await Html.PartialAsync("_TailwindConfirmModal")
+
 @section Scripts {
-    <script>
-        let gradeTable = null;
-        let currentAcademicYearId = '';
-        let currentAcademicClassId = '';
-        let currentGradeType = '';
+<script>
+    const pageState = { page: 1, limit: 10, filters: { academic_year_id: '', academic_class_id: '', grade_type: '', search: '' }, sort: { field: 'date', order: 'desc' }, hasNextPage: false, totalRows: 0 };
+    let lastRequestKey = '';
+    let searchDebounce = null;
 
-        $(document).ready(function () {
-            initGradeTable();
+    function stateQuery() {
+        return `page=${pageState.page}&limit=${pageState.limit}&academicYear=${encodeURIComponent(pageState.filters.academic_year_id || '')}&academicClass=${encodeURIComponent(pageState.filters.academic_class_id || '')}&gradeType=${encodeURIComponent(pageState.filters.grade_type || '')}&search=${encodeURIComponent(pageState.filters.search || '')}&sortField=${encodeURIComponent(pageState.sort.field)}&sortOrder=${encodeURIComponent(pageState.sort.order)}`;
+    }
 
-            $(document).on('click', function (e) {
-                if (!$(e.target).closest('.grade-actions-wrapper').length) {
-                    $('.grade-actions-menu').addClass('hidden');
-                }
-            });
+    function syncStateToUrl() {
+        history.replaceState({ ...pageState }, '', `?${stateQuery()}`);
+        $('#grade-add-link').attr('href', `/Grade/Create?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+    }
+
+    function hydrate() {
+        const q = new URLSearchParams(window.location.search);
+        pageState.page = Math.max(1, Number(q.get('page') || 1));
+        pageState.limit = Math.max(1, Number(q.get('limit') || 10));
+        pageState.filters.academic_year_id = q.get('academicYear') || '';
+        pageState.filters.academic_class_id = q.get('academicClass') || '';
+        pageState.filters.grade_type = q.get('gradeType') || '';
+        pageState.filters.search = q.get('search') || '';
+        pageState.sort.field = q.get('sortField') || 'date';
+        pageState.sort.order = q.get('sortOrder') || 'desc';
+    }
+
+    function renderToolbar() {
+        const searchVal = (pageState.filters.search || '').replace(/"/g, '&quot;');
+        $('#grade-table-toolbar').html(`
+            <div class="flex items-center gap-2 text-sm text-gray-600">Show <select id="list-limit" class="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:ring-2 focus:ring-blue-500"><option value="10">10</option><option value="25">25</option><option value="50">50</option></select> rows</div>
+            <div class="relative">
+                <button id="gradeFilterToggleBtn" type="button" class="flex items-center gap-2 bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
+                    Filter
+                </button>
+                <div id="gradeFilterDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl border border-gray-200 shadow-xl z-50 overflow-visible">
+                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100"><h3 class="text-lg font-bold text-gray-800">Filter</h3><button type="button" id="gradeFilterCloseBtn" class="text-gray-400 hover:text-gray-600 transition p-1 rounded-lg hover:bg-gray-100">✕</button></div>
+                    <div class="px-5 py-4 space-y-4">
+                        <div><label class="block text-xs font-medium mb-1" for="filter_academic_year">Academic Year</label><select id="filter_academic_year" class="w-full"></select></div>
+                        <div><label class="block text-xs font-medium mb-1" for="filter_class">Class</label><select id="filter_class" class="w-full"></select></div>
+                        <div><label class="block text-xs font-medium mb-1" for="filter_grade_type">Grade Type</label><select id="filter_grade_type" class="w-full"></select></div>
+                        <div><label class="block text-xs font-medium mb-1" for="grade_search_filter">Search</label><input id="grade_search_filter" type="text" value="${searchVal}" class="w-full border border-gray-300 rounded-md p-2 text-sm" placeholder="Search..." /></div>
+                    </div>
+                    <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100"><button type="button" id="apply-grade-filter-btn" class="px-5 py-2 rounded-full text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 transition">Filter</button></div>
+                </div>
+            </div>
+        `);
+
+        $('#list-limit').val(String(pageState.limit)).off('change').on('change', function () {
+            pageState.limit = Number($(this).val() || 10); pageState.page = 1; lastRequestKey = ''; fetchGrades();
         });
 
-        function initGradeTable() {
-            gradeTable = $('#grade-table').DataTable({
-                processing: true,
-                serverSide: true,
-                searching: true,
-                lengthChange: true,
-                ajax: {
-                    url: '/Grade/GetAll',
-                    type: 'POST',
-                    data: function (d) {
-                        d.academic_year_id = currentAcademicYearId || null;
-                        d.academic_class_id = currentAcademicClassId || null;
-                        d.grade_type = currentGradeType || null;
-                    }
-                },
-                dom: 'lftip',
-                language: {
-                    lengthMenu: "Show _MENU_ rows",
-                    search: "",
-                    searchPlaceholder: "Search...",
-                    paginate: {
-                        first: "First",
-                        last: "Last",
-                        next: "Next",
-                        previous: "Previous"
-                    },
-                    info: "Showing _START_ to _END_ of _TOTAL_ entries"
-                },
-                columns: [
-                    {
-                        data: null,
-                        className: 'py-3',
-                        render: function (data, type, row) {
-                            return `${formatYearShort(row.start_date)} - ${formatYearShort(row.end_date)}`;
-                        }
-                    },
-                    {
-                        data: 'semester',
-                        className: 'py-3 text-gray-700',
-                        render: function (data) {
-                            return data ? `Semester ${data}` : '-';
-                        }
-                    },
-                    {
-                        data: 'grade_date',
-                        className: 'py-3 text-gray-900',
-                        render: data => data ? new Date(data).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }) : '-'
-                    },
-                    { data: 'class_name', className: 'py-3 text-gray-700' },
-                    { data: 'subject_name', className: 'py-3 text-gray-700' },
-                    { data: 'teacher_name', className: 'py-3 text-gray-700' },
-                    { data: 'grade_type', className: 'py-3 text-gray-700' },
-                    {
-                        data: 'minimum_value',
-                        className: 'py-3 text-gray-700',
-                        render: data => data ?? '-'
-                    },
-                    {
-                        data: null,
-                        className: 'py-3',
-                        render: row => `Pass: ${row.passed || 0} | Remedial: ${row.remedial || 0}`
-                    },
-                    {
-                        data: null,
-                        orderable: false,
-                        searchable: false,
-                        className: 'text-center py-3',
-                        render: function (data, type, row) {
-                            var id = row.grade_id;
-                            var editUrl = '/Grade/Edit?id=' + id;
-                            return `
-                                        <div class="flex justify-center grade-actions-wrapper relative">
-                                            <button type="button" onclick="toggleActionsMenu(event, '${id}')"
-                                                    class="p-1.5 hover:bg-gray-100 rounded-md transition-colors duration-150">
-                                                <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                                                </svg>
-                                            </button>
-                                            <div id="actions-menu-${id}" class="grade-actions-menu hidden absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10">
-                                                <a href="${editUrl}" class="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">
-                                                    Edit
-                                                </a>
-                                                <button type="button" onclick="delGrade('${id}')"
-                                                        class="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100">
-                                                    Delete
-                                                </button>
-                                            </div>
-                                        </div>`;
-                        }
-                    }
-                ],
-                initComplete: function () {
-                    const wrapper = $('#grade-table_wrapper');
-                    const $length = wrapper.find('.dataTables_length, .dt-length');
-                    const $filter = wrapper.find('.dataTables_filter, .dt-search');
-                    const initialSearch = (gradeTable.search() || '').replace(/"/g, '&quot;');
+        const $d = $('#gradeFilterDropdown');
+        $('#gradeFilterToggleBtn').off('click').on('click', function () { $d.toggleClass('hidden'); });
+        $('#gradeFilterCloseBtn').off('click').on('click', function () { $d.addClass('hidden'); });
+        $('#apply-grade-filter-btn').off('click').on('click', applyFilters);
 
-                    $filter.hide();
+        $('#filter_academic_year').select2({ placeholder: 'All Academic Years', allowClear: true, width: '100%', ajax: { url: '/Select2/AcademicYears', dataType: 'json', delay: 250, data: p => ({ q: p.term || '', page: p.page || 1 }), processResults: d => ({ results: d.results, pagination: d.pagination }), cache: true }, minimumInputLength: 0 });
+        $('#filter_class').select2({ placeholder: '-- All Class --', allowClear: true, width: '100%', ajax: { url: '/Select2/AcademicClasses', dataType: 'json', delay: 250, data: p => ({ q: p.term || '', page: p.page || 1, activeOnly: true }), processResults: d => ({ results: d.results, pagination: d.pagination }), cache: true }, minimumInputLength: 0 });
+        $('#filter_grade_type').select2({ placeholder: '-- All Grade Type --', allowClear: true, width: '100%', ajax: { url: '/Select2/GradeTypes', dataType: 'json', delay: 250, data: p => ({ q: p.term || '', page: p.page || 1 }), processResults: d => ({ results: d.results, pagination: d.pagination }), cache: true }, minimumInputLength: 0 });
+    }
 
-                    const $toggleFilter = $(`
-                        <div class="relative">
-                            <button id="filterToggleBtn"
-                                    onclick="toggleFilter()"
-                                    class="flex items-center gap-2 bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none"
-                                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-                                </svg>
-                                Filter
-                            </button>
+    function setSelectValue(selector, id, text) {
+        if (!id) return;
+        if ($(selector + ` option[value="${id}"]`).length === 0) $(selector).append(new Option(text || id, id, true, true));
+        $(selector).val(id).trigger('change');
+    }
 
-                            <div id="filterDropdown"
-                                    class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl border border-gray-200 shadow-xl z-50 overflow-visible">
-                                <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                                    <h3 class="text-lg font-bold text-gray-800">Filter</h3>
-                                    <button type="button"
-                                            onclick="toggleFilter()"
-                                            class="text-gray-400 hover:text-gray-600 transition p-1 rounded-lg hover:bg-gray-100">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
-                                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                            <line x1="18" y1="6" x2="6" y2="18" />
-                                            <line x1="6" y1="6" x2="18" y2="18" />
-                                        </svg>
-                                    </button>
-                                </div>
-                                <div class="px-5 py-4 space-y-4">
-                                    <div class="w-full">
-                                        <label class="block text-xs font-medium mb-1" for="filter_academic_year">Academic Year</label>
-                                        <select id="filter_academic_year" class="w-full"></select>
-                                    </div>
-                                    <div class="w-full">
-                                        <label class="block text-xs font-medium mb-1" for="filter_class">Class</label>
-                                        <select id="filter_class" class="w-full"></select>
-                                    </div>
-                                    <div class="w-full">
-                                        <label class="block text-xs font-medium mb-1" for="filter_grade_type">Grade Type</label>
-                                        <select id="filter_grade_type" class="w-full"></select>
-                                    </div>
-                                    <div class="w-full">
-                                        <label class="block text-xs font-medium mb-1" for="grade_search_filter">Search</label>
-                                        <input id="grade_search_filter"
-                                                type="text"
-                                                value="${initialSearch}"
-                                                class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                placeholder="Filter by grade type / title / description" />
-                                    </div>
-                                </div>
-                                <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
-                                    <button type="button"
-                                            onclick="applyGradeFilter()"
-                                            class="px-5 py-2 rounded-full text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 transition">
-                                        Filter
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `);
+    async function initDefaultYear() {
+        try {
+            const res = await $.get('/Grade/GetActiveAcademicYear');
+            if (res && res.success && res.data && res.data.id && !pageState.filters.academic_year_id) pageState.filters.academic_year_id = res.data.id;
+            if (pageState.filters.academic_year_id) setSelectValue('#filter_academic_year', pageState.filters.academic_year_id, (res && res.data && res.data.text) ? res.data.text : pageState.filters.academic_year_id);
+        } catch { }
+    }
 
-                    $('#grade-table-toolbar').empty().append($length).append($toggleFilter);
+    function applyFilters() {
+        pageState.filters.academic_year_id = $('#filter_academic_year').val() || '';
+        pageState.filters.academic_class_id = $('#filter_class').val() || '';
+        pageState.filters.grade_type = $('#filter_grade_type').val() || '';
+        pageState.filters.search = ($('#grade_search_filter').val() || '').trim();
+        pageState.page = 1; lastRequestKey = ''; fetchGrades(); $('#gradeFilterDropdown').addClass('hidden');
+    }
 
-                    $length.addClass('flex items-center gap-2 text-sm text-gray-600');
-                    $length.find('label').addClass('flex items-center gap-2');
-                    $length.find('select').addClass('border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500');
+    function sortIndicators() {
+        $('#grade-table thead th[data-sort]').each(function () {
+            const f = $(this).data('sort');
+            const active = f === pageState.sort.field;
+            const icon = active ? (pageState.sort.order === 'asc' ? ' ↑' : ' ↓') : '';
+            const base = $(this).text().replace(/ [↑↓]$/, '');
+            $(this).text(base + icon);
+        });
+    }
 
-                    $('#grade-table-toolbar').addClass('flex flex-col md:flex-row md:items-center md:justify-between gap-4');
+    function fmtDate(d) { if (!d) return '-'; const x = new Date(d); return isNaN(x.getTime()) ? '-' : x.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }); }
 
-                    $('#filter_academic_year').select2({
-                        placeholder: "All Academic Years",
-                        allowClear: true,
-                        width: '100%',
-                        ajax: {
-                            url: '/Select2/AcademicYears',
-                            dataType: 'json',
-                            delay: 250,
-                            data: params => ({ q: params.term || '', page: params.page || 1 }),
-                            processResults: data => ({ results: data.results, pagination: data.pagination }),
-                            cache: true
-                        },
-                        minimumInputLength: 0
-                    });
+    function rows(items) {
+        const $tb = $('#grade-table tbody');
+        if (!items || !items.length) { $tb.html('<tr><td colspan="10" class="px-4 py-8 text-center text-gray-500">No data found.</td></tr>'); return; }
+        let html = ''; const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+        items.forEach(r => {
+            html += `<tr><td class="px-4 py-3">${new Date(r.start_date).getFullYear()} - ${new Date(r.end_date).getFullYear()}</td><td class="px-4 py-3">${r.semester ? `Semester ${r.semester}` : '-'}</td><td class="px-4 py-3">${fmtDate(r.grade_date)}</td><td class="px-4 py-3">${r.class_name || '-'}</td><td class="px-4 py-3">${r.subject_name || '-'}</td><td class="px-4 py-3">${r.teacher_name || '-'}</td><td class="px-4 py-3">${r.grade_type || '-'}</td><td class="px-4 py-3">${r.minimum_value ?? '-'}</td><td class="px-4 py-3">Pass: ${r.passed || 0} | Remedial: ${r.remedial || 0}</td><td class="px-4 py-3 text-center"><div class="flex flex-wrap gap-2 justify-center"><a href="/Grade/Edit?id=${encodeURIComponent(r.grade_id || '')}&returnUrl=${returnUrl}" class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200" title="Edit">E</a><button type="button" onclick="delGrade('${r.grade_id || ''}')" class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-red-100 text-red-700 hover:bg-red-200" title="Delete">D</button></div></td></tr>`;
+        });
+        $tb.html(html);
+    }
 
-                    $('#filter_class').select2({
-                        placeholder: "-- All Class --",
-                        allowClear: true,
-                        width: '100%',
-                        ajax: {
-                            url: '/Select2/AcademicClasses',
-                            dataType: 'json',
-                            delay: 250,
-                            data: params => ({ q: params.term || '', page: params.page || 1, activeOnly: true }),
-                            processResults: data => ({ results: data.results, pagination: data.pagination }),
-                            cache: true
-                        },
-                        minimumInputLength: 0
-                    });
+function pager(count) {
+        const start = count === 0 ? 0 : ((pageState.page - 1) * pageState.limit) + 1;
+        const end = ((pageState.page - 1) * pageState.limit) + count;
+        $('#table-info-container').html(`<span class="text-sm text-gray-600">Showing ${start} to ${end} of ${pageState.totalRows}</span>`);
+        const prevDisabled = pageState.page <= 1; const nextDisabled = !pageState.hasNextPage;
+        $('#table-pagination-container').html(`<div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm"><button id="page-prev" class="px-3 py-2 text-sm border-r border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Prev</button><span class="px-3 py-2 text-sm bg-blue-900 text-white font-semibold">${pageState.page}</span><button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Next</button></div>`);
+        $('#page-prev').off('click').on('click', function () { if (pageState.page <= 1) return; pageState.page--; lastRequestKey = ''; fetchGrades(); });
+        $('#page-next').off('click').on('click', function () { if (!pageState.hasNextPage) return; pageState.page++; lastRequestKey = ''; fetchGrades(); });
+    }
 
-                    $('#filter_grade_type').select2({
-                        placeholder: "-- All Grade Type --",
-                        allowClear: true,
-                        width: '100%',
-                        ajax: {
-                            url: '/Select2/GradeTypes',
-                            dataType: 'json',
-                            delay: 250,
-                            data: params => ({ q: params.term || '', page: params.page || 1 }),
-                            processResults: data => ({ results: data.results, pagination: data.pagination }),
-                            cache: true
-                        },
-                        minimumInputLength: 0
-                    });
+    function setGradeLoading(isLoading) { $('#grade-table-loading').toggleClass('hidden', !isLoading); }
 
-                    $.ajax({
-                        url: '/Grade/GetActiveAcademicYear',
-                        type: 'GET',
-                        success: function (res) {
-                            if (!res || !res.success || !res.data || !res.data.id) return;
+    async function fetchGrades() {
+        const payload = { page: pageState.page, limit: pageState.limit, filters: { ...pageState.filters }, sort: { ...pageState.sort } };
+        const key = JSON.stringify(payload); if (key === lastRequestKey) return; lastRequestKey = key;
+        syncStateToUrl(); sortIndicators(); setGradeLoading(true);
+        try {
+            const res = await $.ajax({ url: '/Grade/GetAll', type: 'POST', contentType: 'application/json', data: JSON.stringify(payload) });
+            if (!res || !res.success) { lastRequestKey = ''; await tailwindMessageModal('Failed', (res && res.message) ? res.message : 'Failed to load grade data.'); return; }
+            const result = res.data || {}; const items = result.data || [];
+            pageState.hasNextPage = !!result.hasNextPage; pageState.totalRows = Number(result.totalRows || 0);
+            rows(items); pager(items.length);
+        } catch { lastRequestKey = ''; await tailwindMessageModal('Error', 'An error occurred while loading grade data.'); }
+        finally { setGradeLoading(false); }
+    }
 
-                            currentAcademicYearId = res.data.id;
+    async function delGrade(id) {
+        const yes = await tailwindConfirmModal({ title: 'Delete Confirmation', message: 'Are you sure you want to delete this grade record?', confirmText: 'Delete', cancelText: 'Cancel' });
+        if (!yes) return;
+        try {
+            const res = await $.ajax({ url: '/Grade/Delete', type: 'POST', contentType: 'application/json', data: JSON.stringify({ action: 'delete', id: id, data: null }) });
+            if (!res || !res.success) { await tailwindMessageModal('Failed', (res && res.message) ? res.message : 'Delete failed.'); return; }
+            lastRequestKey = ''; await fetchGrades(); await tailwindMessageModal('Deleted', 'Grade has been deleted.');
+        } catch { await tailwindMessageModal('Error', 'An error occurred while deleting grade data.'); }
+    }
 
-                            if ($('#filter_academic_year option[value="' + res.data.id + '"]').length === 0) {
-                                const option = new Option(res.data.text || '', res.data.id, true, true);
-                                $('#filter_academic_year').append(option);
-                            }
-
-                            $('#filter_academic_year').val(res.data.id).trigger('change');
-                            gradeTable.ajax.reload(null, true);
-                        }
-                    });
-
-                    stylePagination();
-                },
-                drawCallback: function () {
-                    setTimeout(stylePagination, 50);
-                }
-            });
-        }
-
-        function applyGradeFilter() {
-            currentAcademicYearId = $('#filter_academic_year').val() || '';
-            currentAcademicClassId = $('#filter_class').val() || '';
-            currentGradeType = $('#filter_grade_type').val() || '';
-            const searchKeyword = ($('#grade_search_filter').val() || '').trim();
-            gradeTable.search(searchKeyword);
-            gradeTable.ajax.reload(null, true);
-            toggleFilter();
-        }
-
-        function stylePagination() {
-            const wrapper = $('#grade-table_wrapper');
-            let $info = wrapper.find('.dataTables_info').first();
-            if ($info.length === 0) $info = wrapper.find('.dt-info').first();
-
-            let $paginate = wrapper.find('.dataTables_paginate').first();
-            if ($paginate.length === 0) $paginate = wrapper.find('.dt-paging').first();
-
-            if ($info.length > 0) {
-                $('#table-info-container').empty().append($info);
-                $info.removeClass().addClass('text-sm text-gray-600');
-            }
-
-            if ($paginate.length > 0) {
-                $('#table-pagination-container').empty().append($paginate);
-            }
-
-            $('#table-pagination-container').addClass('w-full flex justify-end overflow-x-auto whitespace-nowrap');
-            if (typeof applyAdminPaginationStyle === 'function') {
-                applyAdminPaginationStyle($('#table-pagination-container'));
-            }
-        }
-
-        function formatYearShort(d) {
-            if (!d) return "";
-            const date = new Date(d);
-            if (isNaN(date.getTime())) return "";
-            return date.getFullYear();
-        }
-
-        function toggleActionsMenu(event, id) {
-            event.stopPropagation();
-            $('.grade-actions-menu').addClass('hidden');
-            $('#actions-menu-' + id).toggleClass('hidden');
-        }
-
-        function delGrade(id) {
-            $('.grade-actions-menu').addClass('hidden');
-            if (!confirm("Delete this grade record?")) return;
-
-            $.ajax({
-                url: "/Grade/Delete",
-                type: "POST",
-                contentType: "application/json",
-                data: JSON.stringify({ id: id }),
-                success: res => {
-                    if (res.success) {
-                        $('#grade-table').DataTable().ajax.reload(null, false);
-                    } else {
-                        alert(res.message || "Failed to delete grade record");
-                    }
-                },
-                error: () => alert("An error occurred while deleting the grade record.")
-            });
-        }
-    </script>
+    $(document).ready(async function () {
+        hydrate(); renderToolbar(); await initDefaultYear(); sortIndicators(); fetchGrades();
+        $(document).on('click', function (e) { const $d = $('#gradeFilterDropdown'); const t = $(e.target); if (!t.closest('#gradeFilterToggleBtn').length && !t.closest('#gradeFilterDropdown').length && !t.closest('.select2-container, .select2-dropdown').length) $d.addClass('hidden'); });
+        $('#grade-table thead').on('click', 'th[data-sort]', function () { const f = $(this).data('sort'); if (!f) return; if (pageState.sort.field === f) pageState.sort.order = pageState.sort.order === 'asc' ? 'desc' : 'asc'; else { pageState.sort.field = f; pageState.sort.order = 'asc'; } pageState.page = 1; lastRequestKey = ''; fetchGrades(); });
+        $(document).on('input', '#grade_search_filter', function () { const val = ($(this).val() || '').trim(); if ((pageState.filters.search || '') === val) return; clearTimeout(searchDebounce); searchDebounce = setTimeout(() => { pageState.filters.search = val; pageState.page = 1; lastRequestKey = ''; fetchGrades(); }, 300); });
+    });
+</script>
 }

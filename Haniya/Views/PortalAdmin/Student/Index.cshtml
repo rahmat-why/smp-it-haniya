@@ -6,23 +6,23 @@
 <div class="flex justify-between items-center mb-4">
     <h2 class="text-xl font-semibold">Student List</h2>
     <a id="student-add-link" href="/Student/Create"
-       class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900"
-       data-testid="student-add-button">
+       class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
         + Add Student
     </a>
 </div>
 <div class="bg-white rounded-lg shadow">
-    <!-- Toolbar -->
     <div class="px-4 pt-4">
-        <div id="student-table-toolbar"
-             class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        </div>
+        <div id="student-table-toolbar" class="flex flex-col md:flex-row md:items-center md:justify-between gap-3"></div>
     </div>
 
-    <!-- Table -->
-    <div class="overflow-x-auto px-4 pt-4">
-        <table id="student-table"
-               class="min-w-full text-sm text-left text-gray-700 border-collapse">
+    <div class="relative overflow-x-auto px-4 pt-4">
+        <div id="student-table-loading" class="hidden absolute inset-0 z-20 bg-white/80 backdrop-blur-[1px] flex items-center justify-center">
+            <div class="flex flex-col items-center gap-3 text-gray-600">
+                <div class="w-8 h-8 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin"></div>
+                <p class="text-sm font-medium">Loading student data...</p>
+            </div>
+        </div>
+        <table id="student-table" class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
                     <th data-sort="student" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 250px;">Student</th>
@@ -33,19 +33,17 @@
                     <th data-sort="entryDate" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 130px;">Entry Date</th>
                     <th data-sort="level" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 130px;">Level</th>
                     <th data-sort="class" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 90px;">Class</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase !text-right" style="width: 70px;">Action</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 110px;">Action</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100"></tbody>
         </table>
     </div>
 
-    <!-- Footer -->
     <div class="px-4 pb-4 pt-3">
-        <div id="student-table-footer"
-             class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div id="student-table-info"></div>
-            <div id="student-table-pagination"></div>
+        <div id="student-table-footer" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div id="table-info-container"></div>
+            <div id="table-pagination-container"></div>
         </div>
     </div>
 </div>
@@ -57,7 +55,7 @@
     const pageState = {
         page: 1,
         limit: 10,
-        filters: { search: '' },
+        filters: { search: '', level: '', gender: '' },
         sort: { field: 'student', order: 'desc' },
         hasNextPage: false,
         totalRows: 0
@@ -71,7 +69,7 @@
     }
 
     function getStateQuery() {
-        return `page=${pageState.page}&limit=${pageState.limit}&search=${encodeURIComponent(pageState.filters.search || '')}&sortField=${encodeURIComponent(pageState.sort.field)}&sortOrder=${encodeURIComponent(pageState.sort.order)}`;
+        return `page=${pageState.page}&limit=${pageState.limit}&search=${encodeURIComponent(pageState.filters.search || '')}&level=${encodeURIComponent(pageState.filters.level || '')}&gender=${encodeURIComponent(pageState.filters.gender || '')}&sortField=${encodeURIComponent(pageState.sort.field)}&sortOrder=${encodeURIComponent(pageState.sort.order)}`;
     }
 
     function syncStateToUrl() {
@@ -86,30 +84,46 @@
         pageState.page = Number.isFinite(page) && page > 0 ? page : 1;
         pageState.limit = Number.isFinite(limit) && limit > 0 ? limit : 10;
         pageState.filters.search = q.get('search') || '';
+        pageState.filters.level = q.get('level') || '';
+        pageState.filters.gender = q.get('gender') || '';
         pageState.sort.field = q.get('sortField') || 'student';
         pageState.sort.order = q.get('sortOrder') || 'desc';
     }
 
     function renderToolbar() {
+        const searchValue = (pageState.filters.search || '').replace(/"/g, '&quot;');
         $('#student-table-toolbar').html(`
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 w-full">
-                <div class="flex items-center gap-2 text-sm text-gray-600">
-                    Show
-                    <select id="list-limit" class="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:ring-2 focus:ring-blue-500">
-                        <option value="10">10</option>
-                        <option value="25">25</option>
-                        <option value="50">50</option>
-                    </select> rows
-                </div>
-                <div>
-                    <input id="list-search" type="text" placeholder="Search..." class="border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 w-full md:w-64"/>
+            <div class="flex items-center gap-2 text-sm text-gray-600">
+                Show
+                <select id="list-limit" class="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:ring-2 focus:ring-blue-500">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select> rows
+            </div>
+            <div class="relative">
+                <button id="studentFilterToggleBtn" type="button" class="flex items-center gap-2 bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
+                    Filter
+                </button>
+                <div id="studentFilterDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl border border-gray-200 shadow-xl z-50 overflow-visible">
+                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                        <h3 class="text-lg font-bold text-gray-800">Filter</h3>
+                        <button type="button" id="studentFilterCloseBtn" class="text-gray-400 hover:text-gray-600 transition p-1 rounded-lg hover:bg-gray-100">?</button>
+                    </div>
+                    <div class="px-5 py-4 space-y-4">
+                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_level">Level</label><select id="filter_level" class="w-full"></select></div>
+                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_gender">Gender</label><select id="filter_gender" class="w-full"></select></div>
+                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="student_search_filter">Search</label><input id="student_search_filter" type="text" value="${searchValue}" class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Search..." /></div>
+                    </div>
+                    <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
+                        <button type="button" id="apply-student-filter-btn" class="px-5 py-2 rounded-full text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 transition">Filter</button>
+                    </div>
                 </div>
             </div>
         `);
 
         $('#list-limit').val(String(pageState.limit));
-        $('#list-search').val(pageState.filters.search || '');
-
         $('#list-limit').off('change').on('change', function () {
             const next = Number($(this).val() || 10);
             if (pageState.limit === next) return;
@@ -119,27 +133,71 @@
             fetchStudents();
         });
 
-        $('#list-search').off('input').on('input', function () {
-            const val = $(this).val() || '';
-            if ((pageState.filters.search || '') === val) return;
-            clearTimeout(searchDebounce);
-            searchDebounce = setTimeout(() => {
-                pageState.filters.search = val;
-                pageState.page = 1;
-                lastRequestKey = '';
-                fetchStudents();
-            }, 300);
+        const $dropdown = $('#studentFilterDropdown');
+        $('#studentFilterToggleBtn').off('click').on('click', function () { $dropdown.toggleClass('hidden'); });
+        $('#studentFilterCloseBtn').off('click').on('click', function () { $dropdown.addClass('hidden'); });
+        $('#apply-student-filter-btn').off('click').on('click', applyStudentFilter);
+
+        $('#filter_level').select2({
+            placeholder: '-- All Level --',
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $dropdown,
+            ajax: {
+                url: '/Select2/LevelStudent',
+                dataType: 'json',
+                delay: 250,
+                data: p => ({ q: p.term || '', page: p.page || 1 }),
+                processResults: d => ({ results: d.results, pagination: d.pagination }),
+                cache: true
+            },
+            minimumInputLength: 0
         });
+
+        $('#filter_gender').select2({
+            placeholder: '-- All Gender --',
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $dropdown,
+            ajax: {
+                url: '/Select2/Gender',
+                dataType: 'json',
+                delay: 250,
+                data: p => ({ q: p.term || '', page: p.page || 1 }),
+                processResults: d => ({ results: d.results, pagination: d.pagination }),
+                cache: true
+            },
+            minimumInputLength: 0
+        });
+
+        if (pageState.filters.level) {
+            const option = new Option(pageState.filters.level, pageState.filters.level, true, true);
+            $('#filter_level').append(option).trigger('change');
+        }
+        if (pageState.filters.gender) {
+            const option = new Option(pageState.filters.gender, pageState.filters.gender, true, true);
+            $('#filter_gender').append(option).trigger('change');
+        }
     }
 
     function renderSortIndicators() {
         $('#student-table thead th[data-sort]').each(function () {
             const field = $(this).data('sort');
             const isActive = field === pageState.sort.field;
-            const icon = isActive ? (pageState.sort.order === 'asc' ? ' ▲' : ' ▼') : '';
-            const base = $(this).text().replace(/ [▲▼]$/, '');
+            const icon = isActive ? (pageState.sort.order === 'asc' ? ' ↑' : ' ↓') : '';
+            const base = $(this).text().replace(/ [↑↓]$/, '');
             $(this).text(base + icon);
         });
+    }
+
+    function applyStudentFilter() {
+        pageState.filters.level = $('#filter_level').val() || '';
+        pageState.filters.gender = $('#filter_gender').val() || '';
+        pageState.filters.search = ($('#student_search_filter').val() || '').trim();
+        pageState.page = 1;
+        lastRequestKey = '';
+        fetchStudents();
+        $('#studentFilterDropdown').addClass('hidden');
     }
 
     function renderRows(items) {
@@ -152,9 +210,7 @@
         let html = '';
         items.forEach(row => {
             const id = row.student_id || '';
-            const src = (typeof row.profile_photo === 'string' && row.profile_photo.trim() !== '')
-                ? row.profile_photo
-                : '/image/no-image.png';
+            const src = (typeof row.profile_photo === 'string' && row.profile_photo.trim() !== '') ? row.profile_photo : '/image/no-image.png';
             const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
             html += `
                 <tr class="bg-white divide-y divide-gray-100">
@@ -174,17 +230,14 @@
                     <td class="px-4 py-3">${formatDateCell(row.entry_date)}</td>
                     <td class="px-4 py-3">${row.level || '-'}</td>
                     <td class="px-4 py-3">${row.class || '-'}</td>
-                    <td class="px-4 py-3 text-right">
-                        <div class="inline-flex justify-end student-actions-wrapper relative">
-                            <button type="button" onclick="toggleActionsMenu(event, '${id}')" class="p-1.5 hover:bg-gray-100 rounded-md">
-                                <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4z M10 12a2 2 0 110-4 2 2 0 010 4z M10 18a2 2 0 110-4 2 2 0 010 4z"/>
-                                </svg>
+                    <td class="px-4 py-3 text-center">
+                        <div class="flex flex-wrap gap-2 justify-center">
+                            <a href="/Student/Edit?id=${encodeURIComponent(id)}&returnUrl=${returnUrl}" class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200" title="Edit">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+                            </a>
+                            <button type="button" onclick="delStudent('${id}')" class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-red-100 text-red-700 hover:bg-red-200" title="Delete">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path></svg>
                             </button>
-                            <div id="actions-menu-${id}" class="student-actions-menu hidden absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10">
-                                <a href="/Student/Edit?id=${encodeURIComponent(id)}&returnUrl=${returnUrl}" class="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">Edit</a>
-                                <button type="button" onclick="delStudent('${id}')" class="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100">Delete</button>
-                            </div>
                         </div>
                     </td>
                 </tr>
@@ -196,11 +249,11 @@
     function renderPagination(currentCount) {
         const start = currentCount === 0 ? 0 : ((pageState.page - 1) * pageState.limit) + 1;
         const end = ((pageState.page - 1) * pageState.limit) + currentCount;
-        $('#student-table-info').html(`<span class="text-sm text-gray-600">Showing ${start} to ${end} of ${pageState.totalRows}</span>`);
+        $('#table-info-container').html(`<span class="text-sm text-gray-600">Showing ${start} to ${end} of ${pageState.totalRows}</span>`);
 
         const prevDisabled = pageState.page <= 1;
         const nextDisabled = !pageState.hasNextPage;
-        $('#student-table-pagination').html(`
+        $('#table-pagination-container').html(`
             <div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm">
                 <button id="page-prev" class="px-3 py-2 text-sm border-r border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Prev</button>
                 <span class="px-3 py-2 text-sm bg-blue-900 text-white font-semibold">${pageState.page}</span>
@@ -222,6 +275,10 @@
         });
     }
 
+    function setStudentLoading(isLoading) {
+        $('#student-table-loading').toggleClass('hidden', !isLoading);
+    }
+
     async function fetchStudents() {
         const payload = {
             page: pageState.page,
@@ -235,6 +292,7 @@
 
         syncStateToUrl();
         renderSortIndicators();
+        setStudentLoading(true);
 
         try {
             const res = await $.ajax({
@@ -258,17 +316,12 @@
         } catch {
             lastRequestKey = '';
             tailwindMessageModal('Error', 'An error occurred while loading student data.');
+        } finally {
+            setStudentLoading(false);
         }
     }
 
-    function toggleActionsMenu(event, id) {
-        event.stopPropagation();
-        $('.student-actions-menu').addClass('hidden');
-        $('#actions-menu-' + id).toggleClass('hidden');
-    }
-
     async function delStudent(id) {
-        $('.student-actions-menu').addClass('hidden');
         const yes = await tailwindConfirmModal({
             title: 'Delete Confirmation',
             message: 'Are you sure you want to delete this data?',
@@ -279,14 +332,10 @@
 
         try {
             const res = await $.ajax({
-                url: "/Student/Delete",
-                type: "POST",
-                contentType: "application/json",
-                data: JSON.stringify({
-                    action: "delete",
-                    id: id,
-                    data: null
-                })
+                url: '/Student/Delete',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ action: 'delete', id: id, data: null })
             });
             if (!res || !res.success) {
                 await tailwindMessageModal('Failed', (res && res.message) ? res.message : 'Delete failed.');
@@ -305,11 +354,15 @@
         renderToolbar();
         renderSortIndicators();
         fetchStudents();
+
         $(document).on('click', function (e) {
-            if (!$(e.target).closest('.student-actions-wrapper').length) {
-                $('.student-actions-menu').addClass('hidden');
-            }
+            const $dropdown = $('#studentFilterDropdown');
+            const isToggle = $(e.target).closest('#studentFilterToggleBtn').length > 0;
+            const isInsideDropdown = $(e.target).closest('#studentFilterDropdown').length > 0;
+            const isSelect2 = $(e.target).closest('.select2-container, .select2-dropdown').length > 0;
+            if (!isToggle && !isInsideDropdown && !isSelect2) $dropdown.addClass('hidden');
         });
+
         $('#student-table thead').on('click', 'th[data-sort]', function () {
             const field = $(this).data('sort');
             if (!field) return;
@@ -323,7 +376,18 @@
             lastRequestKey = '';
             fetchStudents();
         });
+
+        $(document).on('input', '#student_search_filter', function () {
+            const val = ($(this).val() || '').trim();
+            if ((pageState.filters.search || '') === val) return;
+            clearTimeout(searchDebounce);
+            searchDebounce = setTimeout(() => {
+                pageState.filters.search = val;
+                pageState.page = 1;
+                lastRequestKey = '';
+                fetchStudents();
+            }, 300);
+        });
     });
 </script>
 }
-

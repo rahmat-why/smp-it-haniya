@@ -1,4 +1,4 @@
-﻿@{
+@{
     Layout = "_LayoutStudent";
     ViewData["Title"] = "My Attendance";
 }
@@ -8,42 +8,16 @@
 </div>
 
 <div class="bg-white rounded-lg shadow">
-    <div class="px-4 pt-4">
-        <div id="attendance-toolbar" class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        </div>
-    </div>
-    <div class="px-4 pt-4">
-        <div class="overflow-x-auto border border-gray-200 rounded-xl bg-white shadow-sm">
-            <table id="attendance-table" class="w-full text-sm text-left text-gray-700 border-collapse">
-                <thead class="bg-gray-50 text-gray-600 border-b border-gray-200">
-                    <tr>
-                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Date</th>
-                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Class</th>
-                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Teacher</th>
-                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-center">Status</th>
-                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Notes</th>
-                    </tr>
-                </thead>
-
-                <tbody class="bg-white"></tbody>
-
-            </table>
-        </div>
-    </div>
-    <div class="px-4 pb-4 pt-3">
-        <div id="attendance-footer" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div id="table-info"></div>
-            <div id="table-pagination"></div>
-        </div>
-    </div>
-
+    <div class="px-4 pt-4"><div id="attendance-toolbar" class="flex flex-col md:flex-row md:items-center md:justify-between gap-3"></div></div>
+    <div class="px-4 pt-4"><div class="relative overflow-x-auto border border-gray-200 rounded-xl bg-white shadow-sm"><div id="st-attendance-table-loading" class="hidden absolute inset-0 z-20 bg-white/80 backdrop-blur-[1px] flex items-center justify-center"><div class="flex flex-col items-center gap-3 text-gray-600"><div class="w-8 h-8 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin"></div><p class="text-sm font-medium">Loading attendance data...</p></div></div><table id="attendance-table" class="w-full text-sm text-left text-gray-700 border-collapse"><thead class="bg-gray-50 text-gray-600 border-b border-gray-200"><tr><th data-sort="date" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Date</th><th data-sort="class" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Class</th><th data-sort="teacher" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Teacher</th><th data-sort="status" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Status</th><th data-sort="notes" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Notes</th></tr></thead><tbody class="bg-white"></tbody></table></div></div>
+    <div class="px-4 pb-4 pt-3"><div id="attendance-footer" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"><div id="table-info"></div><div id="table-pagination"></div></div></div>
 </div>
 
 @section Scripts {
 <script>
-    $(document).ready(function () {
-        initAttendanceTable();
-    });
+    const pageState = { page: 1, limit: 10, filters: { search: '' }, sort: { field: 'date', order: 'desc' }, hasNextPage: false, totalRows: 0 };
+    let lastRequestKey = '';
+    let searchDebounce = null;
 
     function formatDateId(dateValue) {
         const d = new Date(dateValue);
@@ -51,157 +25,125 @@
         return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
     }
 
-    function initAttendanceTable() {
+    function getStateQuery() { return `page=${pageState.page}&limit=${pageState.limit}&search=${encodeURIComponent(pageState.filters.search || '')}&sortField=${encodeURIComponent(pageState.sort.field)}&sortOrder=${encodeURIComponent(pageState.sort.order)}`; }
+    function syncStateToUrl() { history.replaceState({ ...pageState }, '', `?${getStateQuery()}`); }
+    function hydrateStateFromUrl() { const q = new URLSearchParams(window.location.search); const page = Number(q.get('page') || 1); const limit = Number(q.get('limit') || 10); pageState.page = Number.isFinite(page) && page > 0 ? page : 1; pageState.limit = Number.isFinite(limit) && limit > 0 ? limit : 10; pageState.filters.search = q.get('search') || ''; pageState.sort.field = q.get('sortField') || 'date'; pageState.sort.order = q.get('sortOrder') || 'desc'; }
 
-        $('#attendance-table').DataTable({
-            processing: true,
-            serverSide: true,
-            searching: true,
-            lengthChange: true,
-            ordering: true,
-            dom: 'lftip',
+    function renderToolbar() {
+        const searchVal = (pageState.filters.search || '').replace(/"/g, '&quot;');
+        $('#attendance-toolbar').html(`
+            <div class="flex items-center gap-2 text-sm text-gray-600">Show <select id="list-limit" class="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"><option value="10">10</option><option value="25">25</option><option value="50">50</option></select> rows</div>
+            <div class="w-full md:w-80"><input id="attendance_search_filter" type="text" value="${searchVal}" class="w-full border border-gray-300 rounded-md p-2 text-sm" placeholder="Search attendance..." /></div>
+        `);
 
-            ajax: {
-                url: '/StAttendance/GetMyAttendance',
-                type: 'POST'
-            },
+        $('#list-limit').val(String(pageState.limit)).off('change').on('change', function () { const next = Number($(this).val() || 10); if (pageState.limit === next) return; pageState.limit = next; pageState.page = 1; lastRequestKey = ''; fetchAttendance(); });
+    }
 
-            columns: [
-                {
-                    data: 'date',
-                    className: 'px-5 py-3text-gray-900 whitespace-nowrap',
-                    render: d => d
-                        ? formatDateId(d)
-                        : "-"
-                },
-                {
-                    data: 'class_name',
-                    className: 'px-5 py-3 whitespace-nowrap'
-                },
-                {
-                    data: 'teacher',
-                    className: 'px-5 py-3 whitespace-nowrap'
-                },
-                {
-                    data: 'status',
-                    className: 'px-5 py-3 font-semibold',
-                    render: function (data) {
-                        if (data === 'Present')
-                            return '<span class="px-2 py-1 text-xs rounded-md bg-green-50 text-green-700 border border-green-100 font-medium">Present</span>';
+    function renderSortIndicators() {
+        $('#attendance-table thead th[data-sort]').each(function () {
+            const field = $(this).data('sort');
+            const isActive = field === pageState.sort.field;
+            const icon = isActive ? (pageState.sort.order === 'asc' ? ' ↑' : ' ↓') : '';
+            const base = $(this).text().replace(/ [↑↓]$/, '');
+            $(this).text(base + icon);
+        });
+    }
 
-                        if (data === 'Absent')
-                            return '<span class="px-2 py-1 text-xs rounded-md bg-red-50 text-red-700 border border-red-100 font-medium">Absent</span>';
+    function renderRows(items) {
+        const $tbody = $('#attendance-table tbody');
+        if (!items || !items.length) { $tbody.html('<tr><td colspan="5" class="px-5 py-8 text-center text-gray-500">No data found.</td></tr>'); return; }
 
-                        if (data === 'Late')
-                            return '<span class="px-2 py-1 text-xs rounded-md bg-yellow-50 text-yellow-700 border border-yellow-100 font-medium">Late</span>';
+        let html = '';
+        items.forEach(row => {
+            const st = (row.status || '').toUpperCase();
+            let badge = `<span class="px-2 py-1 text-xs rounded-md bg-gray-50 text-gray-700 border border-gray-100 font-medium">${row.status || '-'}</span>`;
+            if (st === 'PRESENT') badge = '<span class="px-2 py-1 text-xs rounded-md bg-green-50 text-green-700 border border-green-100 font-medium">Present</span>';
+            else if (st === 'ABSENT' || st === 'NOINFO') badge = '<span class="px-2 py-1 text-xs rounded-md bg-red-50 text-red-700 border border-red-100 font-medium">Absent</span>';
+            else if (st === 'LATE') badge = '<span class="px-2 py-1 text-xs rounded-md bg-yellow-50 text-yellow-700 border border-yellow-100 font-medium">Late</span>';
+            else if (st === 'SICK') badge = '<span class="px-2 py-1 text-xs rounded-md bg-blue-50 text-blue-700 border border-blue-100 font-medium">Sick</span>';
+            else if (st === 'EXCUSED') badge = '<span class="px-2 py-1 text-xs rounded-md bg-purple-50 text-purple-700 border border-purple-100 font-medium">Excused</span>';
 
-                        return data ?? '-';
-                    }
-                },
-                {
-                    data: 'notes',
-                    className: 'px-5 py-3 text-gray-600'
-                }
-            ],
+            html += `<tr class="border-b border-gray-100"><td class="px-5 py-3 whitespace-nowrap">${row.date ? formatDateId(row.date) : '-'}</td><td class="px-5 py-3 whitespace-nowrap">${row.class_name || '-'}</td><td class="px-5 py-3 whitespace-nowrap">${row.teacher || '-'}</td><td class="px-5 py-3">${badge}</td><td class="px-5 py-3 text-gray-600">${row.notes || '-'}</td></tr>`;
+        });
+        $tbody.html(html);
+    }
 
-            initComplete: function () {
-                styleStudentAttendanceTable();
-            },
+    function renderPagination(currentCount) {
+        const start = currentCount === 0 ? 0 : ((pageState.page - 1) * pageState.limit) + 1;
+        const end = ((pageState.page - 1) * pageState.limit) + currentCount;
+        $('#table-info').html(`<span class="text-sm text-gray-600">Showing ${start} to ${end} of ${pageState.totalRows}</span>`);
 
-            drawCallback: function () {
-                mergeDateRows(this.api());
-                styleStudentAttendanceTable();
+        const prevDisabled = pageState.page <= 1;
+        const nextDisabled = !pageState.hasNextPage;
+        $('#table-pagination').html(`<div class="inline-flex items-center border border-gray-300 rounded-md overflow-hidden min-w-max"><button id="page-prev" class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900'}" ${prevDisabled ? 'disabled' : ''}>Prev</button><span class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 bg-blue-900 text-white">${pageState.page}</span><button id="page-next" class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900'}" ${nextDisabled ? 'disabled' : ''}>Next</button></div>`);
+
+        $('#page-prev').off('click').on('click', function () { if (pageState.page <= 1) return; pageState.page -= 1; lastRequestKey = ''; fetchAttendance(); });
+        $('#page-next').off('click').on('click', function () { if (!pageState.hasNextPage) return; pageState.page += 1; lastRequestKey = ''; fetchAttendance(); });
+    }
+
+    function setStAttendanceLoading(isLoading) {
+        $('#st-attendance-table-loading').toggleClass('hidden', !isLoading);
+    }
+
+    async function fetchAttendance() {
+        const payload = { page: pageState.page, limit: pageState.limit, filters: { ...pageState.filters }, sort: { ...pageState.sort } };
+        const requestKey = JSON.stringify(payload);
+        if (requestKey === lastRequestKey) return;
+        lastRequestKey = requestKey;
+
+        syncStateToUrl();
+        renderSortIndicators();
+        setStAttendanceLoading(true);
+
+        try {
+            const res = await $.ajax({ url: '/StAttendance/GetMyAttendance', type: 'POST', contentType: 'application/json', data: JSON.stringify(payload) });
+            if (!res || !res.success) {
+                lastRequestKey = '';
+                await tailwindMessageModal('Failed', (res && res.message) ? res.message : 'Failed to load attendance.');
+                return;
             }
-        });
-    }
 
-    function mergeDateRows(api) {
-        let rows = api.rows({ page: 'current' }).nodes();
-        let lastDate = null;
-        let rowspan = 1;
-        let lastCell = null;
-
-        api.column(0, { page: 'current' }).data().each(function (date, i) {
-            let cell = $('td:eq(0)', rows[i]);
-
-            if (lastDate === date) {
-                cell.remove();
-                rowspan++;
-                lastCell.attr('rowspan', rowspan);
-            } else {
-                lastDate = date;
-                rowspan = 1;
-                lastCell = cell;
-            }
-        });
-    }
-
-    function styleStudentAttendanceTable() {
-        const wrapper = $('#attendance-table_wrapper');
-        const $length = wrapper.find('.dataTables_length, .dt-length');
-        const $filter = wrapper.find('.dataTables_filter, .dt-search');
-
-        $('#attendance-toolbar').empty().append($length).append($filter);
-
-        $length.addClass('flex items-center gap-2 text-sm text-gray-600');
-        $length.find('label').addClass('flex items-center gap-2');
-        $length.find('select').addClass(
-            'border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 ' +
-            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-        );
-
-        $filter.addClass('flex items-center gap-2 text-sm text-gray-600 w-full md:w-auto justify-end');
-        $filter.find('label').addClass('flex items-center gap-2');
-        $filter.find('input')
-            .addClass(
-                'border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white text-gray-700 ' +
-                'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full md:w-72'
-            )
-            .attr('placeholder', 'Search attendance...');
-
-        let $info = wrapper.find('.dataTables_info').first();
-        if ($info.length === 0) $info = wrapper.find('.dt-info').first();
-
-        let $paginate = wrapper.find('.dataTables_paginate').first();
-        if ($paginate.length === 0) $paginate = wrapper.find('.dt-paging').first();
-
-        if ($info.length > 0) {
-            $('#table-info').empty().append($info);
-            $info.removeClass().addClass('text-sm text-gray-600');
+            const result = res.data || {};
+            const items = result.data || [];
+            pageState.totalRows = Number(result.totalRows || 0);
+            pageState.hasNextPage = !!result.hasNextPage;
+            renderRows(items);
+            renderPagination(items.length);
+        } catch {
+            lastRequestKey = '';
+            await tailwindMessageModal('Error', 'An error occurred while loading attendance.');
+        } finally {
+            setStAttendanceLoading(false);
         }
-
-        if ($paginate.length > 0) {
-            $('#table-pagination').empty().append($paginate);
-        }
-
-        $('#table-pagination').addClass('w-full flex justify-end overflow-x-auto whitespace-nowrap');
-        applyStudentPaginationStyle($('#table-pagination'));
     }
 
-    function applyStudentPaginationStyle($scope) {
-        const $root = $scope && $scope.length ? $scope : $(document);
-        $root.find('.dataTables_paginate, .dt-paging').each(function () {
-            const $paginate = $(this);
-            $paginate.addClass('inline-flex items-center border border-gray-300 rounded-md overflow-hidden min-w-max');
+    $(document).ready(function () {
+        hydrateStateFromUrl();
+        renderToolbar();
+        renderSortIndicators();
+        fetchAttendance();
 
-            $paginate.find('a, span, button, .paginate_button, .dt-paging-button').each(function () {
-                const $btn = $(this);
-                const isCurrent = $btn.hasClass('current') || $btn.hasClass('active') || $btn.attr('aria-current') === 'page';
-                const isDisabled = $btn.hasClass('disabled') || $btn.prop('disabled') || $btn.attr('aria-disabled') === 'true';
-                const baseClasses = 'inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 last:border-r-0 min-w-[40px] transition-colors duration-150';
-
-                $btn.addClass(baseClasses);
-                $btn.removeClass('bg-blue-900 text-white cursor-default bg-gray-50 text-gray-400 cursor-not-allowed bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900 cursor-pointer');
-
-                if (isCurrent) {
-                    $btn.addClass('bg-blue-900 text-white cursor-default');
-                } else if (isDisabled) {
-                    $btn.addClass('bg-gray-50 text-gray-400 cursor-not-allowed');
-                } else {
-                    $btn.addClass('bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900 cursor-pointer');
-                }
-            });
+        $('#attendance-table thead').on('click', 'th[data-sort]', function () {
+            const field = $(this).data('sort');
+            if (!field) return;
+            if (pageState.sort.field === field) pageState.sort.order = pageState.sort.order === 'asc' ? 'desc' : 'asc';
+            else { pageState.sort.field = field; pageState.sort.order = 'asc'; }
+            pageState.page = 1;
+            lastRequestKey = '';
+            fetchAttendance();
         });
-    }
+
+        $(document).on('input', '#attendance_search_filter', function () {
+            const val = ($(this).val() || '').trim();
+            if ((pageState.filters.search || '') === val) return;
+            clearTimeout(searchDebounce);
+            searchDebounce = setTimeout(() => {
+                pageState.filters.search = val;
+                pageState.page = 1;
+                lastRequestKey = '';
+                fetchAttendance();
+            }, 300);
+        });
+    });
 </script>
 }

@@ -217,127 +217,164 @@ namespace Haniya.Controllers.PortalAdmin
             return View("~/Views/PortalAdmin/Attendance/Edit.cshtml");
         }
 
-        [HttpPost]
-        public IActionResult GetAll(string academic_year_id = null, string academic_class_id = null, string attendance_month = null)
+        public class ListSort
         {
-            var (draw, start, length, _, orderColumnIndex, orderDir) = ParseDataTablesQuery();
+            public string field { get; set; } = "date";
+            public string order { get; set; } = "desc";
+        }
 
-            using var conn = GetConn();
-            conn.Open();
+        public class ListRequest
+        {
+            public int page { get; set; } = 1;
+            public int limit { get; set; } = 10;
+            public Dictionary<string, string>? filters { get; set; }
+            public ListSort? sort { get; set; }
+        }
 
-            var monthStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-            if (!string.IsNullOrWhiteSpace(attendance_month) &&
-                DateTime.TryParseExact(attendance_month + "-01", "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedMonthStart))
+        [HttpPost]
+        public IActionResult GetAll([FromBody] ListRequest? req)
+        {
+            try
             {
-                monthStart = parsedMonthStart;
-            }
-            var nextMonth = monthStart.AddMonths(1);
+                req ??= new ListRequest();
+                var page = req.page <= 0 ? 1 : req.page;
+                var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
+                var offset = (page - 1) * limit;
 
-            if (string.IsNullOrWhiteSpace(academic_year_id))
-            {
-                using var activeYearCmd = new SqlCommand(@"
-                    SELECT TOP 1 academic_year_id
-                    FROM mst_academic_years
-                    WHERE status = 'ACTIVE'
-                    ORDER BY start_date DESC", conn);
-                academic_year_id = activeYearCmd.ExecuteScalar()?.ToString();
-            }
+                var filters = req.filters ?? new Dictionary<string, string>();
+                filters.TryGetValue("academic_year_id", out var academic_year_id);
+                filters.TryGetValue("academic_class_id", out var academic_class_id);
+                filters.TryGetValue("attendance_month", out var attendance_month);
 
-            // TOTAL
-            int recordsTotal;
-            using (var cmd = new SqlCommand(
-                @"SELECT COUNT(*) 
-                  FROM dbo.txn_attendances a
-                  JOIN dbo.mst_academic_classes ac ON ac.academic_class_id = a.academic_class_id
-                  WHERE a.attendance_date >= @monthStart
-                    AND a.attendance_date < @nextMonth
-                    AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
-                    AND (@academicClassId IS NULL OR a.academic_class_id = @academicClassId)", conn))
-            {
-                cmd.Parameters.AddWithValue("@monthStart", monthStart);
-                cmd.Parameters.AddWithValue("@nextMonth", nextMonth);
-                cmd.Parameters.AddWithValue("@academicYearId", (object)academic_year_id ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@academicClassId", (object)academic_class_id ?? DBNull.Value);
-                recordsTotal = (int)cmd.ExecuteScalar();
-            }
+                using var conn = GetConn();
+                conn.Open();
 
-            var orderBy = GetAttendanceOrderByColumn(orderColumnIndex);
-            if (string.IsNullOrWhiteSpace(orderBy))
-                orderBy = "a.attendance_date";
-
-            // DATA
-            var sql = @"
-    SELECT
-        a.attendance_id,
-        a.attendance_date,
-        ay.start_date,
-        ay.end_date,
-        ay.semester,
-        c.class_name,
-        CONCAT(t.first_name,' ',t.last_name) AS teacher_name,
-        SUM(CASE WHEN d.status='PRESENT' THEN 1 ELSE 0 END) AS present,
-        SUM(CASE WHEN d.status='SICK' THEN 1 ELSE 0 END) AS sick,
-        SUM(CASE WHEN d.status='EXCUSED' THEN 1 ELSE 0 END) AS permit,
-        SUM(CASE WHEN d.status='NOINFO' THEN 1 ELSE 0 END) AS alpha
-    FROM dbo.txn_attendances a
-    JOIN dbo.mst_academic_classes ac ON ac.academic_class_id = a.academic_class_id
-    JOIN dbo.mst_academic_years ay ON ay.academic_year_id = ac.academic_year_id
-    JOIN dbo.mst_classes c ON c.class_id = ac.class_id
-    JOIN dbo.mst_teachers t ON t.teacher_id = a.teacher_id
-    LEFT JOIN dbo.txn_attendance_details d ON d.attendance_id = a.attendance_id
-    WHERE a.attendance_date >= @monthStart
-      AND a.attendance_date < @nextMonth
-      AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
-      AND (@academicClassId IS NULL OR a.academic_class_id = @academicClassId)
-    GROUP BY
-        a.attendance_id,
-        a.attendance_date,
-        ay.start_date,
-        ay.end_date,
-        ay.semester,
-        c.class_name,
-        t.first_name,
-        t.last_name
-    ORDER BY " + orderBy + " " + orderDir + @", a.attendance_date DESC
-    OFFSET @start ROWS FETCH NEXT @length ROWS ONLY";
-
-            var list = new List<object>();
-            using (var cmd = new SqlCommand(sql, conn))
-            {
-                cmd.Parameters.AddWithValue("@monthStart", monthStart);
-                cmd.Parameters.AddWithValue("@nextMonth", nextMonth);
-                cmd.Parameters.AddWithValue("@academicYearId", (object)academic_year_id ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@academicClassId", (object)academic_class_id ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@start", start);
-                cmd.Parameters.AddWithValue("@length", length);
-
-                using var r = cmd.ExecuteReader();
-                while (r.Read())
+                var monthStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+                if (!string.IsNullOrWhiteSpace(attendance_month) &&
+                    DateTime.TryParseExact(attendance_month + "-01", "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedMonthStart))
                 {
-                    list.Add(new
-                    {
-                        attendance_id = r["attendance_id"].ToString(),
-                        attendance_date = ((DateTime)r["attendance_date"]).ToString("yyyy-MM-dd"),
-                        start_date = r["start_date"],
-                        end_date = r["end_date"],
-                        semester = r["semester"]?.ToString(),
-                        class_name = r["class_name"].ToString(),
-                        teacher_name = r["teacher_name"].ToString(),
-                        present = Convert.ToInt32(r["present"]),
-                        sick = Convert.ToInt32(r["sick"]),
-                        permit = Convert.ToInt32(r["permit"]),
-                        alpha = Convert.ToInt32(r["alpha"])
-                    });
+                    monthStart = parsedMonthStart;
                 }
-            }
+                var nextMonth = monthStart.AddMonths(1);
 
-            return Json(new
+                if (string.IsNullOrWhiteSpace(academic_year_id))
+                {
+                    using var activeYearCmd = new SqlCommand(@"
+                        SELECT TOP 1 academic_year_id
+                        FROM mst_academic_years
+                        WHERE status = 'ACTIVE'
+                        ORDER BY start_date DESC", conn);
+                    academic_year_id = activeYearCmd.ExecuteScalar()?.ToString();
+                }
+
+                var sortMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["academicYear"] = "ay.start_date",
+                    ["semester"] = "ay.semester",
+                    ["date"] = "a.attendance_date",
+                    ["class"] = "c.class_name",
+                    ["teacher"] = "t.first_name",
+                    ["present"] = "SUM(CASE WHEN d.status='PRESENT' THEN 1 ELSE 0 END)",
+                    ["sick"] = "SUM(CASE WHEN d.status='SICK' THEN 1 ELSE 0 END)",
+                    ["permit"] = "SUM(CASE WHEN d.status='EXCUSED' THEN 1 ELSE 0 END)",
+                    ["alpha"] = "SUM(CASE WHEN d.status='NOINFO' THEN 1 ELSE 0 END)"
+                };
+                var sort = req.sort ?? new ListSort();
+                var orderBy = sortMap.TryGetValue(sort.field ?? "", out var mapped) ? mapped : "a.attendance_date";
+                var orderDir = string.Equals(sort.order, "asc", StringComparison.OrdinalIgnoreCase) ? "ASC" : "DESC";
+                var secondaryOrder = string.Equals(orderBy, "a.attendance_date", StringComparison.OrdinalIgnoreCase)
+                    ? "a.attendance_id DESC"
+                    : "a.attendance_date DESC";
+
+                int totalRows;
+                using (var countCmd = new SqlCommand(
+                    @"SELECT COUNT(*) 
+                      FROM dbo.txn_attendances a
+                      JOIN dbo.mst_academic_classes ac ON ac.academic_class_id = a.academic_class_id
+                      WHERE a.attendance_date >= @monthStart
+                        AND a.attendance_date < @nextMonth
+                        AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
+                        AND (@academicClassId IS NULL OR a.academic_class_id = @academicClassId)", conn))
+                {
+                    countCmd.Parameters.AddWithValue("@monthStart", monthStart);
+                    countCmd.Parameters.AddWithValue("@nextMonth", nextMonth);
+                    countCmd.Parameters.AddWithValue("@academicYearId", (object?)academic_year_id ?? DBNull.Value);
+                    countCmd.Parameters.AddWithValue("@academicClassId", (object?)academic_class_id ?? DBNull.Value);
+                    totalRows = (int)countCmd.ExecuteScalar();
+                }
+
+                var sql = @"
+                    SELECT
+                        a.attendance_id,
+                        a.attendance_date,
+                        ay.start_date,
+                        ay.end_date,
+                        ay.semester,
+                        c.class_name,
+                        CONCAT(t.first_name,' ',t.last_name) AS teacher_name,
+                        SUM(CASE WHEN d.status='PRESENT' THEN 1 ELSE 0 END) AS present,
+                        SUM(CASE WHEN d.status='SICK' THEN 1 ELSE 0 END) AS sick,
+                        SUM(CASE WHEN d.status='EXCUSED' THEN 1 ELSE 0 END) AS permit,
+                        SUM(CASE WHEN d.status='NOINFO' THEN 1 ELSE 0 END) AS alpha
+                    FROM dbo.txn_attendances a
+                    JOIN dbo.mst_academic_classes ac ON ac.academic_class_id = a.academic_class_id
+                    JOIN dbo.mst_academic_years ay ON ay.academic_year_id = ac.academic_year_id
+                    JOIN dbo.mst_classes c ON c.class_id = ac.class_id
+                    JOIN dbo.mst_teachers t ON t.teacher_id = a.teacher_id
+                    LEFT JOIN dbo.txn_attendance_details d ON d.attendance_id = a.attendance_id
+                    WHERE a.attendance_date >= @monthStart
+                      AND a.attendance_date < @nextMonth
+                      AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
+                      AND (@academicClassId IS NULL OR a.academic_class_id = @academicClassId)
+                    GROUP BY
+                        a.attendance_id,
+                        a.attendance_date,
+                        ay.start_date,
+                        ay.end_date,
+                        ay.semester,
+                        c.class_name,
+                        t.first_name,
+                        t.last_name
+                    ORDER BY " + orderBy + " " + orderDir + @", " + secondaryOrder + @"
+                    OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY";
+
+                var list = new List<object>();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@monthStart", monthStart);
+                    cmd.Parameters.AddWithValue("@nextMonth", nextMonth);
+                    cmd.Parameters.AddWithValue("@academicYearId", (object?)academic_year_id ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@academicClassId", (object?)academic_class_id ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@offset", offset);
+                    cmd.Parameters.AddWithValue("@limit", limit);
+
+                    using var r = cmd.ExecuteReader();
+                    while (r.Read())
+                    {
+                        list.Add(new
+                        {
+                            attendance_id = r["attendance_id"].ToString(),
+                            attendance_date = ((DateTime)r["attendance_date"]).ToString("yyyy-MM-dd"),
+                            start_date = r["start_date"],
+                            end_date = r["end_date"],
+                            semester = r["semester"]?.ToString(),
+                            class_name = r["class_name"].ToString(),
+                            teacher_name = r["teacher_name"].ToString(),
+                            present = Convert.ToInt32(r["present"]),
+                            sick = Convert.ToInt32(r["sick"]),
+                            permit = Convert.ToInt32(r["permit"]),
+                            alpha = Convert.ToInt32(r["alpha"])
+                        });
+                    }
+                }
+
+                var hasNextPage = (offset + list.Count) < totalRows;
+                return Json(DTOResponse.ok(new { data = list, hasNextPage, totalRows }));
+            }
+            catch (Exception ex)
             {
-                draw,
-                recordsTotal,
-                recordsFiltered = recordsTotal,
-                data = list
-            });
+                return Json(DTOResponse.fail(ex.Message, 500));
+            }
         }
 
         [HttpGet]
@@ -377,59 +414,6 @@ namespace Haniya.Controllers.PortalAdmin
             }
         }
 
-        // ParseDataTablesQuery method (same as ClassController)
-        private (int draw, int start, int length, string searchValue, int orderColumnIndex, string orderDir)
-        ParseDataTablesQuery()
-        {
-            var form = Request.HasFormContentType ? Request.Form : null;
-            var q = Request.Query;
-
-            string GetVal(string key)
-            {
-                if (form != null && form.ContainsKey(key)) return form[key].ToString();
-                return q[key].ToString();
-            }
-
-            int.TryParse(GetVal("draw"), out var draw);
-            if (draw <= 0) draw = 1;
-            int.TryParse(GetVal("start"), out var start);
-            if (start < 0) start = 0;
-            int.TryParse(GetVal("length"), out var length);
-            if (length <= 0) length = 10;
-            var searchValue = GetVal("search[value]") ?? string.Empty;
-
-            int orderColumnIndex = 0; // default to column 0 (Date)
-            var orderColIdxStr = GetVal("order[0][column]");
-            if (int.TryParse(orderColIdxStr, out var idx))
-            {
-                orderColumnIndex = idx;
-            }
-
-            var dir = GetVal("order[0][dir]");
-            var orderDir = "ASC";
-            if (!string.IsNullOrWhiteSpace(dir) &&
-                (dir.Equals("asc", StringComparison.OrdinalIgnoreCase) ||
-                 dir.Equals("desc", StringComparison.OrdinalIgnoreCase)))
-            {
-                orderDir = dir.ToUpper();
-            }
-
-            return (draw, start, length, searchValue, orderColumnIndex, orderDir);
-        }
-
-        private string GetAttendanceOrderByColumn(int orderColumnIndex)
-        {
-            return orderColumnIndex switch
-            {
-                0 => "ay.start_date",
-                1 => "ay.semester",
-                2 => "a.attendance_date",
-                3 => "c.class_name",
-                4 => "t.first_name",
-                5 => "SUM(CASE WHEN d.status='PRESENT' THEN 1 ELSE 0 END)",
-                _ => "a.attendance_date"
-            };
-        }
 
         [HttpGet]
         public IActionResult GetById(string id)
@@ -451,10 +435,12 @@ namespace Haniya.Controllers.PortalAdmin
                 a.attendance_date,
                 a.academic_class_id,
                 a.teacher_id,
-                c.class_name
+                c.class_name,
+                CONCAT(t.first_name, ' ', t.last_name) AS teacher_name
             FROM txn_attendances a
             LEFT JOIN mst_academic_classes ac ON a.academic_class_id = ac.academic_class_id
             LEFT JOIN mst_classes c ON ac.class_id = c.class_id
+            LEFT JOIN mst_teachers t ON a.teacher_id = t.teacher_id
             WHERE a.attendance_id = @id";
 
                 object header = null;
@@ -474,7 +460,8 @@ namespace Haniya.Controllers.PortalAdmin
                                 : Convert.ToDateTime(reader["attendance_date"]).ToString("yyyy-MM-dd"),
                             academic_class_id = reader["academic_class_id"]?.ToString(),
                             teacher_id = reader["teacher_id"]?.ToString(),
-                            class_name = reader["class_name"]?.ToString()
+                            class_name = reader["class_name"]?.ToString(),
+                            teacher_name = reader["teacher_name"]?.ToString()
                         };
                     }
                     reader.Close();
@@ -529,6 +516,7 @@ namespace Haniya.Controllers.PortalAdmin
                     academic_class_id = ((dynamic)header).academic_class_id,
                     teacher_id = ((dynamic)header).teacher_id,
                     class_name = ((dynamic)header).class_name,
+                    teacher_name = ((dynamic)header).teacher_name,
                     details
                 }));
             }
