@@ -1415,6 +1415,11 @@
     window.onload = function () {
         applySavedData();
         autoResize();
+        const isEmbedPreview = new URLSearchParams(window.location.search).get('embed') === '1';
+        if (isEmbedPreview) {
+            const actionCard = document.querySelector('.download-container');
+            if (actionCard) actionCard.style.display = 'none';
+        }
     };
 
     function appendEkskulRow(item) {
