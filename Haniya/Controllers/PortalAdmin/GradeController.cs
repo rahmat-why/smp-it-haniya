@@ -51,18 +51,12 @@ namespace Haniya.Controllers.PortalAdmin
             filters.TryGetValue("grade_type", out var grade_type);
             filters.TryGetValue("search", out var search);
 
+            academic_year_id = string.IsNullOrWhiteSpace(academic_year_id) ? null : academic_year_id;
+            academic_class_id = string.IsNullOrWhiteSpace(academic_class_id) ? null : academic_class_id;
+            grade_type = string.IsNullOrWhiteSpace(grade_type) ? null : grade_type;
+
             using var conn = GetConn();
             conn.Open();
-
-            if (string.IsNullOrWhiteSpace(academic_year_id))
-            {
-                using var activeYearCmd = new SqlCommand(@"
-                    SELECT TOP 1 academic_year_id
-                    FROM mst_academic_years
-                    WHERE status = 'ACTIVE'
-                    ORDER BY start_date DESC", conn);
-                academic_year_id = activeYearCmd.ExecuteScalar()?.ToString();
-            }
 
             var searchKeyword = string.IsNullOrWhiteSpace(search) ? null : $"%{search.Trim()}%";
 
@@ -70,7 +64,7 @@ namespace Haniya.Controllers.PortalAdmin
             var totalSql = @"
         SELECT COUNT(*) 
         FROM txn_grades g
-        JOIN mst_academic_classes ac ON g.academic_class_id = ac.academic_class_id
+        LEFT JOIN mst_academic_classes ac ON g.academic_class_id = ac.academic_class_id
         WHERE (@classId IS NULL OR g.academic_class_id = @classId)
           AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
           AND (@gradeType IS NULL OR g.grade_type = @gradeType)";
@@ -146,23 +140,23 @@ namespace Haniya.Controllers.PortalAdmin
 
         FROM txn_grades g
 
-        JOIN mst_academic_classes ac 
+        LEFT JOIN mst_academic_classes ac 
             ON g.academic_class_id = ac.academic_class_id
 
-        JOIN mst_academic_years ay
+        LEFT JOIN mst_academic_years ay
             ON ac.academic_year_id = ay.academic_year_id
 
-        JOIN mst_classes c 
+        LEFT JOIN mst_classes c 
             ON ac.class_id = c.class_id
 
-        JOIN mst_subjects s 
+        LEFT JOIN mst_subjects s 
             ON g.subject_id = s.subject_id
 
         LEFT JOIN mst_rps r 
             ON r.academic_class_id = ac.academic_class_id 
            AND r.subject_id = g.subject_id
 
-        JOIN mst_teachers t 
+        LEFT JOIN mst_teachers t 
             ON g.teacher_id = t.teacher_id
 
         LEFT JOIN txn_grade_details d 
@@ -178,7 +172,10 @@ namespace Haniya.Controllers.PortalAdmin
           AND (@search IS NULL 
                OR g.grade_type LIKE @search
                OR dt.item_name LIKE @search
-               OR dt.item_desc LIKE @search)
+               OR dt.item_desc LIKE @search
+               OR c.class_name LIKE @search
+               OR s.subject_name LIKE @search
+               OR CONCAT(t.first_name,' ',t.last_name) LIKE @search)
 
         GROUP BY 
             g.grade_id,
@@ -210,20 +207,20 @@ namespace Haniya.Controllers.PortalAdmin
 
             FROM txn_grades g
 
-            JOIN mst_academic_classes ac 
+            LEFT JOIN mst_academic_classes ac 
                 ON g.academic_class_id = ac.academic_class_id
 
-            JOIN mst_classes c 
+            LEFT JOIN mst_classes c 
                 ON ac.class_id = c.class_id
 
-            JOIN mst_subjects s 
+            LEFT JOIN mst_subjects s 
                 ON g.subject_id = s.subject_id
 
             LEFT JOIN mst_rps r 
                 ON r.academic_class_id = ac.academic_class_id 
                AND r.subject_id = g.subject_id
 
-            JOIN mst_teachers t 
+            LEFT JOIN mst_teachers t 
                 ON g.teacher_id = t.teacher_id
 
             LEFT JOIN txn_grade_details d 
@@ -239,7 +236,10 @@ namespace Haniya.Controllers.PortalAdmin
               AND (@search IS NULL 
                    OR g.grade_type LIKE @search
                    OR dt.item_name LIKE @search
-                   OR dt.item_desc LIKE @search)
+                   OR dt.item_desc LIKE @search
+                   OR c.class_name LIKE @search
+                   OR s.subject_name LIKE @search
+                   OR CONCAT(t.first_name,' ',t.last_name) LIKE @search)
 
             GROUP BY g.grade_id
         ) x";
@@ -257,6 +257,9 @@ namespace Haniya.Controllers.PortalAdmin
                 recordsFiltered = (int)cmd.ExecuteScalar();
             }
 
+            var totalPages = recordsFiltered == 0 ? 1 : (int)Math.Ceiling(recordsFiltered / (double)limit);
+            page = Math.Min(page, totalPages);
+            offset = (page - 1) * limit;
 
             // ================= DATA =================
             var list = new List<object>();
@@ -306,7 +309,9 @@ namespace Haniya.Controllers.PortalAdmin
                 data = list,
                 hasNextPage,
                 totalRows = recordsFiltered,
-                totalAll = recordsTotal
+                totalAll = recordsTotal,
+                currentPage = page,
+                limit
             }));
         }
 

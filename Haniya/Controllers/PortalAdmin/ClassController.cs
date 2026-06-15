@@ -70,7 +70,6 @@ namespace Haniya.Controllers.PortalAdmin
                 req ??= new ListRequest();
                 var page = req.page <= 0 ? 1 : req.page;
                 var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
-                var offset = (page - 1) * limit;
 
                 var filters = req.filters ?? new Dictionary<string, string>();
                 filters.TryGetValue("search", out var searchValue);
@@ -120,6 +119,9 @@ namespace Haniya.Controllers.PortalAdmin
                 if (!string.IsNullOrWhiteSpace(academicYearId))
                     countCmd.Parameters.AddWithValue("@academic_year_id", academicYearId);
                 var totalRows = Convert.ToInt32(countCmd.ExecuteScalar() ?? 0);
+                var totalPages = totalRows == 0 ? 1 : (int)Math.Ceiling(totalRows / (double)limit);
+                page = Math.Min(page, totalPages);
+                var offset = (page - 1) * limit;
 
                 var sql = $@"
             SELECT
@@ -196,7 +198,7 @@ namespace Haniya.Controllers.PortalAdmin
 
                 var hasNextPage = (offset + list.Count) < totalRows;
 
-                return Json(DTOResponse.ok(new { data = list, hasNextPage, totalRows }));
+                return Json(DTOResponse.ok(new { data = list, hasNextPage, totalRows, currentPage = page, limit }));
             }
             catch (Exception ex)
             {

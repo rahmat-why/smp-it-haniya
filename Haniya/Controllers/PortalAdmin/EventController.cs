@@ -106,7 +106,6 @@ namespace Haniya.Controllers.PortalAdmin
                 req ??= new ListRequest();
                 var page = req.page <= 0 ? 1 : req.page;
                 var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
-                var offset = (page - 1) * limit;
 
                 var filters = req.filters ?? new Dictionary<string, string>();
                 filters.TryGetValue("search", out var searchValue);
@@ -152,6 +151,10 @@ namespace Haniya.Controllers.PortalAdmin
                 if (!string.IsNullOrWhiteSpace(statusFilter))
                     filteredCmd.Parameters.AddWithValue("@statusFilter", statusFilter);
                 var recordsFiltered = (int)filteredCmd.ExecuteScalar();
+
+                var totalPages = recordsFiltered == 0 ? 1 : (int)Math.Ceiling(recordsFiltered / (double)limit);
+                page = Math.Min(page, totalPages);
+                var offset = (page - 1) * limit;
 
                 // Main data query with tags
                 var sql = $@"
@@ -214,7 +217,9 @@ namespace Haniya.Controllers.PortalAdmin
                     data = list,
                     hasNextPage,
                     totalRows = recordsFiltered,
-                    totalAll = recordsTotal
+                    totalAll = recordsTotal,
+                    currentPage = page,
+                    limit
                 }));
             }
             catch (Exception ex)

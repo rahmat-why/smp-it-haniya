@@ -44,11 +44,10 @@ namespace Haniya.Controllers.PortalStudent
                 req ??= new ListRequest();
                 var page = req.page <= 0 ? 1 : req.page;
                 var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
-                var offset = (page - 1) * limit;
-                var take = limit + 1;
 
                 var filters = req.filters ?? new Dictionary<string, string>();
                 filters.TryGetValue("search", out var search);
+                search = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
 
                 var sortMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                 {
@@ -68,7 +67,7 @@ namespace Haniya.Controllers.PortalStudent
                 conn.Open();
 
                 var where = new List<string> { "d.student_id = @studentId" };
-                if (!string.IsNullOrWhiteSpace(search))
+                if (search != null)
                 {
                     where.Add(@"(
                         c.class_name LIKE @search
@@ -80,6 +79,11 @@ namespace Haniya.Controllers.PortalStudent
                     )");
                 }
                 var whereSql = "WHERE " + string.Join(" AND ", where);
+
+                var totalAllSql = @"
+            SELECT COUNT(*)
+            FROM txn_grade_details d
+            WHERE d.student_id = @studentId";
 
                 var totalSql = @"
             SELECT COUNT(*)
@@ -113,29 +117,40 @@ namespace Haniya.Controllers.PortalStudent
                 LEFT JOIN mst_detail_settings dt ON g.grade_type = dt.detail_id AND dt.header_id = 'GRADE_TYPE'
             {WHERE_SQL}
             ORDER BY {ORDER_BY} {ORDER_DIR}, d.created_at DESC
-            OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY"
+            OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY"
                     .Replace("{WHERE_SQL}", whereSql)
                     .Replace("{ORDER_BY}", orderBy)
                     .Replace("{ORDER_DIR}", orderDir);
 
                 var list = new List<object>();
+                int totalAll = 0;
                 int totalRows = 0;
+
+                using (var totalAllCmd = new SqlCommand(totalAllSql, conn))
+                {
+                    totalAllCmd.Parameters.AddWithValue("@studentId", studentId);
+                    totalAll = Convert.ToInt32(totalAllCmd.ExecuteScalar() ?? 0);
+                }
 
                 using (var countCmd = new SqlCommand(totalSql, conn))
                 {
                     countCmd.Parameters.AddWithValue("@studentId", studentId);
-                    if (!string.IsNullOrWhiteSpace(search))
-                        countCmd.Parameters.AddWithValue("@search", $"%{search.Trim()}%");
+                    if (search != null)
+                        countCmd.Parameters.AddWithValue("@search", $"%{search}%");
                     totalRows = Convert.ToInt32(countCmd.ExecuteScalar() ?? 0);
                 }
+
+                var totalPages = totalRows == 0 ? 1 : (int)Math.Ceiling(totalRows / (double)limit);
+                page = Math.Min(page, totalPages);
+                var offset = (page - 1) * limit;
 
                 using (var cmd = new SqlCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("@studentId", studentId);
                     cmd.Parameters.AddWithValue("@offset", offset);
-                    cmd.Parameters.AddWithValue("@take", take);
-                    if (!string.IsNullOrWhiteSpace(search))
-                        cmd.Parameters.AddWithValue("@search", $"%{search.Trim()}%");
+                    cmd.Parameters.AddWithValue("@limit", limit);
+                    if (search != null)
+                        cmd.Parameters.AddWithValue("@search", $"%{search}%");
 
                     using var r = cmd.ExecuteReader();
                     while (r.Read())
@@ -156,10 +171,9 @@ namespace Haniya.Controllers.PortalStudent
                     }
                 }
 
-                var hasNextPage = list.Count > limit;
-                if (hasNextPage) list = list.Take(limit).ToList();
+                var hasNextPage = (offset + list.Count) < totalRows;
 
-                return Json(DTOResponse.ok(new { data = list, hasNextPage, totalRows }));
+                return Json(DTOResponse.ok(new { data = list, hasNextPage, totalRows, currentPage = page, limit, totalAll }));
             }
             catch (Exception ex)
             {

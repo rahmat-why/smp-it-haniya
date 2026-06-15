@@ -52,13 +52,16 @@ namespace Haniya.Controllers.PortalAdmin
             req ??= new ListRequest();
             var page = req.page <= 0 ? 1 : req.page;
             var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
-            var offset = (page - 1) * limit;
 
             var filters = req.filters ?? new Dictionary<string, string>();
             filters.TryGetValue("search", out var search);
             filters.TryGetValue("academicClassId", out var academicClassId);
             filters.TryGetValue("status", out var status);
             filters.TryGetValue("paymentType", out var paymentType);
+            search = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
+            academicClassId = string.IsNullOrWhiteSpace(academicClassId) ? null : academicClassId.Trim();
+            status = string.IsNullOrWhiteSpace(status) ? null : status.Trim();
+            paymentType = string.IsNullOrWhiteSpace(paymentType) ? null : paymentType.Trim();
 
             var sortMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -79,10 +82,10 @@ namespace Haniya.Controllers.PortalAdmin
             conn.Open();
 
             var where = new List<string> { "1=1" };
-            if (!string.IsNullOrWhiteSpace(academicClassId)) where.Add("sc.academic_class_id = @classId");
-            if (!string.IsNullOrWhiteSpace(status)) where.Add("p.status = @status");
-            if (!string.IsNullOrWhiteSpace(paymentType)) where.Add("p.payment_type = @paymentType");
-            if (!string.IsNullOrWhiteSpace(search))
+            if (academicClassId != null) where.Add("sc.academic_class_id = @classId");
+            if (status != null) where.Add("p.status = @status");
+            if (paymentType != null) where.Add("p.payment_type = @paymentType");
+            if (search != null)
             {
                 where.Add(@"(
                     COALESCE(s.full_name, CONCAT(s.first_name, ' ', s.last_name)) LIKE @searchPattern
@@ -105,12 +108,16 @@ namespace Haniya.Controllers.PortalAdmin
             var totalRows = 0;
             using (var countCmd = new SqlCommand(countSql, conn))
             {
-                if (!string.IsNullOrWhiteSpace(academicClassId)) countCmd.Parameters.AddWithValue("@classId", academicClassId.Trim());
-                if (!string.IsNullOrWhiteSpace(status)) countCmd.Parameters.AddWithValue("@status", status.Trim());
-                if (!string.IsNullOrWhiteSpace(paymentType)) countCmd.Parameters.AddWithValue("@paymentType", paymentType.Trim());
-                if (!string.IsNullOrWhiteSpace(search)) countCmd.Parameters.AddWithValue("@searchPattern", $"%{search.Trim()}%");
+                if (academicClassId != null) countCmd.Parameters.AddWithValue("@classId", academicClassId);
+                if (status != null) countCmd.Parameters.AddWithValue("@status", status);
+                if (paymentType != null) countCmd.Parameters.AddWithValue("@paymentType", paymentType);
+                if (search != null) countCmd.Parameters.AddWithValue("@searchPattern", $"%{search}%");
                 totalRows = Convert.ToInt32(countCmd.ExecuteScalar() ?? 0);
             }
+
+            var totalPages = totalRows == 0 ? 1 : (int)Math.Ceiling(totalRows / (double)limit);
+            page = Math.Min(page, totalPages);
+            var offset = (page - 1) * limit;
 
             var sql = @"
         SELECT 
@@ -157,10 +164,10 @@ namespace Haniya.Controllers.PortalAdmin
             {
                 cmd.Parameters.AddWithValue("@offset", offset);
                 cmd.Parameters.AddWithValue("@limit", limit);
-                if (!string.IsNullOrWhiteSpace(academicClassId)) cmd.Parameters.AddWithValue("@classId", academicClassId.Trim());
-                if (!string.IsNullOrWhiteSpace(status)) cmd.Parameters.AddWithValue("@status", status.Trim());
-                if (!string.IsNullOrWhiteSpace(paymentType)) cmd.Parameters.AddWithValue("@paymentType", paymentType.Trim());
-                if (!string.IsNullOrWhiteSpace(search)) cmd.Parameters.AddWithValue("@searchPattern", $"%{search.Trim()}%");
+                if (academicClassId != null) cmd.Parameters.AddWithValue("@classId", academicClassId);
+                if (status != null) cmd.Parameters.AddWithValue("@status", status);
+                if (paymentType != null) cmd.Parameters.AddWithValue("@paymentType", paymentType);
+                if (search != null) cmd.Parameters.AddWithValue("@searchPattern", $"%{search}%");
 
                 using var r = cmd.ExecuteReader();
                 while (r.Read())
@@ -186,7 +193,7 @@ namespace Haniya.Controllers.PortalAdmin
             }
 
             var hasNextPage = (offset + list.Count) < totalRows;
-            return Json(DTOResponse.ok(new { data = list, hasNextPage, totalRows }));
+            return Json(DTOResponse.ok(new { data = list, hasNextPage, totalRows, currentPage = page, limit }));
         }
 
         [HttpGet]

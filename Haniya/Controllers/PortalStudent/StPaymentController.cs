@@ -2,11 +2,12 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.Security.Claims;
 using Haniya.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Haniya.Controllers.PortalStudent
 {
+    [Authorize]
     public class StPaymentController : Controller
     {
         private readonly IConfiguration _config;
@@ -48,10 +49,10 @@ namespace Haniya.Controllers.PortalStudent
                 req ??= new ListRequest();
                 var page = req.page <= 0 ? 1 : req.page;
                 var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
-                var offset = (page - 1) * limit;
 
                 var filters = req.filters ?? new Dictionary<string, string>();
                 filters.TryGetValue("search", out var search);
+                search = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
 
                 // Ambil StudentId dari login
                 var studentId = User.FindFirst("StudentId")?.Value;
@@ -63,11 +64,11 @@ namespace Haniya.Controllers.PortalStudent
                 using var conn = GetConn();
                 conn.Open();
 
-                var searchPattern = string.IsNullOrWhiteSpace(search) ? null : $"%{search.Trim()}%";
+                var searchPattern = search == null ? null : $"%{search}%";
 
                 var sortMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                 {
-                    ["date"] = "p.payment_date",
+                    ["date"] = "COALESCE(p.due_date, p.payment_date)",
                     ["class"] = "c.class_name",
                     ["type"] = "COALESCE(pt.item_desc, p.payment_type)",
                     ["total"] = "p.total_price",
@@ -77,11 +78,11 @@ namespace Haniya.Controllers.PortalStudent
                     ["method"] = "COALESCE(pm.item_desc, p.payment_method)"
                 };
                 var sort = req.sort ?? new ListSort();
-                var orderBy = sortMap.TryGetValue(sort.field ?? "", out var mapped) ? mapped : "p.payment_date";
+                var orderBy = sortMap.TryGetValue(sort.field ?? "", out var mapped) ? mapped : "COALESCE(p.due_date, p.payment_date)";
                 var orderDir = string.Equals(sort.order, "asc", StringComparison.OrdinalIgnoreCase) ? "ASC" : "DESC";
-                var secondaryOrder = string.Equals(orderBy, "p.payment_date", StringComparison.OrdinalIgnoreCase)
+                var secondaryOrder = string.Equals(orderBy, "COALESCE(p.due_date, p.payment_date)", StringComparison.OrdinalIgnoreCase)
                     ? "p.payment_id DESC"
-                    : "p.payment_date DESC";
+                    : "COALESCE(p.due_date, p.payment_date) DESC";
 
                 var whereSql = @"
                 WHERE s.student_id = @studentId
@@ -101,7 +102,8 @@ namespace Haniya.Controllers.PortalStudent
                 LEFT JOIN mst_academic_classes ac ON sc.academic_class_id = ac.academic_class_id
                 LEFT JOIN mst_classes c ON ac.class_id = c.class_id
                 LEFT JOIN mst_detail_settings pt ON p.payment_type = pt.detail_id AND pt.header_id = 'PAYMENT_TYPE'
-                LEFT JOIN mst_detail_settings pm ON p.payment_method = pm.detail_id AND pm.header_id = 'PAYMENT_METHOD'
+                LEFT JOIN mst_detail_settings pm ON pm.header_id = 'PAYMENT_METHOD'
+                                                AND (p.payment_method = pm.detail_id OR p.payment_method = pm.item_code)
                 WHERE s.student_id = @studentId";
 
                 var filteredSql = @"
@@ -112,7 +114,8 @@ namespace Haniya.Controllers.PortalStudent
                 LEFT JOIN mst_academic_classes ac ON sc.academic_class_id = ac.academic_class_id
                 LEFT JOIN mst_classes c ON ac.class_id = c.class_id
                 LEFT JOIN mst_detail_settings pt ON p.payment_type = pt.detail_id AND pt.header_id = 'PAYMENT_TYPE'
-                LEFT JOIN mst_detail_settings pm ON p.payment_method = pm.detail_id AND pm.header_id = 'PAYMENT_METHOD'
+                LEFT JOIN mst_detail_settings pm ON pm.header_id = 'PAYMENT_METHOD'
+                                                AND (p.payment_method = pm.detail_id OR p.payment_method = pm.item_code)
                 " + whereSql;
 
                 int recordsTotal;
@@ -130,6 +133,10 @@ namespace Haniya.Controllers.PortalStudent
                     recordsFiltered = Convert.ToInt32(filteredCmd.ExecuteScalar() ?? 0);
                 }
 
+                var totalPages = recordsFiltered == 0 ? 1 : (int)Math.Ceiling(recordsFiltered / (double)limit);
+                page = Math.Min(page, totalPages);
+                var offset = (page - 1) * limit;
+
                 var sql = @"
                 SELECT
                     p.payment_id,
@@ -139,6 +146,7 @@ namespace Haniya.Controllers.PortalStudent
                     p.remaining_payment,
                     p.status,
                     p.payment_date,
+                    p.due_date,
                     p.payment_method,
 
                     COALESCE(pt.item_desc, p.payment_type) AS payment_type_desc,
@@ -165,8 +173,8 @@ namespace Haniya.Controllers.PortalStudent
                    AND pt.header_id = 'PAYMENT_TYPE'
 
                 LEFT JOIN mst_detail_settings pm 
-                    ON p.payment_method = pm.detail_id 
-                   AND pm.header_id = 'PAYMENT_METHOD'
+                    ON pm.header_id = 'PAYMENT_METHOD'
+                   AND (p.payment_method = pm.detail_id OR p.payment_method = pm.item_code)
 
                 " + whereSql + @"
                 ORDER BY " + orderBy + " " + orderDir + @", " + secondaryOrder + @"
@@ -203,6 +211,10 @@ namespace Haniya.Controllers.PortalStudent
                                 ? null
                                 : ((DateTime)r["payment_date"]).ToString("yyyy-MM-dd"),
 
+                            due_date = r["due_date"] == DBNull.Value
+                                ? null
+                                : ((DateTime)r["due_date"]).ToString("yyyy-MM-dd"),
+
                             payment_method = r["payment_method_desc"]?.ToString(),
 
                             class_name = r["class_name"]?.ToString()
@@ -216,6 +228,8 @@ namespace Haniya.Controllers.PortalStudent
                     data = list,
                     hasNextPage,
                     totalRows = recordsFiltered,
+                    currentPage = page,
+                    limit,
                     totalAll = recordsTotal
                 }));
             }

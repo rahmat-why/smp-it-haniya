@@ -49,7 +49,6 @@ namespace Haniya.Controllers.PortalAdmin
             req ??= new ListRequest();
             var page = req.page <= 0 ? 1 : req.page;
             var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
-            var offset = (page - 1) * limit;
 
             var filters = req.filters ?? new Dictionary<string, string>();
             filters.TryGetValue("search", out var searchValue);
@@ -57,6 +56,12 @@ namespace Haniya.Controllers.PortalAdmin
             filters.TryGetValue("academic_class_id", out var academic_class_id);
             filters.TryGetValue("subject_id", out var subject_id);
             filters.TryGetValue("teacher_id", out var teacher_id);
+
+            academic_year_id = string.IsNullOrWhiteSpace(academic_year_id) ? null : academic_year_id;
+            academic_class_id = string.IsNullOrWhiteSpace(academic_class_id) ? null : academic_class_id;
+            subject_id = string.IsNullOrWhiteSpace(subject_id) ? null : subject_id;
+            teacher_id = string.IsNullOrWhiteSpace(teacher_id) ? null : teacher_id;
+            searchValue = string.IsNullOrWhiteSpace(searchValue) ? null : searchValue.Trim();
 
             var sortMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -75,17 +80,8 @@ namespace Haniya.Controllers.PortalAdmin
             using var conn = GetConn();
             conn.Open();
 
-            if (string.IsNullOrWhiteSpace(academic_year_id))
-            {
-                using var activeYearCmd = new SqlCommand(@"
-                    SELECT TOP 1 academic_year_id
-                    FROM mst_academic_years
-                    WHERE status = 'ACTIVE'
-                    ORDER BY start_date DESC", conn);
-                academic_year_id = activeYearCmd.ExecuteScalar()?.ToString();
-            }
-
             var where = @"
+          AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
           AND (@subjectId IS NULL OR r.subject_id = @subjectId)
           AND (@academicClassId IS NULL OR r.academic_class_id = @academicClassId)
           AND (@teacherId IS NULL OR r.teacher_id = @teacherId)";
@@ -103,15 +99,12 @@ namespace Haniya.Controllers.PortalAdmin
             var totalSql = @"
         SELECT COUNT(*)
         FROM mst_rps r
-        JOIN mst_subjects s ON r.subject_id = s.subject_id
-        JOIN mst_teachers t ON r.teacher_id = t.teacher_id
-        JOIN mst_academic_classes ac ON r.academic_class_id = ac.academic_class_id
-        JOIN mst_classes c ON ac.class_id = c.class_id
+        LEFT JOIN mst_subjects s ON r.subject_id = s.subject_id
+        LEFT JOIN mst_teachers t ON r.teacher_id = t.teacher_id
+        LEFT JOIN mst_academic_classes ac ON r.academic_class_id = ac.academic_class_id
+        LEFT JOIN mst_classes c ON ac.class_id = c.class_id
         WHERE r.status = 'ACTIVE'
-          AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
-          AND (@subjectId IS NULL OR r.subject_id = @subjectId)
-          AND (@academicClassId IS NULL OR r.academic_class_id = @academicClassId)
-          AND (@teacherId IS NULL OR r.teacher_id = @teacherId)";
+        " + where;
 
             var totalRows = 0;
             using (var cmd = new SqlCommand(totalSql, conn))
@@ -120,37 +113,21 @@ namespace Haniya.Controllers.PortalAdmin
                 cmd.Parameters.AddWithValue("@subjectId", (object)subject_id ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@academicClassId", (object)academic_class_id ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@teacherId", (object)teacher_id ?? DBNull.Value);
+                if (!string.IsNullOrWhiteSpace(searchValue))
+                    cmd.Parameters.AddWithValue("@search", $"%{searchValue}%");
 
                 totalRows = (int)cmd.ExecuteScalar();
             }
 
-            if (!string.IsNullOrWhiteSpace(searchValue))
-            {
-                var filteredSql = @"
-            SELECT COUNT(*)
-            FROM mst_rps r
-            JOIN mst_subjects s ON r.subject_id = s.subject_id
-            JOIN mst_teachers t ON r.teacher_id = t.teacher_id
-            JOIN mst_academic_classes ac ON r.academic_class_id = ac.academic_class_id
-            JOIN mst_classes c ON ac.class_id = c.class_id
-            WHERE r.status = 'ACTIVE'
-              AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
-            " + where;
-
-                using var filteredCmd = new SqlCommand(filteredSql, conn);
-                filteredCmd.Parameters.AddWithValue("@academicYearId", (object)academic_year_id ?? DBNull.Value);
-                filteredCmd.Parameters.AddWithValue("@subjectId", (object)subject_id ?? DBNull.Value);
-                filteredCmd.Parameters.AddWithValue("@academicClassId", (object)academic_class_id ?? DBNull.Value);
-                filteredCmd.Parameters.AddWithValue("@teacherId", (object)teacher_id ?? DBNull.Value);
-                filteredCmd.Parameters.AddWithValue("@search", $"%{searchValue.Trim()}%");
-                totalRows = (int)filteredCmd.ExecuteScalar();
-            }
+            var totalPages = totalRows == 0 ? 1 : (int)Math.Ceiling(totalRows / (double)limit);
+            page = Math.Min(page, totalPages);
+            var offset = (page - 1) * limit;
 
             var sql = @"
         SELECT 
             r.rps_id,
             s.subject_name,
-            CONCAT(t.first_name, ' ', t.last_name) AS teacher_name,
+            NULLIF(LTRIM(RTRIM(CONCAT(t.first_name, ' ', t.last_name))), '') AS teacher_name,
             c.class_name,
             ac.academic_year_id,
             ay.start_date,
@@ -161,26 +138,25 @@ namespace Haniya.Controllers.PortalAdmin
 
         FROM mst_rps r
 
-        JOIN mst_subjects s 
+        LEFT JOIN mst_subjects s 
             ON r.subject_id = s.subject_id
 
-        JOIN mst_teachers t 
+        LEFT JOIN mst_teachers t 
             ON r.teacher_id = t.teacher_id
 
-        JOIN mst_academic_classes ac 
+        LEFT JOIN mst_academic_classes ac 
             ON r.academic_class_id = ac.academic_class_id
 
-        JOIN mst_academic_years ay
+        LEFT JOIN mst_academic_years ay
             ON ac.academic_year_id = ay.academic_year_id
 
-        JOIN mst_classes c 
+        LEFT JOIN mst_classes c 
             ON ac.class_id = c.class_id
 
         LEFT JOIN mst_rps_details d 
             ON d.rps_id = r.rps_id
 
         WHERE r.status = 'ACTIVE'
-          AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
         " + where + @"
 
         GROUP BY 
@@ -210,7 +186,7 @@ namespace Haniya.Controllers.PortalAdmin
                 cmd.Parameters.AddWithValue("@academicClassId", (object)academic_class_id ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@teacherId", (object)teacher_id ?? DBNull.Value);
                 if (!string.IsNullOrWhiteSpace(searchValue))
-                    cmd.Parameters.AddWithValue("@search", $"%{searchValue.Trim()}%");
+                    cmd.Parameters.AddWithValue("@search", $"%{searchValue}%");
 
                 cmd.Parameters.Add("@offset", SqlDbType.Int).Value = offset;
                 cmd.Parameters.Add("@limit", SqlDbType.Int).Value = limit;
@@ -236,7 +212,7 @@ namespace Haniya.Controllers.PortalAdmin
             }
 
             var hasNextPage = (offset + list.Count) < totalRows;
-            return Json(DTOResponse.ok(new { data = list, hasNextPage, totalRows }));
+            return Json(DTOResponse.ok(new { data = list, hasNextPage, totalRows, currentPage = page, limit }));
         }
 
         [HttpGet]

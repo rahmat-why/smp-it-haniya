@@ -239,7 +239,6 @@ namespace Haniya.Controllers.PortalAdmin
                 req ??= new ListRequest();
                 var page = req.page <= 0 ? 1 : req.page;
                 var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
-                var offset = (page - 1) * limit;
 
                 var filters = req.filters ?? new Dictionary<string, string>();
                 filters.TryGetValue("academic_year_id", out var academic_year_id);
@@ -249,22 +248,13 @@ namespace Haniya.Controllers.PortalAdmin
                 using var conn = GetConn();
                 conn.Open();
 
-                var monthStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+                DateTime? monthStart = null;
+                DateTime? nextMonth = null;
                 if (!string.IsNullOrWhiteSpace(attendance_month) &&
                     DateTime.TryParseExact(attendance_month + "-01", "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedMonthStart))
                 {
                     monthStart = parsedMonthStart;
-                }
-                var nextMonth = monthStart.AddMonths(1);
-
-                if (string.IsNullOrWhiteSpace(academic_year_id))
-                {
-                    using var activeYearCmd = new SqlCommand(@"
-                        SELECT TOP 1 academic_year_id
-                        FROM mst_academic_years
-                        WHERE status = 'ACTIVE'
-                        ORDER BY start_date DESC", conn);
-                    academic_year_id = activeYearCmd.ExecuteScalar()?.ToString();
+                    nextMonth = parsedMonthStart.AddMonths(1);
                 }
 
                 var sortMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -291,17 +281,20 @@ namespace Haniya.Controllers.PortalAdmin
                     @"SELECT COUNT(*) 
                       FROM dbo.txn_attendances a
                       JOIN dbo.mst_academic_classes ac ON ac.academic_class_id = a.academic_class_id
-                      WHERE a.attendance_date >= @monthStart
-                        AND a.attendance_date < @nextMonth
+                      WHERE (@monthStart IS NULL OR a.attendance_date >= @monthStart)
+                        AND (@nextMonth IS NULL OR a.attendance_date < @nextMonth)
                         AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
                         AND (@academicClassId IS NULL OR a.academic_class_id = @academicClassId)", conn))
                 {
-                    countCmd.Parameters.AddWithValue("@monthStart", monthStart);
-                    countCmd.Parameters.AddWithValue("@nextMonth", nextMonth);
+                    countCmd.Parameters.Add("@monthStart", SqlDbType.DateTime).Value = (object?)monthStart ?? DBNull.Value;
+                    countCmd.Parameters.Add("@nextMonth", SqlDbType.DateTime).Value = (object?)nextMonth ?? DBNull.Value;
                     countCmd.Parameters.AddWithValue("@academicYearId", (object?)academic_year_id ?? DBNull.Value);
                     countCmd.Parameters.AddWithValue("@academicClassId", (object?)academic_class_id ?? DBNull.Value);
                     totalRows = (int)countCmd.ExecuteScalar();
                 }
+                var totalPages = totalRows == 0 ? 1 : (int)Math.Ceiling(totalRows / (double)limit);
+                page = Math.Min(page, totalPages);
+                var offset = (page - 1) * limit;
 
                 var sql = @"
                     SELECT
@@ -311,7 +304,7 @@ namespace Haniya.Controllers.PortalAdmin
                         ay.end_date,
                         ay.semester,
                         c.class_name,
-                        CONCAT(t.first_name,' ',t.last_name) AS teacher_name,
+                        NULLIF(LTRIM(RTRIM(CONCAT(t.first_name,' ',t.last_name))), '') AS teacher_name,
                         SUM(CASE WHEN d.status='PRESENT' THEN 1 ELSE 0 END) AS present,
                         SUM(CASE WHEN d.status='SICK' THEN 1 ELSE 0 END) AS sick,
                         SUM(CASE WHEN d.status='EXCUSED' THEN 1 ELSE 0 END) AS permit,
@@ -320,10 +313,10 @@ namespace Haniya.Controllers.PortalAdmin
                     JOIN dbo.mst_academic_classes ac ON ac.academic_class_id = a.academic_class_id
                     JOIN dbo.mst_academic_years ay ON ay.academic_year_id = ac.academic_year_id
                     JOIN dbo.mst_classes c ON c.class_id = ac.class_id
-                    JOIN dbo.mst_teachers t ON t.teacher_id = a.teacher_id
+                    LEFT JOIN dbo.mst_teachers t ON t.teacher_id = a.teacher_id
                     LEFT JOIN dbo.txn_attendance_details d ON d.attendance_id = a.attendance_id
-                    WHERE a.attendance_date >= @monthStart
-                      AND a.attendance_date < @nextMonth
+                    WHERE (@monthStart IS NULL OR a.attendance_date >= @monthStart)
+                      AND (@nextMonth IS NULL OR a.attendance_date < @nextMonth)
                       AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
                       AND (@academicClassId IS NULL OR a.academic_class_id = @academicClassId)
                     GROUP BY
@@ -341,8 +334,8 @@ namespace Haniya.Controllers.PortalAdmin
                 var list = new List<object>();
                 using (var cmd = new SqlCommand(sql, conn))
                 {
-                    cmd.Parameters.AddWithValue("@monthStart", monthStart);
-                    cmd.Parameters.AddWithValue("@nextMonth", nextMonth);
+                    cmd.Parameters.Add("@monthStart", SqlDbType.DateTime).Value = (object?)monthStart ?? DBNull.Value;
+                    cmd.Parameters.Add("@nextMonth", SqlDbType.DateTime).Value = (object?)nextMonth ?? DBNull.Value;
                     cmd.Parameters.AddWithValue("@academicYearId", (object?)academic_year_id ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("@academicClassId", (object?)academic_class_id ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("@offset", offset);
@@ -369,7 +362,7 @@ namespace Haniya.Controllers.PortalAdmin
                 }
 
                 var hasNextPage = (offset + list.Count) < totalRows;
-                return Json(DTOResponse.ok(new { data = list, hasNextPage, totalRows }));
+                return Json(DTOResponse.ok(new { data = list, hasNextPage, totalRows, currentPage = page, limit }));
             }
             catch (Exception ex)
             {

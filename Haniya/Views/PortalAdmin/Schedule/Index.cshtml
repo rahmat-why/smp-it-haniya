@@ -236,7 +236,16 @@
     function renderRows(items) {
         const $tbody = $('#schedule-table tbody');
         if (!items || !items.length) {
-            $tbody.html(`<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">No data found.</td></tr>`);
+            $tbody.html(`
+                <tr>
+                    <td colspan="6" class="px-4 py-10 text-center">
+                        <div class="flex flex-col items-center gap-2 text-gray-500">
+                            <div class="text-sm font-semibold text-gray-700">Tidak ada data schedule</div>
+                            <div class="text-xs">Coba ubah pencarian, tahun ajaran, class, atau hari yang digunakan.</div>
+                        </div>
+                    </td>
+                </tr>
+            `);
             return;
         }
 
@@ -270,29 +279,59 @@
     function renderPagination(currentCount) {
         const start = currentCount === 0 ? 0 : ((pageState.page - 1) * pageState.limit) + 1;
         const end = ((pageState.page - 1) * pageState.limit) + currentCount;
-        $('#table-info-container').html(`<span class="text-sm text-gray-600">Showing ${start} to ${end} of ${pageState.totalRows}</span>`);
+        $('#table-info-container').html(`<span class="text-sm text-gray-600">Menampilkan ${start} sampai ${end} dari ${pageState.totalRows} data</span>`);
 
+        const totalPages = Math.max(1, Math.ceil(pageState.totalRows / pageState.limit));
         const prevDisabled = pageState.page <= 1;
         const nextDisabled = !pageState.hasNextPage;
+        const pageStart = Math.max(1, Math.min(pageState.page - 1, totalPages - 2));
+        const pageEnd = Math.min(totalPages, pageStart + 2);
+        const pageButtons = [];
+        for (let i = pageStart; i <= pageEnd; i++) {
+            const active = i === pageState.page;
+            pageButtons.push(`<button type="button" data-page="${i}" class="page-number px-3 py-2 text-sm border-l border-gray-200 ${active ? 'bg-blue-900 text-white font-semibold' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${active ? 'disabled' : ''}>${i}</button>`);
+        }
+
         $('#table-pagination-container').html(`
             <div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-                <button id="page-prev" class="px-3 py-2 text-sm border-r border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Prev</button>
-                <span class="px-3 py-2 text-sm bg-blue-900 text-white font-semibold">${pageState.page}</span>
+                <button id="page-first" class="px-3 py-2 text-sm ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>First</button>
+                <button id="page-prev" class="px-3 py-2 text-sm border-l border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Prev</button>
+                ${pageButtons.join('')}
                 <button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Next</button>
+                <button id="page-last" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Last</button>
             </div>
         `);
 
+        function goToPage(page) {
+            const nextPage = Math.min(Math.max(1, page), totalPages);
+            if (nextPage === pageState.page) return;
+            pageState.page = nextPage;
+            lastRequestKey = '';
+            fetchSchedules();
+        }
+
+        $('#page-first').off('click').on('click', function () {
+            if (pageState.page <= 1) return;
+            goToPage(1);
+        });
+
         $('#page-prev').off('click').on('click', function () {
             if (pageState.page <= 1) return;
-            pageState.page -= 1;
-            lastRequestKey = '';
-            fetchSchedules();
+            goToPage(pageState.page - 1);
         });
+
+        $('.page-number').off('click').on('click', function () {
+            goToPage(Number($(this).data('page') || 1));
+        });
+
         $('#page-next').off('click').on('click', function () {
             if (!pageState.hasNextPage) return;
-            pageState.page += 1;
-            lastRequestKey = '';
-            fetchSchedules();
+            goToPage(pageState.page + 1);
+        });
+
+        $('#page-last').off('click').on('click', function () {
+            if (!pageState.hasNextPage) return;
+            goToPage(totalPages);
         });
     }
 
@@ -331,8 +370,11 @@
 
             const result = res.data || {};
             const items = result.data || [];
+            pageState.page = Number(result.currentPage || pageState.page);
+            pageState.limit = Number(result.limit || 10);
             pageState.hasNextPage = !!result.hasNextPage;
             pageState.totalRows = Number(result.totalRows || 0);
+            syncStateToUrl();
             renderRows(items);
             renderPagination(items.length);
         } catch {

@@ -51,12 +51,10 @@
 
 @section Scripts {
 <script>
-    const now = new Date();
-    const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const pageState = {
         page: 1,
         limit: 10,
-        filters: { academic_year_id: '', academic_class_id: '', attendance_month: defaultMonth },
+        filters: { academic_year_id: '', academic_class_id: '', attendance_month: '' },
         sort: { field: 'date', order: 'desc' },
         hasNextPage: false,
         totalRows: 0
@@ -80,7 +78,7 @@
         pageState.limit = Number.isFinite(limit) && limit > 0 ? limit : 10;
         pageState.filters.academic_year_id = q.get('academicYear') || '';
         pageState.filters.academic_class_id = q.get('academicClass') || '';
-        pageState.filters.attendance_month = q.get('month') || defaultMonth;
+        pageState.filters.attendance_month = q.get('month') || '';
         pageState.sort.field = q.get('sortField') || 'date';
         pageState.sort.order = q.get('sortOrder') || 'desc';
     }
@@ -131,7 +129,7 @@
         $('#attendanceFilterCloseBtn').off('click').on('click', function () { $dropdown.addClass('hidden'); });
         $('#apply-attendance-filter-btn').off('click').on('click', applyAttendanceFilter);
 
-        $('#filter_month').val(pageState.filters.attendance_month || defaultMonth);
+        $('#filter_month').val(pageState.filters.attendance_month || '');
 
         $('#filter_academic_year').select2({
             placeholder: 'All Academic Years',
@@ -162,6 +160,13 @@
             },
             minimumInputLength: 0
         });
+
+        if (pageState.filters.academic_year_id) {
+            upsertSelect2Value('#filter_academic_year', pageState.filters.academic_year_id, pageState.filters.academic_year_id);
+        }
+        if (pageState.filters.academic_class_id) {
+            upsertSelect2Value('#filter_class', pageState.filters.academic_class_id, pageState.filters.academic_class_id);
+        }
     }
 
     function upsertSelect2Value(selector, id, text) {
@@ -174,20 +179,19 @@
     }
 
     async function initDefaultAcademicYear() {
+        if (!pageState.filters.academic_year_id) return;
         try {
             const res = await $.get('/Attendance/GetActiveAcademicYear');
             if (!res || !res.success || !res.data || !res.data.id) return;
-            if (!pageState.filters.academic_year_id) {
-                pageState.filters.academic_year_id = res.data.id;
-            }
-            upsertSelect2Value('#filter_academic_year', pageState.filters.academic_year_id, res.data.text || pageState.filters.academic_year_id);
+            const text = res.data.id === pageState.filters.academic_year_id ? res.data.text : pageState.filters.academic_year_id;
+            upsertSelect2Value('#filter_academic_year', pageState.filters.academic_year_id, text);
         } catch { }
     }
 
     function applyAttendanceFilter() {
         pageState.filters.academic_year_id = $('#filter_academic_year').val() || '';
         pageState.filters.academic_class_id = $('#filter_class').val() || '';
-        pageState.filters.attendance_month = $('#filter_month').val() || defaultMonth;
+        pageState.filters.attendance_month = $('#filter_month').val() || '';
         pageState.page = 1;
         lastRequestKey = '';
         fetchAttendances();
@@ -214,7 +218,16 @@
     function renderRows(items) {
         const $tbody = $('#attendance-table tbody');
         if (!items || !items.length) {
-            $tbody.html('<tr><td colspan="7" class="px-4 py-8 text-center text-gray-500">No data found.</td></tr>');
+            $tbody.html(`
+                <tr>
+                    <td colspan="7" class="px-4 py-10 text-center">
+                        <div class="flex flex-col items-center gap-2 text-gray-500">
+                            <div class="text-sm font-semibold text-gray-700">Tidak ada data attendance</div>
+                            <div class="text-xs">Coba ubah bulan, tahun ajaran, atau class yang digunakan.</div>
+                        </div>
+                    </td>
+                </tr>
+            `);
             return;
         }
 
@@ -249,29 +262,59 @@
     function renderPagination(currentCount) {
         const start = currentCount === 0 ? 0 : ((pageState.page - 1) * pageState.limit) + 1;
         const end = ((pageState.page - 1) * pageState.limit) + currentCount;
-        $('#table-info-container').html(`<span class="text-sm text-gray-600">Showing ${start} to ${end} of ${pageState.totalRows}</span>`);
+        $('#table-info-container').html(`<span class="text-sm text-gray-600">Menampilkan ${start} sampai ${end} dari ${pageState.totalRows} data</span>`);
 
+        const totalPages = Math.max(1, Math.ceil(pageState.totalRows / pageState.limit));
         const prevDisabled = pageState.page <= 1;
         const nextDisabled = !pageState.hasNextPage;
+        const pageStart = Math.max(1, Math.min(pageState.page - 1, totalPages - 2));
+        const pageEnd = Math.min(totalPages, pageStart + 2);
+        const pageButtons = [];
+        for (let i = pageStart; i <= pageEnd; i++) {
+            const active = i === pageState.page;
+            pageButtons.push(`<button type="button" data-page="${i}" class="page-number px-3 py-2 text-sm border-l border-gray-200 ${active ? 'bg-blue-900 text-white font-semibold' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${active ? 'disabled' : ''}>${i}</button>`);
+        }
+
         $('#table-pagination-container').html(`
             <div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-                <button id="page-prev" class="px-3 py-2 text-sm border-r border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Prev</button>
-                <span class="px-3 py-2 text-sm bg-blue-900 text-white font-semibold">${pageState.page}</span>
+                <button id="page-first" class="px-3 py-2 text-sm ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>First</button>
+                <button id="page-prev" class="px-3 py-2 text-sm border-l border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Prev</button>
+                ${pageButtons.join('')}
                 <button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Next</button>
+                <button id="page-last" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Last</button>
             </div>
         `);
 
+        function goToPage(page) {
+            const nextPage = Math.min(Math.max(1, page), totalPages);
+            if (nextPage === pageState.page) return;
+            pageState.page = nextPage;
+            lastRequestKey = '';
+            fetchAttendances();
+        }
+
+        $('#page-first').off('click').on('click', function () {
+            if (pageState.page <= 1) return;
+            goToPage(1);
+        });
+
         $('#page-prev').off('click').on('click', function () {
             if (pageState.page <= 1) return;
-            pageState.page -= 1;
-            lastRequestKey = '';
-            fetchAttendances();
+            goToPage(pageState.page - 1);
         });
+
+        $('.page-number').off('click').on('click', function () {
+            goToPage(Number($(this).data('page') || 1));
+        });
+
         $('#page-next').off('click').on('click', function () {
             if (!pageState.hasNextPage) return;
-            pageState.page += 1;
-            lastRequestKey = '';
-            fetchAttendances();
+            goToPage(pageState.page + 1);
+        });
+
+        $('#page-last').off('click').on('click', function () {
+            if (!pageState.hasNextPage) return;
+            goToPage(totalPages);
         });
     }
 
@@ -310,8 +353,11 @@
 
             const result = res.data || {};
             const items = result.data || [];
+            pageState.page = Number(result.currentPage || pageState.page);
+            pageState.limit = Number(result.limit || 10);
             pageState.hasNextPage = !!result.hasNextPage;
             pageState.totalRows = Number(result.totalRows || 0);
+            syncStateToUrl();
             renderRows(items);
             renderPagination(items.length);
         } catch {

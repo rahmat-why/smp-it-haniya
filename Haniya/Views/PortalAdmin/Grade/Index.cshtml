@@ -101,6 +101,10 @@
         $('#filter_academic_year').select2({ placeholder: 'All Academic Years', allowClear: true, width: '100%', ajax: { url: '/Select2/AcademicYears', dataType: 'json', delay: 250, data: p => ({ q: p.term || '', page: p.page || 1 }), processResults: d => ({ results: d.results, pagination: d.pagination }), cache: true }, minimumInputLength: 0 });
         $('#filter_class').select2({ placeholder: '-- All Class --', allowClear: true, width: '100%', ajax: { url: '/Select2/AcademicClasses', dataType: 'json', delay: 250, data: p => ({ q: p.term || '', page: p.page || 1, activeOnly: true }), processResults: d => ({ results: d.results, pagination: d.pagination }), cache: true }, minimumInputLength: 0 });
         $('#filter_grade_type').select2({ placeholder: '-- All Grade Type --', allowClear: true, width: '100%', ajax: { url: '/Select2/GradeTypes', dataType: 'json', delay: 250, data: p => ({ q: p.term || '', page: p.page || 1 }), processResults: d => ({ results: d.results, pagination: d.pagination }), cache: true }, minimumInputLength: 0 });
+
+        if (pageState.filters.academic_year_id) setSelectValue('#filter_academic_year', pageState.filters.academic_year_id, pageState.filters.academic_year_id);
+        if (pageState.filters.academic_class_id) setSelectValue('#filter_class', pageState.filters.academic_class_id, pageState.filters.academic_class_id);
+        if (pageState.filters.grade_type) setSelectValue('#filter_grade_type', pageState.filters.grade_type, pageState.filters.grade_type);
     }
 
     function setSelectValue(selector, id, text) {
@@ -110,10 +114,13 @@
     }
 
     async function initDefaultYear() {
+        if (!pageState.filters.academic_year_id) return;
         try {
             const res = await $.get('/Grade/GetActiveAcademicYear');
-            if (res && res.success && res.data && res.data.id && !pageState.filters.academic_year_id) pageState.filters.academic_year_id = res.data.id;
-            if (pageState.filters.academic_year_id) setSelectValue('#filter_academic_year', pageState.filters.academic_year_id, (res && res.data && res.data.text) ? res.data.text : pageState.filters.academic_year_id);
+            if (res && res.success && res.data && res.data.id) {
+                const text = res.data.id === pageState.filters.academic_year_id ? res.data.text : pageState.filters.academic_year_id;
+                setSelectValue('#filter_academic_year', pageState.filters.academic_year_id, text);
+            }
         } catch { }
     }
 
@@ -139,22 +146,90 @@
 
     function rows(items) {
         const $tb = $('#grade-table tbody');
-        if (!items || !items.length) { $tb.html('<tr><td colspan="10" class="px-4 py-8 text-center text-gray-500">No data found.</td></tr>'); return; }
+        if (!items || !items.length) {
+            $tb.html(`
+                <tr>
+                    <td colspan="10" class="px-4 py-10 text-center">
+                        <div class="flex flex-col items-center gap-2 text-gray-500">
+                            <div class="text-sm font-semibold text-gray-700">Tidak ada data grade</div>
+                            <div class="text-xs">Coba ubah pencarian, tahun ajaran, class, atau grade type yang digunakan.</div>
+                        </div>
+                    </td>
+                </tr>
+            `);
+            return;
+        }
         let html = ''; const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
         items.forEach(r => {
-            html += `<tr><td class="px-4 py-3">${new Date(r.start_date).getFullYear()} - ${new Date(r.end_date).getFullYear()}</td><td class="px-4 py-3">${r.semester ? `Semester ${r.semester}` : '-'}</td><td class="px-4 py-3">${fmtDate(r.grade_date)}</td><td class="px-4 py-3">${r.class_name || '-'}</td><td class="px-4 py-3">${r.subject_name || '-'}</td><td class="px-4 py-3">${r.teacher_name || '-'}</td><td class="px-4 py-3">${r.grade_type || '-'}</td><td class="px-4 py-3">${r.minimum_value ?? '-'}</td><td class="px-4 py-3">Pass: ${r.passed || 0} | Remedial: ${r.remedial || 0}</td><td class="px-4 py-3 text-center"><div class="flex flex-wrap gap-2 justify-center"><a href="/Grade/Edit?id=${encodeURIComponent(r.grade_id || '')}&returnUrl=${returnUrl}" class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200" title="Edit">E</a><button type="button" onclick="delGrade('${r.grade_id || ''}')" class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-red-100 text-red-700 hover:bg-red-200" title="Delete">D</button></div></td></tr>`;
+            const startYear = r.start_date ? new Date(r.start_date).getFullYear() : null;
+            const endYear = r.end_date ? new Date(r.end_date).getFullYear() : null;
+            const academicYear = startYear && endYear ? `${startYear} - ${endYear}` : '-';
+            html += `
+                <tr>
+                    <td class="px-4 py-3">${academicYear}</td>
+                    <td class="px-4 py-3">${r.semester ? `Semester ${r.semester}` : '-'}</td>
+                    <td class="px-4 py-3">${fmtDate(r.grade_date)}</td>
+                    <td class="px-4 py-3">${r.class_name || '-'}</td>
+                    <td class="px-4 py-3">${r.subject_name || '-'}</td>
+                    <td class="px-4 py-3">${r.teacher_name || '-'}</td>
+                    <td class="px-4 py-3">${r.grade_type || '-'}</td>
+                    <td class="px-4 py-3">${r.minimum_value ?? '-'}</td>
+                    <td class="px-4 py-3">Pass: ${r.passed || 0} | Remedial: ${r.remedial || 0}</td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="flex flex-wrap gap-2 justify-center">
+                            <a href="/Grade/Edit?id=${encodeURIComponent(r.grade_id || '')}&returnUrl=${returnUrl}" class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200" title="Edit">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+                            </a>
+                            <button type="button" onclick="delGrade('${r.grade_id || ''}')" class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-red-100 text-red-700 hover:bg-red-200" title="Delete">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path></svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
         });
         $tb.html(html);
     }
 
-function pager(count) {
+    function pager(count) {
         const start = count === 0 ? 0 : ((pageState.page - 1) * pageState.limit) + 1;
         const end = ((pageState.page - 1) * pageState.limit) + count;
-        $('#table-info-container').html(`<span class="text-sm text-gray-600">Showing ${start} to ${end} of ${pageState.totalRows}</span>`);
-        const prevDisabled = pageState.page <= 1; const nextDisabled = !pageState.hasNextPage;
-        $('#table-pagination-container').html(`<div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm"><button id="page-prev" class="px-3 py-2 text-sm border-r border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Prev</button><span class="px-3 py-2 text-sm bg-blue-900 text-white font-semibold">${pageState.page}</span><button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Next</button></div>`);
-        $('#page-prev').off('click').on('click', function () { if (pageState.page <= 1) return; pageState.page--; lastRequestKey = ''; fetchGrades(); });
-        $('#page-next').off('click').on('click', function () { if (!pageState.hasNextPage) return; pageState.page++; lastRequestKey = ''; fetchGrades(); });
+        $('#table-info-container').html(`<span class="text-sm text-gray-600">Menampilkan ${start} sampai ${end} dari ${pageState.totalRows} data</span>`);
+
+        const totalPages = Math.max(1, Math.ceil(pageState.totalRows / pageState.limit));
+        const prevDisabled = pageState.page <= 1;
+        const nextDisabled = !pageState.hasNextPage;
+        const pageStart = Math.max(1, Math.min(pageState.page - 1, totalPages - 2));
+        const pageEnd = Math.min(totalPages, pageStart + 2);
+        const pageButtons = [];
+        for (let i = pageStart; i <= pageEnd; i++) {
+            const active = i === pageState.page;
+            pageButtons.push(`<button type="button" data-page="${i}" class="page-number px-3 py-2 text-sm border-l border-gray-200 ${active ? 'bg-blue-900 text-white font-semibold' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${active ? 'disabled' : ''}>${i}</button>`);
+        }
+
+        $('#table-pagination-container').html(`
+            <div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                <button id="page-first" class="px-3 py-2 text-sm ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>First</button>
+                <button id="page-prev" class="px-3 py-2 text-sm border-l border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Prev</button>
+                ${pageButtons.join('')}
+                <button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Next</button>
+                <button id="page-last" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Last</button>
+            </div>
+        `);
+
+        function goToPage(page) {
+            const nextPage = Math.min(Math.max(1, page), totalPages);
+            if (nextPage === pageState.page) return;
+            pageState.page = nextPage;
+            lastRequestKey = '';
+            fetchGrades();
+        }
+
+        $('#page-first').off('click').on('click', function () { if (pageState.page <= 1) return; goToPage(1); });
+        $('#page-prev').off('click').on('click', function () { if (pageState.page <= 1) return; goToPage(pageState.page - 1); });
+        $('.page-number').off('click').on('click', function () { goToPage(Number($(this).data('page') || 1)); });
+        $('#page-next').off('click').on('click', function () { if (!pageState.hasNextPage) return; goToPage(pageState.page + 1); });
+        $('#page-last').off('click').on('click', function () { if (!pageState.hasNextPage) return; goToPage(totalPages); });
     }
 
     function setGradeLoading(isLoading) { $('#grade-table-loading').toggleClass('hidden', !isLoading); }
@@ -167,7 +242,10 @@ function pager(count) {
             const res = await $.ajax({ url: '/Grade/GetAll', type: 'POST', contentType: 'application/json', data: JSON.stringify(payload) });
             if (!res || !res.success) { lastRequestKey = ''; await tailwindMessageModal('Failed', (res && res.message) ? res.message : 'Failed to load grade data.'); return; }
             const result = res.data || {}; const items = result.data || [];
+            pageState.page = Number(result.currentPage || pageState.page);
+            pageState.limit = Number(result.limit || 10);
             pageState.hasNextPage = !!result.hasNextPage; pageState.totalRows = Number(result.totalRows || 0);
+            syncStateToUrl();
             rows(items); pager(items.length);
         } catch { lastRequestKey = ''; await tailwindMessageModal('Error', 'An error occurred while loading grade data.'); }
         finally { setGradeLoading(false); }

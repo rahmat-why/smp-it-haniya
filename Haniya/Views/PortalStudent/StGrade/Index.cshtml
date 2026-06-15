@@ -122,7 +122,16 @@
     function renderRows(items) {
         const $tbody = $('#student-grade-table tbody');
         if (!items || !items.length) {
-            $tbody.html(`<tr><td colspan="8" class="px-5 py-8 text-center text-gray-500">No data found.</td></tr>`);
+            $tbody.html(`
+                <tr>
+                    <td colspan="8" class="px-5 py-10 text-center">
+                        <div class="flex flex-col items-center gap-2 text-gray-500">
+                            <div class="text-sm font-semibold text-gray-700">Tidak ada data grade</div>
+                            <div class="text-xs">Coba ubah kata pencarian atau cek kembali data nilai siswa.</div>
+                        </div>
+                    </td>
+                </tr>
+            `);
             return;
         }
 
@@ -147,29 +156,57 @@
     function renderPagination(currentCount) {
         const start = currentCount === 0 ? 0 : ((pageState.page - 1) * pageState.limit) + 1;
         const end = ((pageState.page - 1) * pageState.limit) + currentCount;
-        $('#table-info').html(`<span class="text-sm text-gray-600">Showing ${start} to ${end} of ${pageState.totalRows}</span>`);
+        $('#table-info').html(`<span class="text-sm text-gray-600">Menampilkan ${start} sampai ${end} dari ${pageState.totalRows} data</span>`);
 
+        const totalPages = Math.max(1, Math.ceil(pageState.totalRows / pageState.limit));
         const prevDisabled = pageState.page <= 1;
         const nextDisabled = !pageState.hasNextPage;
+        const pageStart = Math.max(1, Math.min(pageState.page - 1, totalPages - 2));
+        const pageEnd = Math.min(totalPages, pageStart + 2);
+        const pageButtons = [];
+        for (let i = pageStart; i <= pageEnd; i++) {
+            const active = i === pageState.page;
+            pageButtons.push(`
+                <button type="button" data-page="${i}" class="page-number inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 ${active ? 'bg-blue-900 text-white' : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900'}" ${active ? 'disabled' : ''}>${i}</button>
+            `);
+        }
+
         $('#table-pagination').html(`
             <div class="inline-flex items-center border border-gray-300 rounded-md overflow-hidden min-w-max">
+                <button id="page-first" class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900'}" ${prevDisabled ? 'disabled' : ''}>First</button>
                 <button id="page-prev" class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900'}" ${prevDisabled ? 'disabled' : ''}>Prev</button>
-                <span class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 bg-blue-900 text-white">${pageState.page}</span>
-                <button id="page-next" class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900'}" ${nextDisabled ? 'disabled' : ''}>Next</button>
+                ${pageButtons.join('')}
+                <button id="page-next" class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900'}" ${nextDisabled ? 'disabled' : ''}>Next</button>
+                <button id="page-last" class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900'}" ${nextDisabled ? 'disabled' : ''}>Last</button>
             </div>
         `);
 
-        $('#page-prev').off('click').on('click', function () {
-            if (pageState.page <= 1) return;
-            pageState.page -= 1;
+        function goToPage(page) {
+            const nextPage = Math.min(Math.max(1, page), totalPages);
+            if (nextPage === pageState.page) return;
+            pageState.page = nextPage;
             lastRequestKey = '';
             fetchGrades();
+        }
+
+        $('#page-first').off('click').on('click', function () {
+            if (prevDisabled) return;
+            goToPage(1);
+        });
+        $('#page-prev').off('click').on('click', function () {
+            if (prevDisabled) return;
+            goToPage(pageState.page - 1);
+        });
+        $('.page-number').off('click').on('click', function () {
+            goToPage(Number($(this).data('page')));
         });
         $('#page-next').off('click').on('click', function () {
-            if (!pageState.hasNextPage) return;
-            pageState.page += 1;
-            lastRequestKey = '';
-            fetchGrades();
+            if (nextDisabled) return;
+            goToPage(pageState.page + 1);
+        });
+        $('#page-last').off('click').on('click', function () {
+            if (nextDisabled) return;
+            goToPage(totalPages);
         });
     }
 
@@ -208,8 +245,11 @@
 
             const result = res.data || {};
             const items = result.data || [];
+            pageState.page = Number(result.currentPage || pageState.page);
+            pageState.limit = Number(result.limit || pageState.limit || 10);
             pageState.totalRows = Number(result.totalRows || 0);
             pageState.hasNextPage = !!result.hasNextPage;
+            syncStateToUrl();
             renderRows(items);
             renderPagination(items.length);
         } catch {

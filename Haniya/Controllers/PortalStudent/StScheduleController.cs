@@ -1,10 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Data.SqlClient;
-using System.Security.Claims;
 using Haniya.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Haniya.Controllers.PortalStudent
 {
+    [Authorize]
     public class StScheduleController : Controller
     {
         private readonly IConfiguration _config;
@@ -51,9 +52,9 @@ namespace Haniya.Controllers.PortalStudent
                 req ??= new ListRequest();
                 var page = req.page <= 0 ? 1 : req.page;
                 var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
-                var offset = (page - 1) * limit;
                 var filters = req.filters ?? new Dictionary<string, string>();
                 filters.TryGetValue("search", out var search);
+                search = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
                 // Ambil student_id dari login
                 var studentId = User.FindFirst("StudentId")?.Value;
 
@@ -69,25 +70,26 @@ namespace Haniya.Controllers.PortalStudent
                             SELECT TOP 1 sc2.student_class_id
                             FROM mst_student_classes sc2
                             JOIN mst_academic_classes ac2 ON sc2.academic_class_id = ac2.academic_class_id
-                            JOIN mst_academic_years ay2 ON ac2.academic_year_id = ay2.academic_year_id
+                            LEFT JOIN mst_academic_years ay2 ON ac2.academic_year_id = ay2.academic_year_id
                             WHERE sc2.student_id = @studentId
-                              AND ay2.status = 'ACTIVE'
-                            ORDER BY sc2.student_class_id DESC
+                            ORDER BY
+                                CASE WHEN ay2.status = 'ACTIVE' THEN 0 ELSE 1 END,
+                                ay2.start_date DESC,
+                                sc2.student_class_id DESC
                       )";
 
                 var whereSql = @"
                     WHERE sc.student_id = @studentId
-                      AND ay.status = 'ACTIVE'
-                      AND sch.day IN ('DAY_MON','DAY_TUE','DAY_WED','DAY_THU','DAY_FRI')
+                      AND sch.day IN ('DAY_MON','DAY_TUE','DAY_WED','DAY_THU','DAY_FRI','DAY_SAT','DAY_SUN')
                     " + currentClassFilterSql + @"
                       AND (
                             @search IS NULL
                             OR sub.subject_name LIKE @search
-                            OR ht.full_name LIKE @search
+                            OR CONCAT(ht.first_name, ' ', ht.last_name) LIKE @search
                             OR c.class_name LIKE @search
                             OR sch.day LIKE @search
                           )";
-                var searchPattern = string.IsNullOrWhiteSpace(search) ? null : $"%{search.Trim()}%";
+                var searchPattern = search == null ? null : $"%{search}%";
                 var sortMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                 {
                     ["day"] = @"CASE sch.day
@@ -102,7 +104,7 @@ namespace Haniya.Controllers.PortalStudent
                                 END",
                     ["time"] = "sd.start_time",
                     ["subject"] = "sub.subject_name",
-                    ["teacher"] = "ht.full_name",
+                    ["teacher"] = "CONCAT(ht.first_name, ' ', ht.last_name)",
                     ["class"] = "c.class_name"
                 };
                 var sort = req.sort ?? new ListSort();
@@ -120,8 +122,7 @@ namespace Haniya.Controllers.PortalStudent
                     LEFT JOIN mst_teachers ht ON sd.teacher_id = ht.teacher_id
                     JOIN mst_classes c ON ac.class_id = c.class_id
                     WHERE sc.student_id = @studentId
-                      AND ay.status = 'ACTIVE'
-                      AND sch.day IN ('DAY_MON','DAY_TUE','DAY_WED','DAY_THU','DAY_FRI')
+                      AND sch.day IN ('DAY_MON','DAY_TUE','DAY_WED','DAY_THU','DAY_FRI','DAY_SAT','DAY_SUN')
                     " + currentClassFilterSql;
 
                 var filteredSql = @"
@@ -151,6 +152,10 @@ namespace Haniya.Controllers.PortalStudent
                     recordsFiltered = Convert.ToInt32(filteredCmd.ExecuteScalar() ?? 0);
                 }
 
+                var totalPages = recordsFiltered == 0 ? 1 : (int)Math.Ceiling(recordsFiltered / (double)limit);
+                page = Math.Min(page, totalPages);
+                var offset = (page - 1) * limit;
+
                 var sql = @"
                     SELECT
                         sch.schedule_id,
@@ -159,7 +164,7 @@ namespace Haniya.Controllers.PortalStudent
                         sd.start_time,
                         sd.end_time,
                         sub.subject_name,
-                        ht.full_name AS teacher_name,
+                        ISNULL(CONCAT(ht.first_name, ' ', ht.last_name), '-') AS teacher_name,
                         c.class_name
                     FROM mst_student_classes sc
                     JOIN mst_academic_classes ac
@@ -224,6 +229,8 @@ namespace Haniya.Controllers.PortalStudent
                     data = list,
                     hasNextPage,
                     totalRows = recordsFiltered,
+                    currentPage = page,
+                    limit,
                     totalAll = recordsTotal
                 }));
             }

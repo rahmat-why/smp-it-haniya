@@ -279,11 +279,20 @@
             'DAY_SUN': 'Minggu'
         };
 
+        function emptyScheduleRow(message) {
+            return `
+                <tr>
+                    <td colspan="4" class="text-center py-8 text-gray-500">
+                        ${message}
+                    </td>
+                </tr>`;
+        }
+
         if (!schedule || schedule.length === 0) {
             html = `
                 <tr>
                     <td colspan="4" class="text-center py-8 text-gray-500">
-                        Tidak ada jadwal untuk kelas ini
+                        Tidak ada jadwal untuk minggu ini
                     </td>
                 </tr>`;
         } else {
@@ -354,6 +363,11 @@
                         </tr>`;
                 });
             });
+
+            if (!html.trim()) {
+                const targetDayName = upcomingDay || normalizedTodayName || 'minggu ini';
+                html = emptyScheduleRow(`Tidak ada jadwal untuk ${targetDayName}`);
+            }
         }
 
         $('#weekly-schedule').html(html);

@@ -49,7 +49,6 @@ namespace Haniya.Controllers.PortalAdmin
             req ??= new ListRequest();
             var page = req.page <= 0 ? 1 : req.page;
             var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
-            var offset = (page - 1) * limit;
 
             var filters = req.filters ?? new Dictionary<string, string>();
             filters.TryGetValue("search", out var search);
@@ -57,12 +56,17 @@ namespace Haniya.Controllers.PortalAdmin
             filters.TryGetValue("academic_class_id", out var academicClassId);
             filters.TryGetValue("day", out var day);
 
+            search = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
+            academicYearId = string.IsNullOrWhiteSpace(academicYearId) ? null : academicYearId;
+            academicClassId = string.IsNullOrWhiteSpace(academicClassId) ? null : academicClassId;
+            day = string.IsNullOrWhiteSpace(day) ? null : day;
+
             var sortMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["academicYear"] = "ay.start_date",
                 ["semester"] = "ay.semester",
                 ["class"] = "c.class_name",
-                ["day"] = "mds.item_name",
+                ["day"] = "COALESCE(mds.item_name, s.day)",
                 ["totalSubject"] = "COUNT(d.schedule_detail_id)"
             };
             var sort = req.sort ?? new ListSort();
@@ -72,29 +76,20 @@ namespace Haniya.Controllers.PortalAdmin
             using var conn = GetConn();
             conn.Open();
 
-            if (string.IsNullOrWhiteSpace(academicYearId))
-            {
-                using var activeYearCmd = new SqlCommand(@"
-                    SELECT TOP 1 academic_year_id
-                    FROM mst_academic_years
-                    WHERE status = 'ACTIVE'
-                    ORDER BY start_date DESC", conn);
-                academicYearId = activeYearCmd.ExecuteScalar()?.ToString();
-            }
-
             var countSql = @"
-                SELECT COUNT(1)
+                SELECT COUNT(DISTINCT s.schedule_id)
                 FROM mst_schedules s
-                JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
-                JOIN mst_academic_years ay ON ac.academic_year_id = ay.academic_year_id
-                JOIN mst_classes c ON ac.class_id = c.class_id
-                JOIN mst_detail_settings mds ON (s.day = mds.item_name OR s.day = mds.detail_id) AND mds.header_id = 'DAY'
+                LEFT JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
+                LEFT JOIN mst_academic_years ay ON ac.academic_year_id = ay.academic_year_id
+                LEFT JOIN mst_classes c ON ac.class_id = c.class_id
+                LEFT JOIN mst_detail_settings mds ON (s.day = mds.item_name OR s.day = mds.detail_id) AND mds.header_id = 'DAY'
                 WHERE (@classId IS NULL OR s.academic_class_id = @classId)
                   AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
                   AND (@search IS NULL OR (
                         c.class_name LIKE @search
                         OR mds.item_name LIKE @search
                         OR mds.item_desc LIKE @search
+                        OR s.day LIKE @search
                   ))
                   AND (
                         @day IS NULL
@@ -107,12 +102,16 @@ namespace Haniya.Controllers.PortalAdmin
             var totalRows = 0;
             using (var countCmd = new SqlCommand(countSql, conn))
             {
-                countCmd.Parameters.AddWithValue("@classId", string.IsNullOrWhiteSpace(academicClassId) ? DBNull.Value : (object)academicClassId);
-                countCmd.Parameters.AddWithValue("@academicYearId", string.IsNullOrWhiteSpace(academicYearId) ? DBNull.Value : (object)academicYearId);
-                countCmd.Parameters.AddWithValue("@search", string.IsNullOrWhiteSpace(search) ? DBNull.Value : (object)$"%{search.Trim()}%");
-                countCmd.Parameters.AddWithValue("@day", string.IsNullOrWhiteSpace(day) ? DBNull.Value : (object)day);
+                countCmd.Parameters.AddWithValue("@classId", (object?)academicClassId ?? DBNull.Value);
+                countCmd.Parameters.AddWithValue("@academicYearId", (object?)academicYearId ?? DBNull.Value);
+                countCmd.Parameters.AddWithValue("@search", string.IsNullOrWhiteSpace(search) ? DBNull.Value : (object)$"%{search}%");
+                countCmd.Parameters.AddWithValue("@day", (object?)day ?? DBNull.Value);
                 totalRows = Convert.ToInt32(countCmd.ExecuteScalar() ?? 0);
             }
+
+            var totalPages = totalRows == 0 ? 1 : (int)Math.Ceiling(totalRows / (double)limit);
+            page = Math.Min(page, totalPages);
+            var offset = (page - 1) * limit;
 
             var sql = @"
                 SELECT 
@@ -121,13 +120,13 @@ namespace Haniya.Controllers.PortalAdmin
                     ay.end_date,
                     ay.semester,
                     c.class_name,
-                    mds.item_name AS day,
+                    COALESCE(mds.item_name, s.day) AS day,
                     COUNT(d.schedule_detail_id) AS lesson_count
                 FROM mst_schedules s
-                JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
-                JOIN mst_academic_years ay ON ac.academic_year_id = ay.academic_year_id
-                JOIN mst_classes c ON ac.class_id = c.class_id
-                JOIN mst_detail_settings mds ON (s.day = mds.item_name OR s.day = mds.detail_id) AND mds.header_id = 'DAY'
+                LEFT JOIN mst_academic_classes ac ON s.academic_class_id = ac.academic_class_id
+                LEFT JOIN mst_academic_years ay ON ac.academic_year_id = ay.academic_year_id
+                LEFT JOIN mst_classes c ON ac.class_id = c.class_id
+                LEFT JOIN mst_detail_settings mds ON (s.day = mds.item_name OR s.day = mds.detail_id) AND mds.header_id = 'DAY'
                 LEFT JOIN mst_schedule_details d ON d.schedule_id = s.schedule_id
                 WHERE (@classId IS NULL OR s.academic_class_id = @classId)
                   AND (@academicYearId IS NULL OR ac.academic_year_id = @academicYearId)
@@ -135,6 +134,7 @@ namespace Haniya.Controllers.PortalAdmin
                         c.class_name LIKE @search
                         OR mds.item_name LIKE @search
                         OR mds.item_desc LIKE @search
+                        OR s.day LIKE @search
                   ))
                   AND (
                         @day IS NULL
@@ -143,17 +143,17 @@ namespace Haniya.Controllers.PortalAdmin
                         OR mds.item_desc = @day
                         OR mds.detail_id = @day
                   )
-                GROUP BY s.schedule_id, ay.start_date, ay.end_date, ay.semester, c.class_name, mds.item_name
+                GROUP BY s.schedule_id, ay.start_date, ay.end_date, ay.semester, c.class_name, COALESCE(mds.item_name, s.day)
                 ORDER BY " + orderBy + " " + orderDir + @"
                 OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY";
 
             var list = new List<object>();
             using (var cmd = new SqlCommand(sql, conn))
             {
-                cmd.Parameters.AddWithValue("@classId", string.IsNullOrWhiteSpace(academicClassId) ? DBNull.Value : (object)academicClassId);
-                cmd.Parameters.AddWithValue("@academicYearId", string.IsNullOrWhiteSpace(academicYearId) ? DBNull.Value : (object)academicYearId);
-                cmd.Parameters.AddWithValue("@search", string.IsNullOrWhiteSpace(search) ? DBNull.Value : $"%{search.Trim()}%");
-                cmd.Parameters.AddWithValue("@day", string.IsNullOrWhiteSpace(day) ? DBNull.Value : (object)day);
+                cmd.Parameters.AddWithValue("@classId", (object?)academicClassId ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@academicYearId", (object?)academicYearId ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@search", string.IsNullOrWhiteSpace(search) ? DBNull.Value : $"%{search}%");
+                cmd.Parameters.AddWithValue("@day", (object?)day ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@offset", offset);
                 cmd.Parameters.AddWithValue("@limit", limit);
 
@@ -175,7 +175,7 @@ namespace Haniya.Controllers.PortalAdmin
 
             var hasNextPage = (offset + list.Count) < totalRows;
 
-            return Json(DTOResponse.ok(new { data = list, hasNextPage, totalRows }));
+            return Json(DTOResponse.ok(new { data = list, hasNextPage, totalRows, currentPage = page, limit }));
         }
 
         [HttpGet]

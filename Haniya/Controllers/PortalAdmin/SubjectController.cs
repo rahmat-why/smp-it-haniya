@@ -90,7 +90,6 @@ namespace Haniya.Controllers.PortalAdmin
                 req ??= new ListRequest();
                 var page = req.page <= 0 ? 1 : req.page;
                 var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
-                var offset = (page - 1) * limit;
 
                 var filters = req.filters ?? new Dictionary<string, string>();
                 filters.TryGetValue("search", out var searchValue);
@@ -135,6 +134,9 @@ namespace Haniya.Controllers.PortalAdmin
                 using var filteredCmd = new SqlCommand(filteredSql, conn);
                 if (hasSearch) filteredCmd.Parameters.AddWithValue("@search", searchPattern);
                 var totalRows = (int)filteredCmd.ExecuteScalar();
+                var totalPages = totalRows == 0 ? 1 : (int)Math.Ceiling(totalRows / (double)limit);
+                page = Math.Min(page, totalPages);
+                var offset = (page - 1) * limit;
 
                 // Data query
                 var dataSql = $@"
@@ -173,7 +175,7 @@ namespace Haniya.Controllers.PortalAdmin
                 }
 
                 var hasNextPage = (offset + list.Count) < totalRows;
-                return Json(DTOResponse.ok(new { data = list, hasNextPage, totalRows, totalAll }));
+                return Json(DTOResponse.ok(new { data = list, hasNextPage, totalRows, totalAll, currentPage = page, limit }));
             }
             catch (Exception ex)
             {

@@ -49,9 +49,9 @@ namespace Haniya.Controllers.PortalStudent
                 req ??= new ListRequest();
                 var page = req.page <= 0 ? 1 : req.page;
                 var limit = req.limit <= 0 ? 10 : Math.Min(req.limit, 50);
-                var offset = (page - 1) * limit;
                 var filters = req.filters ?? new Dictionary<string, string>();
                 filters.TryGetValue("search", out var search);
+                search = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
 
                 // Ambil student_id dari Claims Login
                 var studentId = User.FindFirst("StudentId")?.Value;
@@ -61,12 +61,12 @@ namespace Haniya.Controllers.PortalStudent
                 using var conn = GetConn();
                 conn.Open();
 
-                var searchPattern = string.IsNullOrWhiteSpace(search) ? null : $"%{search.Trim()}%";
+                var searchPattern = search == null ? null : $"%{search}%";
                 var sortMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                 {
                     ["date"] = "a.attendance_date",
                     ["class"] = "cl.class_name",
-                    ["teacher"] = "t.full_name",
+                    ["teacher"] = "CONCAT(t.first_name, ' ', t.last_name)",
                     ["status"] = "d.status",
                     ["notes"] = "d.notes"
                 };
@@ -82,7 +82,7 @@ namespace Haniya.Controllers.PortalStudent
                       AND (
                             @search IS NULL
                             OR cl.class_name LIKE @search
-                            OR t.full_name LIKE @search
+                            OR CONCAT(t.first_name, ' ', t.last_name) LIKE @search
                             OR d.status LIKE @search
                             OR d.notes LIKE @search
                           )";
@@ -93,7 +93,7 @@ namespace Haniya.Controllers.PortalStudent
                     JOIN txn_attendance_details d ON a.attendance_id = d.attendance_id
                     JOIN mst_academic_classes c ON a.academic_class_id = c.academic_class_id
                     JOIN mst_classes cl ON cl.class_id = c.class_id
-                    JOIN mst_teachers t ON a.teacher_id = t.teacher_id
+                    LEFT JOIN mst_teachers t ON a.teacher_id = t.teacher_id
                     WHERE d.student_id = @student_id";
 
                 var filteredSql = @"
@@ -102,7 +102,7 @@ namespace Haniya.Controllers.PortalStudent
                     JOIN txn_attendance_details d ON a.attendance_id = d.attendance_id
                     JOIN mst_academic_classes c ON a.academic_class_id = c.academic_class_id
                     JOIN mst_classes cl ON cl.class_id = c.class_id
-                    JOIN mst_teachers t ON a.teacher_id = t.teacher_id
+                    LEFT JOIN mst_teachers t ON a.teacher_id = t.teacher_id
                     " + whereSql;
 
                 int recordsTotal;
@@ -120,6 +120,10 @@ namespace Haniya.Controllers.PortalStudent
                     recordsFiltered = Convert.ToInt32(filteredCmd.ExecuteScalar() ?? 0);
                 }
 
+                var totalPages = recordsFiltered == 0 ? 1 : (int)Math.Ceiling(recordsFiltered / (double)limit);
+                page = Math.Min(page, totalPages);
+                var offset = (page - 1) * limit;
+
                 var sql = @"
                     SELECT
                         a.attendance_id,
@@ -129,7 +133,7 @@ namespace Haniya.Controllers.PortalStudent
                         d.notes,
 
                         cl.class_name,
-                        t.full_name AS teacher_name
+                        NULLIF(LTRIM(RTRIM(CONCAT(t.first_name, ' ', t.last_name))), '') AS teacher_name
 
                     FROM txn_attendances a
 
@@ -142,7 +146,7 @@ namespace Haniya.Controllers.PortalStudent
                     JOIN mst_classes cl
                         ON cl.class_id = c.class_id
 
-                    JOIN mst_teachers t
+                    LEFT JOIN mst_teachers t
                         ON a.teacher_id = t.teacher_id
 
                     " + whereSql + @"
@@ -180,6 +184,8 @@ namespace Haniya.Controllers.PortalStudent
                     data = list,
                     hasNextPage,
                     totalRows = recordsFiltered,
+                    currentPage = page,
+                    limit,
                     totalAll = recordsTotal
                 }));
             }
