@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
@@ -22,6 +22,31 @@ namespace Haniya.Controllers.PortalAdmin
         private SqlConnection GetConn()
         {
             return new SqlConnection(_config.GetConnectionString("DefaultConnection"));
+        }
+
+        private List<dynamic> GetStatusOptions()
+        {
+            var list = new List<dynamic>();
+            using var conn = GetConn();
+            conn.Open();
+
+            var sql = @"
+                SELECT detail_id, item_desc
+                FROM mst_detail_settings
+                WHERE status = 'ACTIVE' AND header_id = 'ATTENDANCE_STATUS'";
+
+            using var cmd = new SqlCommand(sql, conn);
+            using var rd = cmd.ExecuteReader();
+
+            while (rd.Read())
+            {
+                list.Add(new
+                {
+                    Id = rd["detail_id"]?.ToString(),
+                    Name = rd["item_desc"]?.ToString()
+                });
+            }
+            return list;
         }
 
         private List<dynamic> GetClassOptions()
@@ -117,6 +142,7 @@ namespace Haniya.Controllers.PortalAdmin
 
         public IActionResult Create()
         {
+            ViewBag.StatusOptions = GetStatusOptions();
             return View("~/Views/PortalAdmin/Attendance/Create.cshtml");
         }
 
@@ -214,6 +240,7 @@ namespace Haniya.Controllers.PortalAdmin
         public IActionResult Edit(string id)
         {
             ViewBag.attendanceId = id;
+            ViewBag.StatusOptions = GetStatusOptions();
             return View("~/Views/PortalAdmin/Attendance/Edit.cshtml");
         }
 
@@ -244,6 +271,10 @@ namespace Haniya.Controllers.PortalAdmin
                 filters.TryGetValue("academic_year_id", out var academic_year_id);
                 filters.TryGetValue("academic_class_id", out var academic_class_id);
                 filters.TryGetValue("attendance_month", out var attendance_month);
+
+                academic_year_id = string.IsNullOrWhiteSpace(academic_year_id) ? null : academic_year_id.Trim();
+                academic_class_id = string.IsNullOrWhiteSpace(academic_class_id) ? null : academic_class_id.Trim();
+                attendance_month = string.IsNullOrWhiteSpace(attendance_month) ? null : attendance_month.Trim();
 
                 using var conn = GetConn();
                 conn.Open();

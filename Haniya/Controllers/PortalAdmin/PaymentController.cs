@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
@@ -99,9 +99,6 @@ namespace Haniya.Controllers.PortalAdmin
         FROM txn_payments p
         LEFT JOIN mst_student_classes sc ON p.student_class_id = sc.student_class_id
         LEFT JOIN mst_students s ON sc.student_id = s.student_id
-        LEFT JOIN mst_academic_classes ac ON sc.academic_class_id = ac.academic_class_id
-        LEFT JOIN mst_classes c ON ac.class_id = c.class_id
-        LEFT JOIN mst_detail_settings pt ON p.payment_type = pt.detail_id AND pt.header_id = 'PAYMENT_TYPE'
         {WHERE_SQL}"
                 .Replace("{WHERE_SQL}", whereSql);
 
@@ -142,22 +139,15 @@ namespace Haniya.Controllers.PortalAdmin
         LEFT JOIN mst_students s ON sc.student_id = s.student_id
         LEFT JOIN mst_academic_classes ac ON sc.academic_class_id = ac.academic_class_id
         LEFT JOIN mst_classes c ON ac.class_id = c.class_id
-        LEFT JOIN txn_payment_instalments i ON i.payment_id = p.payment_id
         LEFT JOIN mst_detail_settings pt ON p.payment_type = pt.detail_id AND pt.header_id = 'PAYMENT_TYPE'
-        LEFT JOIN mst_detail_settings pm ON pm.header_id = 'PAYMENT_METHOD'
-                                        AND (p.payment_method = pm.detail_id OR p.payment_method = pm.item_code)
+        LEFT JOIN mst_detail_settings pm ON pm.header_id = 'PAYMENT_METHOD' AND pm.item_code = p.payment_method
         {WHERE_SQL}
-        GROUP BY 
-            p.payment_id, p.student_class_id, p.payment_type, p.payment_method,
-            p.total_price, p.total_payment, p.remaining_payment,
-            p.status, p.due_date, s.student_id, s.full_name, 
-            s.first_name, s.last_name, s.nis, s.profile_photo, c.class_name,
-            pt.item_desc, pm.item_desc
         ORDER BY {ORDER_BY} {ORDER_DIR}
         OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY"
                 .Replace("{WHERE_SQL}", whereSql)
                 .Replace("{ORDER_BY}", orderBy)
                 .Replace("{ORDER_DIR}", orderDir);
+
 
             var list = new List<object>();
             using (var cmd = new SqlCommand(sql, conn))

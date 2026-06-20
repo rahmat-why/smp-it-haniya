@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Data.SqlClient;
 using System.Security.Claims;
@@ -21,9 +21,35 @@ namespace Haniya.Controllers.PortalStudent
             return new SqlConnection(_config.GetConnectionString("DefaultConnection"));
         }
 
+        private List<dynamic> GetStatusOptions()
+        {
+            var list = new List<dynamic>();
+            using var conn = GetConn();
+            conn.Open();
+
+            var sql = @"
+                SELECT detail_id, item_desc
+                FROM mst_detail_settings
+                WHERE status = 'ACTIVE' AND header_id = 'ATTENDANCE_STATUS'";
+
+            using var cmd = new SqlCommand(sql, conn);
+            using var rd = cmd.ExecuteReader();
+
+            while (rd.Read())
+            {
+                list.Add(new
+                {
+                    Id = rd["detail_id"]?.ToString(),
+                    Name = rd["item_desc"]?.ToString()
+                });
+            }
+            return list;
+        }
+
         // View
         public IActionResult Index()
         {
+            ViewBag.StatusOptions = GetStatusOptions();
             return View("~/Views/PortalStudent/StAttendance/Index.cshtml");
         }
 

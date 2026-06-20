@@ -15,6 +15,15 @@
 
 @section Scripts {
 <script>
+    const statusMap = {};
+    @if (ViewBag.StatusOptions != null)
+    {
+        foreach (var opt in ViewBag.StatusOptions)
+        {
+            <text>statusMap["@(opt.Id)"] = "@Html.Raw(opt.Name)";</text>
+        }
+    }
+
     const pageState = { page: 1, limit: 10, filters: { search: '' }, sort: { field: 'date', order: 'desc' }, hasNextPage: false, totalRows: 0 };
     let lastRequestKey = '';
     let searchDebounce = null;
@@ -68,12 +77,13 @@
         let html = '';
         items.forEach(row => {
             const st = (row.status || '').toUpperCase();
-            let badge = `<span class="px-2 py-1 text-xs rounded-md bg-gray-50 text-gray-700 border border-gray-100 font-medium">${row.status || '-'}</span>`;
-            if (st === 'PRESENT') badge = '<span class="px-2 py-1 text-xs rounded-md bg-green-50 text-green-700 border border-green-100 font-medium">Present</span>';
-            else if (st === 'ABSENT' || st === 'NOINFO') badge = '<span class="px-2 py-1 text-xs rounded-md bg-red-50 text-red-700 border border-red-100 font-medium">Absent</span>';
-            else if (st === 'LATE') badge = '<span class="px-2 py-1 text-xs rounded-md bg-yellow-50 text-yellow-700 border border-yellow-100 font-medium">Late</span>';
-            else if (st === 'SICK') badge = '<span class="px-2 py-1 text-xs rounded-md bg-blue-50 text-blue-700 border border-blue-100 font-medium">Sick</span>';
-            else if (st === 'EXCUSED') badge = '<span class="px-2 py-1 text-xs rounded-md bg-purple-50 text-purple-700 border border-purple-100 font-medium">Excused</span>';
+            const label = statusMap[st] || row.status || '-';
+            let badge = `<span class="px-2 py-1 text-xs rounded-md bg-gray-50 text-gray-700 border border-gray-100 font-medium">${label}</span>`;
+            if (st === 'PRESENT') badge = `<span class="px-2 py-1 text-xs rounded-md bg-green-50 text-green-700 border border-green-100 font-medium">${label}</span>`;
+            else if (st === 'ABSENT' || st === 'NOINFO') badge = `<span class="px-2 py-1 text-xs rounded-md bg-red-50 text-red-700 border border-red-100 font-medium">${label}</span>`;
+            else if (st === 'LATE') badge = `<span class="px-2 py-1 text-xs rounded-md bg-yellow-50 text-yellow-700 border border-yellow-100 font-medium">${label}</span>`;
+            else if (st === 'SICK') badge = `<span class="px-2 py-1 text-xs rounded-md bg-blue-50 text-blue-700 border border-blue-100 font-medium">${label}</span>`;
+            else if (st === 'EXCUSED') badge = `<span class="px-2 py-1 text-xs rounded-md bg-purple-50 text-purple-700 border border-purple-100 font-medium">${label}</span>`;
 
             html += `<tr class="border-b border-gray-100"><td class="px-5 py-3 whitespace-nowrap">${row.date ? formatDateId(row.date) : '-'}</td><td class="px-5 py-3 whitespace-nowrap">${row.class_name || '-'}</td><td class="px-5 py-3 whitespace-nowrap">${row.teacher || '-'}</td><td class="px-5 py-3">${badge}</td><td class="px-5 py-3 text-gray-600">${row.notes || '-'}</td></tr>`;
         });

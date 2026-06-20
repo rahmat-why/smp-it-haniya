@@ -60,6 +60,7 @@
 
 @section Scripts {
 <script>
+    const statusOptions = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.StatusOptions));
     const returnUrl = new URLSearchParams(window.location.search).get('returnUrl') || '/Attendance';
 
     function showError($el, message) { $el.text(message).removeClass('hidden'); }
@@ -74,6 +75,21 @@
         const nis = detail.nis || '-';
         const status = detail.status || 'PRESENT';
 
+        let statusSelectHtml = `<select name="statuses" class="status-select w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">`;
+        if (statusOptions && statusOptions.length) {
+            statusOptions.forEach(opt => {
+                statusSelectHtml += `<option value="${opt.Id}">${opt.Name}</option>`;
+            });
+        } else {
+            statusSelectHtml += `
+                <option value="PRESENT">Present</option>
+                <option value="SICK">Sick</option>
+                <option value="EXCUSED">Excused</option>
+                <option value="NOINFO">Absent</option>
+            `;
+        }
+        statusSelectHtml += `</select>`;
+
         $('#tbody-details').append(`
             <tr class="hover:bg-gray-50 transition-colors border-b last:border-0">
                 <td class="px-4 py-3">
@@ -84,12 +100,7 @@
                     <input type="hidden" name="student_ids" value="${detail.student_id}" />
                 </td>
                 <td class="px-4 py-3">
-                    <select name="statuses" class="status-select w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                        <option value="PRESENT">Hadir</option>
-                        <option value="SICK">Sakit</option>
-                        <option value="EXCUSED">Izin</option>
-                        <option value="NOINFO">Alpa</option>
-                    </select>
+                    ${statusSelectHtml}
                 </td>
                 <td class="px-4 py-3"><input type="text" name="notes" value="${detail.notes || ''}" class="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" /></td>
             </tr>
