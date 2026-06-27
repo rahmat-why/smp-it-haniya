@@ -35,7 +35,7 @@
                         </label>
                         <select id="academic_year_id"
                                 class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                data-placeholder="-- Select Academic Year --">
+                                data-placeholder="-- Pilih Tahun Akademik --">
                         </select>
                         <p id="error-academic_year_id"
                            class="mt-1 text-xs text-red-600 hidden validation-error-message"></p>
@@ -47,7 +47,7 @@
                         </label>
                         <select id="class_id"
                                 class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                data-placeholder="-- Select Class --">
+                                data-placeholder="-- Pilih Kelas --">
                         </select>
                         <p id="error-class_id"
                            class="mt-1 text-xs text-red-600 hidden validation-error-message"></p>
@@ -59,7 +59,7 @@
                         </label>
                         <select id="homeroom_teacher_id"
                                 class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                data-placeholder="-- Select Homeroom Teacher --">
+                                data-placeholder="-- Pilih Wali Kelas --">
                         </select>
                         <p id="error-homeroom_teacher_id"
                            class="mt-1 text-xs text-red-600 hidden validation-error-message"></p>
@@ -285,11 +285,11 @@
                         tailwindMessageModal('Berhasil', res.message || 'Kelas berhasil diperbarui.')
                             .then(() => { window.location.href = returnUrl; });
                     } else {
-                        tailwindMessageModal('Failed', res.message || "Failed to update class");
+                        tailwindMessageModal('Gagal', res.message || "Gagal memperbarui kelas");
                     }
                 },
                 error: function () {
-                    tailwindMessageModal('Error', "An error occurred while updating the class.");
+                    tailwindMessageModal('Kesalahan', "Terjadi kesalahan saat memperbarui kelas.");
                 }
             });
         }
@@ -303,7 +303,7 @@
 
             // Initialize Select2 for Academic Year
             $('#academic_year_id').select2({
-                placeholder: "-- Select Academic Year --",
+                placeholder: "-- Pilih Tahun Akademik --",
                 allowClear: true,
                 ajax: {
                     url: '/Select2/AcademicYears',
@@ -325,7 +325,7 @@
 
             // Initialize Select2 for Class
             $('#class_id').select2({
-                placeholder: "-- Select Class --",
+                placeholder: "-- Pilih Kelas --",
                 allowClear: true,
                 ajax: {
                     url: '/Select2/Classes',
@@ -347,7 +347,7 @@
 
             // Initialize Select2 for Homeroom Teacher
             $('#homeroom_teacher_id').select2({
-                placeholder: "-- Select Homeroom Teacher --",
+                placeholder: "-- Pilih Wali Kelas --",
                 allowClear: true,
                 ajax: {
                     url: '/Select2/Teachers',
@@ -372,7 +372,7 @@
             // Load current class info and pre-select values
             $.get("/Class/GetById", { id: acId }, res => {
                 if (!res.success) {
-                    tailwindMessageModal('Failed', res.message || 'Failed to load class info');
+                    tailwindMessageModal('Gagal', res.message || 'Gagal memuat info kelas');
                     return;
                 }
                 const d = res.data;
@@ -401,7 +401,7 @@
                 // Load students with assignment status
                 $.get("/Class/GetStudentsWithAssignmentStatus", { academicClassId: acId }, stRes => {
                     if (!stRes.success) {
-                        tailwindMessageModal('Failed', stRes.message || 'Failed to load students');
+                        tailwindMessageModal('Gagal', stRes.message || 'Gagal memuat siswa');
                         return;
                     }
                     renderStudents(stRes.data || []);

@@ -127,7 +127,8 @@
                             <div class="hidden sm:block text-left">
                                 <p class="text-xs md:text-sm font-semibold text-gray-800 truncate max-w-[140px] md:max-w-[200px]">@fullName</p>
                                 <p class="text-[10px] md:text-xs text-gray-500">NIS: @nis</p>
-                                <p class="text-[10px] md:text-xs text-gray-500">Level: <span id="student-memorization-achievement">-</span></p>
+                                <p class="text-[10px] md:text-xs text-gray-500">Tahsin: <span id="student-tahsin">-</span></p>
+                                <p class="text-[10px] md:text-xs text-gray-500">Tahfidz: <span id="student-tahfidz">-</span></p>
                             </div>
                         </div>
 
@@ -344,7 +345,9 @@
                 type: 'GET',
                 success: function (res) {
                     if (!res || !res.success) return;
-                    $('#student-memorization-achievement').text(res.data || '-');
+                    const data = res.data || {};
+                    $('#student-tahsin').text(data.tahsin || '-');
+                    $('#student-tahfidz').text(data.tahfidz || '-');
                 }
             });
         }

@@ -100,19 +100,33 @@ namespace Haniya.Controllers.PortalStudent
             }
         }
 
-        private string GetMemorizationAchievement(SqlConnection conn, string studentId)
+        private dynamic GetMemorizationAchievement(SqlConnection conn, string studentId)
         {
             using var cmd = new SqlCommand(@"
-                SELECT TOP 1 ISNULL(ds.item_name, '-') AS memorization_achievement
+                SELECT TOP 1 
+                    ISNULL(ds_tahsin.item_name, '-') AS tahsin,
+                    ISNULL(ds_tahfidz.item_name, '-') AS tahfidz
                 FROM mst_students s
-                LEFT JOIN mst_detail_settings ds
-                    ON s.level = ds.detail_id
+                LEFT JOIN mst_detail_settings ds_tahsin
+                    ON s.level = ds_tahsin.detail_id
+                LEFT JOIN mst_detail_settings ds_tahfidz
+                    ON s.tier = ds_tahfidz.detail_id
                 WHERE s.student_id = @studentId
             ", conn);
             cmd.Parameters.AddWithValue("@studentId", studentId);
 
-            var value = cmd.ExecuteScalar()?.ToString();
-            return string.IsNullOrWhiteSpace(value) ? "-" : value;
+            using var rd = cmd.ExecuteReader();
+            if (rd.Read())
+            {
+                var tahsin = rd["tahsin"]?.ToString();
+                var tahfidz = rd["tahfidz"]?.ToString();
+                return new
+                {
+                    tahsin = string.IsNullOrWhiteSpace(tahsin) ? "-" : tahsin,
+                    tahfidz = string.IsNullOrWhiteSpace(tahfidz) ? "-" : tahfidz
+                };
+            }
+            return new { tahsin = "-", tahfidz = "-" };
         }
 
         private string? GetLatestActiveAcademicYear(SqlConnection conn)
