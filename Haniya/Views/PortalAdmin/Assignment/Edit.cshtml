@@ -1,0 +1,294 @@
+@{
+    Layout = "_LayoutAdmin";
+    ViewData["Title"] = "Edit Assignment";
+}
+
+<h2 class="text-2xl font-bold text-gray-800 mb-6">Edit Assignment (Tugas)</h2>
+
+<div class="bg-white p-6 rounded-xl shadow-lg w-full relative">
+    <div id="loadingOverlay" class="absolute inset-0 bg-white/80 backdrop-blur-[1px] flex flex-col items-center justify-center z-10 rounded-xl">
+        <div class="w-8 h-8 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin mb-3"></div>
+        <p class="text-sm font-medium text-gray-600">Loading Assignment data...</p>
+    </div>
+
+    <form id="assignmentForm" class="space-y-8 opacity-0 transition-opacity duration-300">
+        <input type="hidden" id="assignment_id" value="@ViewBag.assignmentId" />
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="title" class="block text-sm font-medium text-gray-700 mb-2">
+                    Title <span class="text-red-600">*</span>
+                </label>
+                <input type="text" id="title" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                       placeholder="Enter assignment title" required />
+                <p id="error-title" class="mt-1 text-sm text-red-600 hidden"></p>
+            </div>
+
+            <div>
+                <label for="academic_class_id" class="block text-sm font-medium text-gray-700 mb-2">
+                    Class <span class="text-red-600">*</span>
+                </label>
+                <select id="academic_class_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                        data-placeholder="-- Select Class --" required></select>
+                <p id="error-class" class="mt-1 text-sm text-red-600 hidden"></p>
+            </div>
+
+            <div>
+                <label for="subject_id" class="block text-sm font-medium text-gray-700 mb-2">
+                    Subject <span class="text-red-600">*</span>
+                </label>
+                <select id="subject_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                        data-placeholder="-- Select Subject --" required></select>
+                <p id="error-subject" class="mt-1 text-sm text-red-600 hidden"></p>
+            </div>
+
+            <div>
+                <label for="teacher_id" class="block text-sm font-medium text-gray-700 mb-2">
+                    Teacher <span class="text-red-600">*</span>
+                </label>
+                <select id="teacher_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                        data-placeholder="-- Select Teacher --" required></select>
+                <p id="error-teacher" class="mt-1 text-sm text-red-600 hidden"></p>
+            </div>
+
+            <div>
+                <label for="due_date" class="block text-sm font-medium text-gray-700 mb-2">
+                    Due Date
+                </label>
+                <input type="date" id="due_date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
+            </div>
+
+            <div class="md:col-span-2">
+                <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
+                    Description
+                </label>
+                <textarea id="description" rows="5" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                          placeholder="Enter assignment description..."></textarea>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-4 pt-6 border-t border-gray-200">
+            <button type="button" onclick="goBack()" class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300">
+                <svg class="w-4 h-4 mr-2 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+                Back
+            </button>
+            <button type="button" onclick="saveAssignment()" class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
+                Save Changes
+                <svg class="w-4 h-4 ml-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            </button>
+        </div>
+    </form>
+</div>
+
+@await Html.PartialAsync("_TailwindConfirmModal")
+
+@section Scripts {
+    <script>
+        const returnUrl = new URLSearchParams(window.location.search).get('returnUrl') || '/Assignment';
+        const assignmentId = $('#assignment_id').val();
+
+        function validateForm() {
+            $('.text-red-600[id^="error-"]').addClass('hidden');
+            let valid = true;
+
+            if (!$('#title').val().trim()) {
+                $('#error-title').text('Title is required').removeClass('hidden');
+                valid = false;
+            }
+            if (!$('#subject_id').val()) {
+                $('#error-subject').text('Subject is required').removeClass('hidden');
+                valid = false;
+            }
+            if (!$('#academic_class_id').val()) {
+                $('#error-class').text('Class is required').removeClass('hidden');
+                valid = false;
+            }
+            if (!$('#teacher_id').val()) {
+                $('#error-teacher').text('Teacher is required').removeClass('hidden');
+                valid = false;
+            }
+
+            return valid;
+        }
+
+        function goBack() {
+            window.location.href = returnUrl;
+        }
+
+        async function saveAssignment() {
+            if (!validateForm()) {
+                await tailwindMessageModal('Validation Error', 'Please complete all required fields.');
+                return;
+            }
+
+            const confirmed = await tailwindConfirmModal({
+                title: 'Save Confirmation',
+                message: 'Are you sure you want to save changes to this Assignment?',
+                confirmText: 'Yes, save',
+                cancelText: 'Cancel'
+            });
+            if (!confirmed) return;
+
+            const fd = new FormData();
+            fd.append("assignment_id", assignmentId);
+            fd.append("title", $('#title').val());
+            fd.append("subject_id", $('#subject_id').val());
+            fd.append("academic_class_id", $('#academic_class_id').val());
+            fd.append("teacher_id", $('#teacher_id').val());
+            fd.append("description", $('#description').val());
+            fd.append("due_date", $('#due_date').val());
+
+            $.ajax({
+                url: "/Assignment/Update",
+                type: "POST",
+                data: fd,
+                processData: false,
+                contentType: false,
+                success: async res => {
+                    if (res.success) {
+                        await tailwindMessageModal('Success', res.message || 'Assignment updated successfully.');
+                        location.href = returnUrl;
+                    } else {
+                        await tailwindMessageModal('Failed', res.message || 'Save failed');
+                    }
+                },
+                error: async () => await tailwindMessageModal('Error', 'Error saving Assignment')
+            });
+        }
+
+        function loadAssignmentData() {
+            if (!assignmentId) {
+                tailwindMessageModal('Error', 'Invalid Assignment ID').then(goBack);
+                return;
+            }
+
+            $.ajax({
+                url: `/Assignment/GetById?id=${assignmentId}`,
+                type: 'GET',
+                success: function(res) {
+                    if (!res.success) {
+                        tailwindMessageModal('Error', res.message || 'Data not found').then(goBack);
+                        return;
+                    }
+
+                    const d = res.data;
+                    $('#title').val(d.title);
+                    $('#description').val(d.description);
+                    $('#due_date').val(d.due_date);
+
+                    if (d.academic_class_id) {
+                        const optClass = new Option('Loading...', d.academic_class_id, true, true);
+                        $('#academic_class_id').append(optClass).trigger('change');
+                        $.get(`/Class/GetById?id=${d.academic_class_id}`, resClass => {
+                            if (resClass.success) {
+                                $('#academic_class_id').find('option').text(resClass.data.class_name);
+                                initSubject(resClass.data.class_level, d.subject_id);
+                            }
+                        });
+                    }
+
+                    if (d.teacher_id) {
+                        const optTeacher = new Option('Loading...', d.teacher_id, true, true);
+                        $('#teacher_id').append(optTeacher).trigger('change');
+                        $.get(`/Teacher/GetById?id=${d.teacher_id}`, resT => {
+                            if (resT.success) {
+                                $('#teacher_id').find('option').text(resT.data.first_name + ' ' + (resT.data.last_name || ''));
+                            }
+                        });
+                    }
+
+                    setTimeout(() => {
+                        $('#loadingOverlay').addClass('hidden');
+                        $('#assignmentForm').removeClass('opacity-0');
+                    }, 500);
+                },
+                error: function() {
+                    tailwindMessageModal('Error', 'Error loading data').then(goBack);
+                }
+            });
+        }
+
+        $(document).ready(function () {
+            $('#academic_class_id').select2({
+                placeholder: "-- Select Class --",
+                allowClear: false,
+                ajax: {
+                    url: '/Select2/AcademicClasses',
+                    dataType: 'json',
+                    delay: 250,
+                    data: p => ({ q: p.term || '', page: p.page || 1 }),
+                    processResults: d => ({ results: d.results, pagination: d.pagination }),
+                    cache: true
+                },
+                minimumInputLength: 0
+            });
+
+            $('#academic_class_id').on('change', function () {
+                const cid = $(this).val();
+                if (cid) {
+                    $.ajax({
+                        url: `/Class/GetById?id=${cid}`,
+                        type: 'GET',
+                        dataType: 'json',
+                        success: res => {
+                            initSubject(res.data.class_level, null);
+                        }
+                    });
+                }
+            });
+
+            $('#teacher_id').select2({
+                placeholder: "-- Select Teacher --",
+                allowClear: false,
+                ajax: {
+                    url: '/Select2/Teachers',
+                    dataType: 'json',
+                    delay: 250,
+                    data: p => ({ q: p.term || '', page: p.page || 1 }),
+                    processResults: d => ({ results: d.results, pagination: d.pagination }),
+                    cache: true
+                },
+                minimumInputLength: 0
+            });
+            
+            initSubject("", null);
+            loadAssignmentData();
+        });
+
+        function initSubject(classLevel, prefillId) {
+            const $subject = $('#subject_id');
+            if ($subject.hasClass("select2-hidden-accessible")) {
+                $subject.select2('destroy');
+            }
+            $subject.empty().val(null).trigger('change');
+
+            $subject.select2({
+                placeholder: "-- Select --",
+                allowClear: false,
+                ajax: {
+                    url: `/Select2/Subjects?classLevel=${classLevel || ''}`,
+                    dataType: 'json',
+                    delay: 250,
+                    data: p => ({ q: p.term || '', page: p.page || 1 }),
+                    processResults: d => ({ results: d.results, pagination: d.pagination }),
+                    cache: true
+                },
+                minimumInputLength: 0
+            });
+
+            if (prefillId) {
+                const optSubject = new Option('Loading...', prefillId, true, true);
+                $subject.append(optSubject).trigger('change');
+                $.get(`/Subject/GetById?id=${prefillId}`, resS => {
+                    if (resS.success) {
+                        $subject.find('option').text(resS.data.subject_name);
+                    }
+                });
+            }
+        }
+    </script>
+}

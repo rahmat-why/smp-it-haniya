@@ -108,6 +108,7 @@
             @if (User.Identity.IsAuthenticated)
             {
                 <div class="flex items-center gap-3 md:gap-4">
+                    
                     <div class="relative inline-block text-left">
                         <div onclick="toggleProfileMenu()" class="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-1.5 md:py-2 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer select-none">
                             @if (!string.IsNullOrEmpty(profilePhoto))
@@ -212,7 +213,7 @@
         </aside>
 
         <!-- Konten Utama -->
-        <main class="flex-1 overflow-auto p-4 md:p-6 pb-20 md:pb-6">
+        <main class="flex-1 overflow-auto p-4 md:p-6 pb-20 md:pb-6 no-scrollbar">
             @RenderBody()
         </main>
     </div>
@@ -297,20 +298,6 @@
             window.location.href = url;
         }
 
-        function toggleProfileMenu() {
-            const menu = document.getElementById("profileMenu");
-            menu.classList.toggle("hidden");
-        }
-
-        document.addEventListener("click", function (event) {
-            const menu = document.getElementById("profileMenu");
-            const container = event.target.closest(".relative");
-
-            if (!container && menu) {
-                menu.classList.add("hidden");
-            }
-        });
-
         function handleLogout(event) {
             const btn = event.target.closest('button');
 
@@ -361,6 +348,27 @@
                 }
             });
         }
+
+        function logoutStudent() {
+            // handle logout
+        }
+
+        // --- Layout UI Toggles ---
+        function toggleProfileMenu() {
+            const menu = $('#profileMenu');
+            if (menu.hasClass('hidden')) {
+                menu.removeClass('hidden');
+            } else {
+                menu.addClass('hidden');
+            }
+        }
+        
+        // Close menus when clicking outside
+        $(document).on('click', function (e) {
+            if (!$(e.target).closest('#profileMenu, div[onclick="toggleProfileMenu()"]').length) {
+                $('#profileMenu').addClass('hidden');
+            }
+        });
 
         function loadPortalMenuStudent() {
             $.ajax({

@@ -43,6 +43,7 @@
     </div>
 
     <div class="px-4 pb-4 pt-3">
+        <div id="payment-summary-container" class="mb-3 text-right font-semibold text-gray-800 text-sm hidden"></div>
         <div id="payment-table-footer" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div id="table-info-container"></div>
             <div id="table-pagination-container"></div>
@@ -189,6 +190,10 @@
                                    class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                    placeholder="Search by student name / NIS..." />
                         </div>
+                        <div class="w-full">
+                            <label class="block text-xs font-medium mb-1" for="filter_monthyear">Month & Year</label>
+                            <input id="filter_monthyear" type="month" class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                        </div>
                     </div>
                     <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
                         <button type="button"
@@ -217,6 +222,15 @@
         });
         $('#paymentFilterCloseBtn').off('click').on('click', function () {
             $dropdown.addClass('hidden');
+        });
+
+        $('#reset-payment-filter-btn').off('click').on('click', function () {
+            $('#filter_class').val(null).trigger('change');
+            $('#filter_status').val('').trigger('change');
+            $('#filter_type').val(null).trigger('change');
+            $('#payment_search_filter').val('');
+            $('#filter_monthyear').val('');
+            applyPaymentFilter();
         });
 
         $('#apply-payment-filter-btn').off('click').on('click', function () {
@@ -276,6 +290,10 @@
             const optionType = new Option(pageState.filters.paymentType, pageState.filters.paymentType, true, true);
             $('#filter_type').append(optionType).trigger('change');
         }
+        if (pageState.filters.year && pageState.filters.month) {
+            const monthVal = pageState.filters.month.padStart(2, '0');
+            $('#filter_monthyear').val(`${pageState.filters.year}-${monthVal}`);
+        }
     }
 
     function applyPaymentFilter() {
@@ -283,6 +301,17 @@
         pageState.filters.status = $('#filter_status').val() || '';
         pageState.filters.paymentType = $('#filter_type').val() || '';
         pageState.filters.search = ($('#payment_search_filter').val() || '').trim();
+        
+        const monthYear = $('#filter_monthyear').val() || '';
+        if (monthYear) {
+            const parts = monthYear.split('-');
+            pageState.filters.year = parts[0];
+            pageState.filters.month = parseInt(parts[1], 10).toString();
+        } else {
+            pageState.filters.year = '';
+            pageState.filters.month = '';
+        }
+
         pageState.page = 1;
         lastRequestKey = '';
         fetchPayments();
@@ -493,6 +522,17 @@
             syncStateToUrl();
             renderRows(items);
             renderPagination(items.length);
+
+            const $summary = $('#payment-summary-container');
+            if (pageState.filters.month && pageState.filters.year && result.totalPaymentForMonth !== undefined) {
+                const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                const mName = monthNames[parseInt(pageState.filters.month, 10) - 1];
+                $summary.html(`Total pembayaran (PAID & PARTIAL) pada bulan ${mName} ${pageState.filters.year}: <span class="text-green-700 ml-2">Rp ${Number(result.totalPaymentForMonth).toLocaleString('id-ID')}</span>`);
+                $summary.removeClass('hidden');
+            } else {
+                $summary.addClass('hidden');
+                $summary.empty();
+            }
         } catch {
             lastRequestKey = '';
             tailwindMessageModal('Error', 'Failed to load payment data.');

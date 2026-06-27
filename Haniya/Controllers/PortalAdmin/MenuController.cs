@@ -62,12 +62,18 @@ namespace Haniya.Controllers.PortalAdmin
                     using var rd = cmd.ExecuteReader();
                     while (rd.Read())
                     {
+                        var url = rd["url"]?.ToString() ?? "";
+                        if (!string.Equals(userType, "Teacher", StringComparison.OrdinalIgnoreCase) && url.StartsWith("/Assignment", StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
                         menus.Add(new
                         {
                             menu_id = rd["menu_id"].ToString(),
                             parent_id = rd["parent_id"] == DBNull.Value ? null : rd["parent_id"].ToString(),
                             menu_name = rd["menu_name"].ToString(),
-                            url = rd["url"].ToString(),
+                            url,
                             icon = rd["icon"]?.ToString(),
                             sort_order = rd["sort_order"],
                             is_external = false

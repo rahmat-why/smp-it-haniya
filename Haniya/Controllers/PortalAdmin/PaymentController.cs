@@ -58,10 +58,14 @@ namespace Haniya.Controllers.PortalAdmin
             filters.TryGetValue("academicClassId", out var academicClassId);
             filters.TryGetValue("status", out var status);
             filters.TryGetValue("paymentType", out var paymentType);
+            filters.TryGetValue("month", out var monthStr);
+            filters.TryGetValue("year", out var yearStr);
             search = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
             academicClassId = string.IsNullOrWhiteSpace(academicClassId) ? null : academicClassId.Trim();
             status = string.IsNullOrWhiteSpace(status) ? null : status.Trim();
             paymentType = string.IsNullOrWhiteSpace(paymentType) ? null : paymentType.Trim();
+            int? month = int.TryParse(monthStr, out var m) ? m : null;
+            int? year = int.TryParse(yearStr, out var y) ? y : null;
 
             var sortMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -83,8 +87,20 @@ namespace Haniya.Controllers.PortalAdmin
 
             var where = new List<string> { "1=1" };
             if (academicClassId != null) where.Add("sc.academic_class_id = @classId");
-            if (status != null) where.Add("p.status = @status");
             if (paymentType != null) where.Add("p.payment_type = @paymentType");
+            
+            if (month.HasValue && year.HasValue)
+            {
+                where.Add("p.status IN ('PAID', 'PARTIAL')");
+                where.Add("MONTH(p.payment_date) = @month");
+                where.Add("YEAR(p.payment_date) = @year");
+                if (status != null && (status == "PAID" || status == "PARTIAL")) where.Add("p.status = @status");
+            }
+            else
+            {
+                if (status != null) where.Add("p.status = @status");
+            }
+
             if (search != null)
             {
                 where.Add(@"(
@@ -108,6 +124,8 @@ namespace Haniya.Controllers.PortalAdmin
                 if (academicClassId != null) countCmd.Parameters.AddWithValue("@classId", academicClassId);
                 if (status != null) countCmd.Parameters.AddWithValue("@status", status);
                 if (paymentType != null) countCmd.Parameters.AddWithValue("@paymentType", paymentType);
+                if (month.HasValue) countCmd.Parameters.AddWithValue("@month", month.Value);
+                if (year.HasValue) countCmd.Parameters.AddWithValue("@year", year.Value);
                 if (search != null) countCmd.Parameters.AddWithValue("@searchPattern", $"%{search}%");
                 totalRows = Convert.ToInt32(countCmd.ExecuteScalar() ?? 0);
             }
@@ -152,12 +170,15 @@ namespace Haniya.Controllers.PortalAdmin
             var list = new List<object>();
             using (var cmd = new SqlCommand(sql, conn))
             {
-                cmd.Parameters.AddWithValue("@offset", offset);
-                cmd.Parameters.AddWithValue("@limit", limit);
                 if (academicClassId != null) cmd.Parameters.AddWithValue("@classId", academicClassId);
                 if (status != null) cmd.Parameters.AddWithValue("@status", status);
                 if (paymentType != null) cmd.Parameters.AddWithValue("@paymentType", paymentType);
+                if (month.HasValue) cmd.Parameters.AddWithValue("@month", month.Value);
+                if (year.HasValue) cmd.Parameters.AddWithValue("@year", year.Value);
                 if (search != null) cmd.Parameters.AddWithValue("@searchPattern", $"%{search}%");
+
+                cmd.Parameters.Add("@offset", System.Data.SqlDbType.Int).Value = offset;
+                cmd.Parameters.Add("@limit", System.Data.SqlDbType.Int).Value = limit;
 
                 using var r = cmd.ExecuteReader();
                 while (r.Read())
@@ -183,7 +204,32 @@ namespace Haniya.Controllers.PortalAdmin
             }
 
             var hasNextPage = (offset + list.Count) < totalRows;
-            return Json(DTOResponse.ok(new { data = list, hasNextPage, totalRows, currentPage = page, limit }));
+
+            decimal totalPaymentForMonth = 0;
+            if (month.HasValue && year.HasValue)
+            {
+                var sumSql = @"
+                    SELECT SUM(p.total_payment)
+                    FROM txn_payments p
+                    LEFT JOIN mst_student_classes sc ON p.student_class_id = sc.student_class_id
+                    LEFT JOIN mst_students s ON sc.student_id = s.student_id
+                    {WHERE_SQL}".Replace("{WHERE_SQL}", whereSql);
+
+                using (var sumCmd = new SqlCommand(sumSql, conn))
+                {
+                    if (academicClassId != null) sumCmd.Parameters.AddWithValue("@classId", academicClassId);
+                    if (status != null) sumCmd.Parameters.AddWithValue("@status", status);
+                    if (paymentType != null) sumCmd.Parameters.AddWithValue("@paymentType", paymentType);
+                    sumCmd.Parameters.AddWithValue("@month", month.Value);
+                    sumCmd.Parameters.AddWithValue("@year", year.Value);
+                    if (search != null) sumCmd.Parameters.AddWithValue("@searchPattern", $"%{search}%");
+                    
+                    var sumResult = sumCmd.ExecuteScalar();
+                    if (sumResult != DBNull.Value) totalPaymentForMonth = Convert.ToDecimal(sumResult);
+                }
+            }
+
+            return Json(DTOResponse.ok(new { data = list, hasNextPage, totalRows, currentPage = page, limit, totalPaymentForMonth }));
         }
 
         [HttpGet]

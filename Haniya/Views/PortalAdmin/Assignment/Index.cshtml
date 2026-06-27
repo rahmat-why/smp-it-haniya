@@ -1,0 +1,453 @@
+@{
+    Layout = "_LayoutAdmin";
+    ViewData["Title"] = "Assignments (Tugas)";
+}
+
+<div class="flex justify-between items-center mb-4">
+    <h2 class="text-xl font-semibold">Assignment List</h2>
+    <a id="assignment-add-link" href="/Assignment/Create"
+       class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
+        + Add Assignment
+    </a>
+</div>
+
+<div class="bg-white rounded-lg shadow">
+    <div class="px-4 pt-4">
+        <div id="assignment-table-toolbar" class="flex flex-col md:flex-row md:items-center md:justify-between gap-3"></div>
+    </div>
+
+    <div class="relative overflow-x-auto px-4 pt-4">
+        <div id="assignment-table-loading" class="hidden absolute inset-0 z-20 bg-white/80 backdrop-blur-[1px] flex items-center justify-center">
+            <div class="flex flex-col items-center gap-3 text-gray-600">
+                <div class="w-8 h-8 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin"></div>
+                <p class="text-sm font-medium">Loading Assignment data...</p>
+            </div>
+        </div>
+        <table id="assignment-table" class="min-w-full text-sm text-left text-gray-700 border-collapse">
+            <thead class="bg-gray-100 border-y border-gray-200">
+                <tr>
+                    <th data-sort="created_at" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Created At</th>
+                    <th data-sort="title" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Title</th>
+                    <th data-sort="class" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Class</th>
+                    <th data-sort="subject" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Subject</th>
+                    <th data-sort="teacher" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Teacher</th>
+                    <th data-sort="due_date" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center cursor-pointer select-none">Due Date</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 110px;">Action</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100"></tbody>
+        </table>
+    </div>
+
+    <div class="px-4 pb-4 pt-3">
+        <div id="assignment-table-footer" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div id="table-info-container"></div>
+            <div id="table-pagination-container"></div>
+        </div>
+    </div>
+</div>
+
+@await Html.PartialAsync("_TailwindConfirmModal")
+
+@section Scripts {
+<script>
+    const pageState = {
+        page: 1,
+        limit: 10,
+        filters: {
+            search: '',
+            academic_year_id: '',
+            academic_class_id: '',
+            teacher_id: ''
+        },
+        sort: { field: 'created_at', order: 'desc' },
+        hasNextPage: false,
+        totalRows: 0
+    };
+    let lastRequestKey = '';
+    let searchDebounce = null;
+
+    function getStateQuery() {
+        return `page=${pageState.page}&limit=${pageState.limit}&search=${encodeURIComponent(pageState.filters.search || '')}&academic_year_id=${encodeURIComponent(pageState.filters.academic_year_id || '')}&academic_class_id=${encodeURIComponent(pageState.filters.academic_class_id || '')}&teacher_id=${encodeURIComponent(pageState.filters.teacher_id || '')}&sortField=${encodeURIComponent(pageState.sort.field)}&sortOrder=${encodeURIComponent(pageState.sort.order)}`;
+    }
+
+    function syncStateToUrl() {
+        history.replaceState({ ...pageState }, '', `?${getStateQuery()}`);
+        $('#assignment-add-link').attr('href', `/Assignment/Create?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+    }
+
+    function hydrateStateFromUrl() {
+        const q = new URLSearchParams(window.location.search);
+        const page = Number(q.get('page') || 1);
+        const limit = Number(q.get('limit') || 10);
+        pageState.page = Number.isFinite(page) && page > 0 ? page : 1;
+        pageState.limit = Number.isFinite(limit) && limit > 0 ? limit : 10;
+        pageState.filters.search = q.get('search') || '';
+        pageState.filters.academic_year_id = q.get('academic_year_id') || '';
+        pageState.filters.academic_class_id = q.get('academic_class_id') || '';
+        pageState.filters.teacher_id = q.get('teacher_id') || '';
+        pageState.sort.field = q.get('sortField') || 'created_at';
+        pageState.sort.order = q.get('sortOrder') || 'desc';
+    }
+
+    function renderSortIndicators() {
+        $('#assignment-table thead th[data-sort]').each(function () {
+            const field = $(this).data('sort');
+            const isActive = field === pageState.sort.field;
+            const icon = isActive ? (pageState.sort.order === 'asc' ? ' ↑' : ' ↓') : '';
+            const base = $(this).text().replace(/ [↑↓]$/, '');
+            $(this).text(base + icon);
+        });
+    }
+
+    function renderToolbar() {
+        const searchValue = (pageState.filters.search || '').replace(/"/g, '&quot;');
+        $('#assignment-table-toolbar').html(`
+            <div class="flex items-center gap-2 text-sm text-gray-600">
+                Show
+                <select id="list-limit" class="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:ring-2 focus:ring-blue-500">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select> rows
+            </div>
+            <div class="relative">
+                <button id="assignmentFilterToggleBtn" type="button" class="flex items-center gap-2 bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
+                    Filter
+                </button>
+                <div id="assignmentFilterDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl border border-gray-200 shadow-xl z-50 overflow-visible">
+                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                        <h3 class="text-lg font-bold text-gray-800">Filter</h3>
+                        <button type="button" id="assignmentFilterCloseBtn" class="text-gray-400 hover:text-gray-600 transition p-1 rounded-lg hover:bg-gray-100">?</button>
+                    </div>
+                    <div class="px-5 py-4 space-y-4">
+                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_academic_year">Academic Year</label><select id="filter_academic_year" class="w-full"></select></div>
+                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_class">Class</label><select id="filter_class" class="w-full"></select></div>
+                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_teacher">Teacher</label><select id="filter_teacher" class="w-full"></select></div>
+                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="assignment_search_filter">Search</label><input id="assignment_search_filter" type="text" value="${searchValue}" class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Search..." /></div>
+                    </div>
+                    <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
+                        <button type="button" id="apply-assignment-filter-btn" class="px-5 py-2 rounded-full text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 transition">Filter</button>
+                    </div>
+                </div>
+            </div>
+        `);
+
+        $('#list-limit').val(String(pageState.limit)).off('change').on('change', function () {
+            const next = Number($(this).val() || 10);
+            if (pageState.limit === next) return;
+            pageState.limit = next;
+            pageState.page = 1;
+            lastRequestKey = '';
+            fetchAssignment();
+        });
+
+        const $dropdown = $('#assignmentFilterDropdown');
+        $('#assignmentFilterToggleBtn').off('click').on('click', function () { $dropdown.toggleClass('hidden'); });
+        $('#assignmentFilterCloseBtn').off('click').on('click', function () { $dropdown.addClass('hidden'); });
+        $('#apply-assignment-filter-btn').off('click').on('click', applyAssignmentFilter);
+
+        initFilterSelect2($dropdown);
+    }
+
+    function initFilterSelect2($dropdown) {
+        $('#filter_academic_year').select2({
+            placeholder: '-- All Academic Years --',
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $dropdown,
+            ajax: {
+                url: '/Select2/AcademicYears',
+                dataType: 'json',
+                delay: 250,
+                data: params => ({ q: params.term || '', page: params.page || 1 }),
+                processResults: data => ({ results: data.results, pagination: data.pagination }),
+                cache: true
+            },
+            minimumInputLength: 0
+        });
+
+        $('#filter_class').select2({
+            placeholder: '-- All Classes --',
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $dropdown,
+            ajax: {
+                url: '/Select2/AcademicClasses',
+                dataType: 'json',
+                delay: 250,
+                data: params => ({ q: params.term || '', page: params.page || 1 }),
+                processResults: data => ({ results: data.results, pagination: data.pagination }),
+                cache: true
+            },
+            minimumInputLength: 0
+        });
+
+        $('#filter_teacher').select2({
+            placeholder: '-- All Teachers --',
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $dropdown,
+            ajax: {
+                url: '/Select2/Teachers',
+                dataType: 'json',
+                delay: 250,
+                data: params => ({ q: params.term || '', page: params.page || 1 }),
+                processResults: data => ({ results: data.results, pagination: data.pagination }),
+                cache: true
+            },
+            minimumInputLength: 0
+        });
+
+        if (pageState.filters.academic_year_id) {
+            const option = new Option(pageState.filters.academic_year_id, pageState.filters.academic_year_id, true, true);
+            $('#filter_academic_year').append(option).trigger('change');
+        }
+        if (pageState.filters.academic_class_id) {
+            const option = new Option(pageState.filters.academic_class_id, pageState.filters.academic_class_id, true, true);
+            $('#filter_class').append(option).trigger('change');
+        }
+        if (pageState.filters.teacher_id) {
+            const option = new Option(pageState.filters.teacher_id, pageState.filters.teacher_id, true, true);
+            $('#filter_teacher').append(option).trigger('change');
+        }
+    }
+
+    function applyAssignmentFilter() {
+        pageState.filters.academic_year_id = $('#filter_academic_year').val() || '';
+        pageState.filters.academic_class_id = $('#filter_class').val() || '';
+        pageState.filters.teacher_id = $('#filter_teacher').val() || '';
+        pageState.filters.search = ($('#assignment_search_filter').val() || '').trim();
+        pageState.page = 1;
+        lastRequestKey = '';
+        fetchAssignment();
+        $('#assignmentFilterDropdown').addClass('hidden');
+    }
+
+    function renderRows(items) {
+        const $tbody = $('#assignment-table tbody');
+        if (!items || !items.length) {
+            $tbody.html(`
+                <tr>
+                    <td colspan="7" class="px-4 py-10 text-center">
+                        <div class="flex flex-col items-center gap-2 text-gray-500">
+                            <div class="text-sm font-semibold text-gray-700">Tidak ada data Assignment</div>
+                            <div class="text-xs">Coba ubah filter pencarian.</div>
+                        </div>
+                    </td>
+                </tr>
+            `);
+            return;
+        }
+
+        let html = '';
+        items.forEach(row => {
+            const id = row.assignment_id || '';
+            html += `
+                <tr class="bg-white divide-y divide-gray-100">
+                    <td class="px-4 py-3 text-gray-700">${row.created_at || '-'}</td>
+                    <td class="px-4 py-3 text-gray-900">${row.title || '-'}</td>
+                    <td class="px-4 py-3 text-gray-700">${row.class_name || '-'}</td>
+                    <td class="px-4 py-3 text-gray-700">${row.subject_name || '-'}</td>
+                    <td class="px-4 py-3 text-gray-700">${row.teacher_name || '-'}</td>
+                    <td class="px-4 py-3 text-center text-gray-700">${row.due_date || '-'}</td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="flex flex-wrap gap-2 justify-center">
+                            <button type="button" data-id="${id}" class="btn-del-assignment inline-flex items-center justify-center w-8 h-8 rounded-md bg-red-100 text-red-700 hover:bg-red-200" title="Delete">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        $tbody.html(html);
+    }
+
+    function renderPagination(currentCount) {
+        const start = currentCount === 0 ? 0 : ((pageState.page - 1) * pageState.limit) + 1;
+        const end = ((pageState.page - 1) * pageState.limit) + currentCount;
+        $('#table-info-container').html(`<span class="text-sm text-gray-600">Menampilkan ${start} sampai ${end} dari ${pageState.totalRows} data</span>`);
+
+        const totalPages = Math.max(1, Math.ceil(pageState.totalRows / pageState.limit));
+        const prevDisabled = pageState.page <= 1;
+        const nextDisabled = !pageState.hasNextPage;
+        const pageStart = Math.max(1, Math.min(pageState.page - 1, totalPages - 2));
+        const pageEnd = Math.min(totalPages, pageStart + 2);
+        const pageButtons = [];
+        for (let i = pageStart; i <= pageEnd; i++) {
+            const active = i === pageState.page;
+            pageButtons.push(`<button type="button" data-page="${i}" class="page-number px-3 py-2 text-sm border-l border-gray-200 ${active ? 'bg-blue-900 text-white font-semibold' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${active ? 'disabled' : ''}>${i}</button>`);
+        }
+
+        $('#table-pagination-container').html(`
+            <div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                <button id="page-first" class="px-3 py-2 text-sm ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>First</button>
+                <button id="page-prev" class="px-3 py-2 text-sm border-l border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Prev</button>
+                ${pageButtons.join('')}
+                <button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Next</button>
+                <button id="page-last" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Last</button>
+            </div>
+        `);
+
+        function goToPage(page) {
+            const nextPage = Math.min(Math.max(1, page), totalPages);
+            if (nextPage === pageState.page) return;
+            pageState.page = nextPage;
+            lastRequestKey = '';
+            fetchAssignment();
+        }
+
+        $('#page-first').off('click').on('click', function () {
+            if (pageState.page <= 1) return;
+            goToPage(1);
+        });
+
+        $('#page-prev').off('click').on('click', function () {
+            if (pageState.page <= 1) return;
+            goToPage(pageState.page - 1);
+        });
+
+        $('.page-number').off('click').on('click', function () {
+            goToPage(Number($(this).data('page') || 1));
+        });
+
+        $('#page-next').off('click').on('click', function () {
+            if (!pageState.hasNextPage) return;
+            goToPage(pageState.page + 1);
+        });
+
+        $('#page-last').off('click').on('click', function () {
+            if (!pageState.hasNextPage) return;
+            goToPage(totalPages);
+        });
+    }
+
+    function setAssignmentLoading(isLoading) {
+        $('#assignment-table-loading').toggleClass('hidden', !isLoading);
+    }
+
+    async function fetchAssignment() {
+        const payload = {
+            page: pageState.page,
+            limit: pageState.limit,
+            filters: { ...pageState.filters },
+            sort: { ...pageState.sort }
+        };
+        const requestKey = JSON.stringify(payload);
+        if (requestKey === lastRequestKey) return;
+        lastRequestKey = requestKey;
+
+        syncStateToUrl();
+        renderSortIndicators();
+        setAssignmentLoading(true);
+
+        try {
+            const res = await $.ajax({
+                url: '/Assignment/GetAll',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(payload)
+            });
+
+            if (!res.success) {
+                lastRequestKey = '';
+                tailwindMessageModal('Failed', res.message || 'Failed to load Assignment data.');
+                return;
+            }
+
+            const result = res.data || {};
+            const items = result.data || [];
+            pageState.page = Number(result.currentPage || pageState.page);
+            pageState.limit = Number(result.limit || 10);
+            pageState.hasNextPage = !!result.hasNextPage;
+            pageState.totalRows = Number(result.totalRows || 0);
+            syncStateToUrl();
+            renderRows(items);
+            renderPagination(items.length);
+        } catch {
+            lastRequestKey = '';
+            tailwindMessageModal('Error', 'Failed to load Assignment data.');
+        } finally {
+            setAssignmentLoading(false);
+        }
+    }
+
+    async function deleteAssignment(id) {
+        const confirmed = await tailwindConfirmModal({
+            title: 'Delete Confirmation',
+            message: 'Delete this Assignment? This will also delete all student reminders associated with it.',
+            confirmText: 'Yes, delete',
+            cancelText: 'Cancel'
+        });
+        if (!confirmed) return;
+
+        $.ajax({
+            url: '/Assignment/Delete',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ id: id }),
+            success: async function (res) {
+                if (res.success) {
+                    await tailwindMessageModal('Success', res.message || 'Assignment deleted.');
+                    lastRequestKey = '';
+                    fetchAssignment();
+                    return;
+                }
+                await tailwindMessageModal('Failed', res.message || 'Failed to delete Assignment.');
+            },
+            error: async function () {
+                await tailwindMessageModal('Error', 'Error deleting Assignment.');
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        hydrateStateFromUrl();
+        renderToolbar();
+        renderSortIndicators();
+        fetchAssignment();
+
+        $(document).on('click', function (e) {
+            const $dropdown = $('#assignmentFilterDropdown');
+            const isToggle = $(e.target).closest('#assignmentFilterToggleBtn').length > 0;
+            const isInsideDropdown = $(e.target).closest('#assignmentFilterDropdown').length > 0;
+            const isSelect2 = $(e.target).closest('.select2-container, .select2-dropdown').length > 0;
+            if (!isToggle && !isInsideDropdown && !isSelect2) $dropdown.addClass('hidden');
+        });
+
+        $('#assignment-table thead').on('click', 'th[data-sort]', function () {
+            const field = $(this).data('sort');
+            if (!field) return;
+            if (pageState.sort.field === field) {
+                pageState.sort.order = pageState.sort.order === 'asc' ? 'desc' : 'asc';
+            } else {
+                pageState.sort.field = field;
+                pageState.sort.order = 'asc';
+            }
+            pageState.page = 1;
+            lastRequestKey = '';
+            fetchAssignment();
+        });
+
+        $(document).on('click', '.btn-del-assignment', function () {
+            const id = ($(this).data('id') || '').toString();
+            if (!id) return;
+            deleteAssignment(id);
+        });
+
+        $(document).on('input', '#assignment_search_filter', function () {
+            const val = ($(this).val() || '').trim();
+            if ((pageState.filters.search || '') === val) return;
+            clearTimeout(searchDebounce);
+            searchDebounce = setTimeout(() => {
+                pageState.filters.search = val;
+                pageState.page = 1;
+                lastRequestKey = '';
+                fetchAssignment();
+            }, 300);
+        });
+    });
+</script>
+}

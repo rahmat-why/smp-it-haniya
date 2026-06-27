@@ -2,7 +2,7 @@
     Layout = "_LayoutAdmin";
 }
 
-<h2 class="text-xl font-semibold mb-4">Create Academic Class</h2>
+<h2 class="text-xl font-semibold mb-4">Buat Kelas Akademik</h2>
 
 <div class="bg-white p-6 rounded-lg shadow w-full space-y-6">
 
@@ -17,7 +17,7 @@
                         class="w-full flex items-center justify-between px-4 py-3 bg-blue-900 hover:bg-blue-800 transition-colors duration-200 text-left"
                         data-testid="academic-info-toggle">
                     <span class="font-semibold text-white">
-                        Academic Information
+                        Informasi Akademik
                     </span>
                     <svg id="icon-academic-info"
                          class="w-5 h-5 text-white transition-transform duration-300"
@@ -36,7 +36,7 @@
                     <!-- Academic Year (searchable dropdown) -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Academic Year <span class="text-red-500">*</span>
+                            Tahun Akademik <span class="text-red-500">*</span>
                         </label>
 
                         <div class="relative" data-testid="academic-year-searchable-wrapper">
@@ -47,7 +47,7 @@
                                     class="w-full border border-gray-300 rounded-md p-2 bg-white text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     data-testid="academic-year-select-toggle">
                                 <span id="academic-year-display-text" class="text-gray-500">
-                                    -- Select Academic Year --
+                                    -- Pilih Tahun Akademik --
                                 </span>
                                 <svg class="w-4 h-4 text-gray-500 ml-2"
                                      fill="none"
@@ -64,7 +64,7 @@
                                 <div class="p-2 border-b border-gray-200">
                                     <input type="text"
                                            id="academic-year-search"
-                                           placeholder="Search academic year..."
+                                           placeholder="Cari tahun akademik..."
                                            class="w-full border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                                            data-testid="academic-year-search-input" />
                                 </div>
@@ -90,7 +90,7 @@
                         class="w-full flex items-center justify-between px-4 py-3 bg-blue-900 hover:bg-blue-800 transition-colors duration-200 text-left"
                         data-testid="class-selection-toggle">
                     <span class="font-semibold text-white">
-                        Class & Homeroom Teacher
+                        Kelas & Wali Kelas
                     </span>
                     <svg id="icon-class-selection"
                          class="w-5 h-5 text-white transition-transform duration-300"
@@ -108,14 +108,14 @@
 
                     <div class="flex items-center justify-between mb-2">
                         <span class="text-sm text-gray-700">
-                            For this academic year, assign a homeroom teacher per class.
+                            Untuk tahun akademik ini, tentukan wali kelas untuk setiap kelas.
                         </span>
                         <label class="inline-flex items-center text-sm text-gray-700 cursor-pointer">
                             <input type="checkbox"
                                    id="select-all-classes"
                                    class="mr-1"
                                    data-testid="select-all-classes-checkbox" />
-                            <span>Select All</span>
+                            <span>Pilih Semua</span>
                         </label>
                     </div>
 
@@ -125,9 +125,9 @@
                             <thead class="bg-gray-50 text-left text-gray-700">
                                 <tr>
                                     <th class="p-2 w-10"></th>
-                                    <th class="p-2 font-medium">Class</th>
-                                    <th class="p-2 font-medium">Level</th>
-                                    <th class="p-2 font-medium">Homeroom Teacher</th>
+                                    <th class="p-2 font-medium">Kelas</th>
+                                    <th class="p-2 font-medium">Tingkat</th>
+                                    <th class="p-2 font-medium">Wali Kelas</th>
                                     <th class="p-2 font-medium">Status</th>
                                 </tr>
                             </thead>

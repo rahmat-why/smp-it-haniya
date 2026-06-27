@@ -366,7 +366,6 @@ namespace Haniya.Controllers.PortalAdmin
                     imagePath = "/image/article/" + fileName;
                 }
 
-                // insert article (status uses DB default: PUBLISHED)
                 var sql = @"
                     INSERT INTO mst_articles (
                         article_id,
@@ -374,6 +373,7 @@ namespace Haniya.Controllers.PortalAdmin
                         slug,
                         content,
                         image,
+                        status,
                         created_at
                     ) VALUES (
                         @id,
@@ -381,6 +381,7 @@ namespace Haniya.Controllers.PortalAdmin
                         @slug,
                         @content,
                         @image,
+                        @status,
                         GETDATE()
                     )";
 
@@ -390,6 +391,7 @@ namespace Haniya.Controllers.PortalAdmin
                 cmd.Parameters.AddWithValue("@slug", slug);
                 cmd.Parameters.AddWithValue("@content", content);
                 cmd.Parameters.AddWithValue("@image", (object?)imagePath ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@status", "PUBLISHED");
 
                 cmd.ExecuteNonQuery();
 

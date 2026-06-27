@@ -1,0 +1,226 @@
+@{
+    Layout = "_LayoutAdmin";
+    ViewData["Title"] = "Create Assignment";
+}
+
+<h2 class="text-2xl font-bold text-gray-800 mb-6">Create Assignment (Tugas)</h2>
+
+<div class="bg-white p-6 rounded-xl shadow-lg w-full">
+    <form id="assignmentForm" class="space-y-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="title" class="block text-sm font-medium text-gray-700 mb-2">
+                    Title <span class="text-red-600">*</span>
+                </label>
+                <input type="text" id="title" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                       placeholder="Enter assignment title" required />
+                <p id="error-title" class="mt-1 text-sm text-red-600 hidden"></p>
+            </div>
+
+            <div>
+                <label for="academic_class_id" class="block text-sm font-medium text-gray-700 mb-2">
+                    Class <span class="text-red-600">*</span>
+                </label>
+                <select id="academic_class_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                        data-placeholder="-- Select Class --" required></select>
+                <p id="error-class" class="mt-1 text-sm text-red-600 hidden"></p>
+            </div>
+
+            <div>
+                <label for="subject_id" class="block text-sm font-medium text-gray-700 mb-2">
+                    Subject <span class="text-red-600">*</span>
+                </label>
+                <select id="subject_id" disabled class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                        data-placeholder="-- Select Subject --" required></select>
+                <p id="error-subject" class="mt-1 text-sm text-red-600 hidden"></p>
+            </div>
+
+            <div>
+                <label for="teacher_id" class="block text-sm font-medium text-gray-700 mb-2">
+                    Teacher <span class="text-red-600">*</span>
+                </label>
+                <select id="teacher_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                        data-placeholder="-- Select Teacher --" required></select>
+                <p id="error-teacher" class="mt-1 text-sm text-red-600 hidden"></p>
+            </div>
+
+            <div>
+                <label for="due_date" class="block text-sm font-medium text-gray-700 mb-2">
+                    Due Date
+                </label>
+                <input type="date" id="due_date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
+            </div>
+
+            <div class="md:col-span-2">
+                <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
+                    Description
+                </label>
+                <textarea id="description" rows="5" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                          placeholder="Enter assignment description..."></textarea>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-4 pt-6 border-t border-gray-200">
+            <button type="button" onclick="goBack()" class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300">
+                <svg class="w-4 h-4 mr-2 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+                Back
+            </button>
+            <button type="button" onclick="saveAssignment()" class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
+                Save
+                <svg class="w-4 h-4 ml-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            </button>
+        </div>
+    </form>
+</div>
+
+@await Html.PartialAsync("_TailwindConfirmModal")
+
+@section Scripts {
+    <script>
+        const returnUrl = new URLSearchParams(window.location.search).get('returnUrl') || '/Assignment';
+
+        function validateForm() {
+            $('.text-red-600[id^="error-"]').addClass('hidden');
+            let valid = true;
+
+            if (!$('#title').val().trim()) {
+                $('#error-title').text('Title is required').removeClass('hidden');
+                valid = false;
+            }
+            if (!$('#subject_id').val()) {
+                $('#error-subject').text('Subject is required').removeClass('hidden');
+                valid = false;
+            }
+            if (!$('#academic_class_id').val()) {
+                $('#error-class').text('Class is required').removeClass('hidden');
+                valid = false;
+            }
+            if (!$('#teacher_id').val()) {
+                $('#error-teacher').text('Teacher is required').removeClass('hidden');
+                valid = false;
+            }
+
+            return valid;
+        }
+
+        function goBack() {
+            window.location.href = returnUrl;
+        }
+
+        async function saveAssignment() {
+            if (!validateForm()) {
+                await tailwindMessageModal('Validation Error', 'Please complete all required fields.');
+                return;
+            }
+
+            const confirmed = await tailwindConfirmModal({
+                title: 'Save Confirmation',
+                message: 'Are you sure you want to save this Assignment? Reminders will be sent to all students in the class.',
+                confirmText: 'Yes, save',
+                cancelText: 'Cancel'
+            });
+            if (!confirmed) return;
+
+            const fd = new FormData();
+            fd.append("title", $('#title').val());
+            fd.append("subject_id", $('#subject_id').val());
+            fd.append("academic_class_id", $('#academic_class_id').val());
+            fd.append("teacher_id", $('#teacher_id').val());
+            fd.append("description", $('#description').val());
+            fd.append("due_date", $('#due_date').val());
+
+            $.ajax({
+                url: "/Assignment/Create",
+                type: "POST",
+                data: fd,
+                processData: false,
+                contentType: false,
+                success: async res => {
+                    if (res.success) {
+                        await tailwindMessageModal('Success', res.message || 'Assignment created successfully.');
+                        location.href = returnUrl;
+                    } else {
+                        await tailwindMessageModal('Failed', res.message || 'Save failed');
+                    }
+                },
+                error: async () => await tailwindMessageModal('Error', 'Error saving Assignment')
+            });
+        }
+
+        $(document).ready(function () {
+            $('#academic_class_id').select2({
+                placeholder: "-- Select Class --",
+                allowClear: false,
+                ajax: {
+                    url: '/Select2/AcademicClasses',
+                    dataType: 'json',
+                    delay: 250,
+                    data: p => ({ q: p.term || '', page: p.page || 1 }),
+                    processResults: d => ({ results: d.results, pagination: d.pagination }),
+                    cache: true
+                },
+                minimumInputLength: 0
+            });
+
+            $('#academic_class_id').on('change', function () {
+                const cid = $(this).val();
+                if (cid) {
+                    initSubject(cid);
+                    $('#subject_id').prop('disabled', false);
+                } else {
+                    $('#subject_id').prop('disabled', true).empty().val(null).trigger('change');
+                }
+            });
+
+            $('#teacher_id').select2({
+                placeholder: "-- Select Teacher --",
+                allowClear: false,
+                ajax: {
+                    url: '/Select2/Teachers',
+                    dataType: 'json',
+                    delay: 250,
+                    data: p => ({ q: p.term || '', page: p.page || 1 }),
+                    processResults: d => ({ results: d.results, pagination: d.pagination }),
+                    cache: true
+                },
+                minimumInputLength: 0
+            });
+
+            const currentTeacherId = '@User.FindFirst("TeacherId")?.Value';
+            const currentTeacherName = '@(User.FindFirst("FullName")?.Value ?? "")';
+            if (currentTeacherId) {
+                const option = new Option(currentTeacherName || currentTeacherId, currentTeacherId, true, true);
+                $('#teacher_id').append(option).trigger('change');
+                $('#teacher_id').prop('disabled', true);
+            }
+
+            $('#subject_id').prop('disabled', true).empty();
+        });
+
+        function initSubject(academicClassId) {
+            const $subject = $('#subject_id');
+            if ($subject.hasClass("select2-hidden-accessible")) {
+                $subject.select2('destroy');
+            }
+            $subject.empty().val(null).trigger('change');
+
+            $subject.select2({
+                placeholder: "-- Select --",
+                allowClear: false,
+                ajax: {
+                    url: `/Select2/Subjects?academicClassId=${academicClassId || ''}`,
+                    dataType: 'json',
+                    delay: 250,
+                    data: p => ({ q: p.term || '', page: p.page || 1 }),
+                    processResults: d => ({ results: d.results, pagination: d.pagination }),
+                    cache: true
+                },
+                minimumInputLength: 0
+            });
+        }
+    </script>
+}

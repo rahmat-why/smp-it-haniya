@@ -1,16 +1,16 @@
 @{
     Layout = "~/Views/Shared/_LayoutLandingPage.cshtml";
-    ViewData["Title"] = "Events";
+    ViewData["Title"] = "Event";
 }
 
 <section id="eventHero" class="relative overflow-hidden bg-slate-900 pt-28 sm:pt-32">
     <div class="absolute inset-0">
-        <img id="eventHeroImage" src="/image/landingpage/default.jpg" alt="Event Hero" class="h-full w-full object-cover">
+        <img id="eventHeroImage" src="/image/landingpage/default.jpg" alt="Hero Event" class="h-full w-full object-cover">
         <div class="absolute inset-0 bg-gradient-to-r from-brand-900/85 via-brand-800/75 to-brand-700/65"></div>
     </div>
     <div class="relative mx-auto max-w-7xl px-4 py-16 text-white sm:px-6 sm:py-20 lg:px-8">
         <p class="text-xs font-semibold uppercase tracking-[0.24em] text-brand-100">Agenda Sekolah</p>
-        <h1 class="mt-3 text-4xl font-black sm:text-5xl">Event Timeline</h1>
+        <h1 class="mt-3 text-4xl font-black sm:text-5xl">Garis Waktu Event</h1>
         <p class="mt-4 max-w-2xl text-sm text-blue-50 sm:text-base">
             Ikuti event terbaru dari sekolah. Klik setiap event untuk melihat detail lengkap.
         </p>
@@ -20,15 +20,15 @@
 <section class="pb-16 pt-10 sm:pb-20">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="mb-6 flex items-center justify-between">
-            <h2 class="text-2xl font-black text-slate-900">Latest Events</h2>
-            <span id="eventPageLabel" class="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">Page 1</span>
+            <h2 class="text-2xl font-black text-slate-900">Event Terbaru</h2>
+            <span id="eventPageLabel" class="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">Halaman 1</span>
         </div>
 
         <div id="eventTimeline" class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3"></div>
 
         <div class="mt-8 flex justify-center gap-3">
-            <button id="prevBtn" onclick="prevPage()" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Previous</button>
-            <button id="nextBtn" onclick="nextPage()" class="rounded-xl bg-brand-800 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">Next</button>
+            <button id="prevBtn" onclick="prevPage()" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Sebelumnya</button>
+            <button id="nextBtn" onclick="nextPage()" class="rounded-xl bg-brand-800 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">Selanjutnya</button>
         </div>
     </div>
 </section>
@@ -47,7 +47,7 @@
             .then(data => {
                 currentData = Array.isArray(data) ? data : [];
                 setHeroImage(currentData);
-                document.getElementById("eventPageLabel").innerText = `Page ${currentPage}`;
+                document.getElementById("eventPageLabel").innerText = `Halaman ${currentPage}`;
                 renderTimeline(currentData);
                 updatePagerState();
             });
@@ -83,7 +83,7 @@
                     <div class="p-5">
                         <h3 class="text-xl font-bold leading-snug text-slate-900">${escapeHtml(item.name || "-")}</h3>
                         <p class="mt-3 text-sm font-medium text-slate-500">${escapeHtml(formatEventDate(item.date))}</p>
-                        <p class="mt-4 text-sm font-semibold text-brand-700">View Event</p>
+                        <p class="mt-4 text-sm font-semibold text-brand-700">Lihat Event</p>
                     </div>
                 </a>`;
         });

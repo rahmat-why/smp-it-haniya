@@ -1,14 +1,14 @@
 ﻿@{
     Layout = "_LayoutAdmin";
-    ViewData["Title"] = "Academic Class";
+    ViewData["Title"] = "Kelas Akademik";
 }
 
 <div class="flex justify-between items-center mb-4">
-    <h2 class="text-xl font-semibold">Academic Class List</h2>
+    <h2 class="text-xl font-semibold">Daftar Kelas Akademik</h2>
     <a id="academic-class-add-link" href="./Create"
        class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900"
        data-testid="academic-class-add-button">
-        + Add Academic Class
+        + Tambah Kelas Akademik
     </a>
 </div>
 
@@ -23,19 +23,19 @@
             <div id="academic-class-loading" class="hidden absolute inset-0 z-20 bg-white/80 backdrop-blur-[1px] flex items-center justify-center">
                 <div class="flex flex-col items-center gap-3 text-gray-600">
                     <div class="w-8 h-8 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin"></div>
-                    <p class="text-sm font-medium">Loading academic class data...</p>
+                    <p class="text-sm font-medium">Memuat data kelas akademik...</p>
                 </div>
             </div>
             <table id="academic-class-table" class="w-full text-sm text-left text-gray-700 border-collapse">
                 <thead class="bg-gray-50 text-gray-600 border-b border-gray-200">
                     <tr>
-                        <th data-sort="academicYear" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Academic Year</th>
+                        <th data-sort="academicYear" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Tahun Akademik</th>
                         <th data-sort="semester" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Semester</th>
-                        <th data-sort="className" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Class</th>
-                        <th data-sort="classLevel" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Class Level</th>
-                        <th data-sort="teacherName" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Homeroom Teacher</th>
-                        <th data-sort="teacherNpk" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Teacher NPK</th>
-                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-right">Action</th>
+                        <th data-sort="className" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Kelas</th>
+                        <th data-sort="classLevel" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Tingkat Kelas</th>
+                        <th data-sort="teacherName" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Wali Kelas</th>
+                        <th data-sort="teacherNpk" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">NPK Guru</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white"></tbody>
@@ -61,8 +61,8 @@
                 <p id="tw-modal-message" class="text-sm text-gray-600"></p>
             </div>
             <div class="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
-                <button id="tw-modal-cancel" type="button" class="px-4 py-2 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">Cancel</button>
-                <button id="tw-modal-confirm" type="button" class="px-4 py-2 text-sm rounded-md bg-blue-900 text-white hover:bg-blue-800">Confirm</button>
+                <button id="tw-modal-cancel" type="button" class="px-4 py-2 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">Batal</button>
+                <button id="tw-modal-confirm" type="button" class="px-4 py-2 text-sm rounded-md bg-blue-900 text-white hover:bg-blue-800">Konfirmasi</button>
             </div>
         </div>
     </div>
@@ -125,15 +125,15 @@
             $('#academic-toolbar').html(`
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 w-full">
                     <div class="flex items-center gap-2 text-sm text-gray-600">
-                        Show
+                        Tampilkan
                         <select id="list-limit" class="border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-900">
                             <option value="10">10</option>
                             <option value="25">25</option>
                             <option value="50">50</option>
-                        </select> rows
+                        </select> baris
                     </div>
                     <div>
-                        <input id="list-search" type="text" placeholder="Search academic class..." class="border border-gray-300 rounded-lg px-3 py-2 w-full md:w-72 focus:outline-none focus:ring-2 focus:ring-blue-900"/>
+                        <input id="list-search" type="text" placeholder="Cari kelas akademik..." class="border border-gray-300 rounded-lg px-3 py-2 w-full md:w-72 focus:outline-none focus:ring-2 focus:ring-blue-900"/>
                     </div>
                 </div>
             `);
@@ -174,7 +174,7 @@
         function renderRows(items) {
             const $tbody = $('#academic-class-table tbody');
             if (!items || !items.length) {
-                $tbody.html(`<tr><td colspan="7" class="px-5 py-8 text-center text-gray-500">No data found.</td></tr>`);
+                $tbody.html(`<tr><td colspan="7" class="px-5 py-8 text-center text-gray-500">Data tidak ditemukan.</td></tr>`);
                 return;
             }
 
@@ -200,8 +200,8 @@
                                 </button>
                                 <div id="actions-menu-${id}" class="academic-class-actions-menu hidden origin-top-right absolute right-0 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
                                     <div class="py-1">
-                                        <a href="./Edit?id=${encodeURIComponent(id)}&returnUrl=${returnUrl}" class="block px-3 py-1.5 text-left text-gray-700 hover:bg-gray-100 text-sm">Edit</a>
-                                        <button type="button" onclick="delAcademicClass('${id}')" class="w-full text-left block px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">Delete</button>
+                                        <a href="./Edit?id=${encodeURIComponent(id)}&returnUrl=${returnUrl}" class="block px-3 py-1.5 text-left text-gray-700 hover:bg-gray-100 text-sm">Ubah</a>
+                                        <button type="button" onclick="delAcademicClass('${id}')" class="w-full text-left block px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">Hapus</button>
                                     </div>
                                 </div>
                             </div>
@@ -214,15 +214,15 @@
         function renderPagination(currentCount) {
             const start = currentCount === 0 ? 0 : ((pageState.page - 1) * pageState.limit) + 1;
             const end = ((pageState.page - 1) * pageState.limit) + currentCount;
-            $('#table-info').html(`<span class="text-sm text-gray-600">Showing ${start} to ${end}</span>`);
+            $('#table-info').html(`<span class="text-sm text-gray-600">Menampilkan ${start} sampai ${end}</span>`);
 
             const prevDisabled = pageState.page <= 1;
             const nextDisabled = !pageState.hasNextPage;
             $('#table-pagination').html(`
                 <div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-                    <button id="page-prev" class="px-3 py-2 text-sm border-r border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Prev</button>
+                    <button id="page-prev" class="px-3 py-2 text-sm border-r border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Sebelumnya</button>
                     <span class="px-3 py-2 text-sm bg-blue-900 text-white font-semibold">${pageState.page}</span>
-                    <button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Next</button>
+                    <button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Selanjutnya</button>
                 </div>
             `);
 
@@ -264,7 +264,7 @@
                     data: JSON.stringify(payload)
                 });
                 if (!res.success) {
-                    showMessageModal('Failed', res.message || 'Failed to load academic classes.');
+                    showMessageModal('Gagal', res.message || 'Gagal memuat kelas akademik.');
                     return;
                 }
 
@@ -274,13 +274,13 @@
                 renderRows(items);
                 renderPagination(items.length);
             } catch {
-                showMessageModal('Error', 'An error occurred while loading academic classes.');
+                showMessageModal('Kesalahan', 'Terjadi kesalahan saat memuat kelas akademik.');
             } finally {
                 setTableLoading(false);
             }
         }
 
-        function confirmModal({ title, message, confirmText = 'Confirm', cancelText = 'Cancel' }) {
+        function confirmModal({ title, message, confirmText = 'Konfirmasi', cancelText = 'Batal' }) {
             return new Promise((resolve) => {
                 const $modal = $('#tw-modal');
                 const $title = $('#tw-modal-title');
@@ -314,16 +314,16 @@
         }
 
         function showMessageModal(title, message) {
-            return confirmModal({ title, message, confirmText: 'OK', cancelText: 'Close' });
+            return confirmModal({ title, message, confirmText: 'OK', cancelText: 'Tutup' });
         }
 
         async function delAcademicClass(id) {
             $('.academic-class-actions-menu').addClass('hidden');
             const yes = await confirmModal({
-                title: 'Delete Confirmation',
-                message: 'Are you sure you want to delete this data?',
-                confirmText: 'Delete',
-                cancelText: 'Cancel'
+                title: 'Konfirmasi Penghapusan',
+                message: 'Apakah Anda yakin ingin menghapus data ini?',
+                confirmText: 'Hapus',
+                cancelText: 'Batal'
             });
             if (!yes) return;
 
@@ -339,14 +339,14 @@
                     }),
                 });
                 if (!res || !res.success) {
-                    await showMessageModal('Failed', (res && res.message) ? res.message : 'Delete failed.');
+                    await showMessageModal('Gagal', (res && res.message) ? res.message : 'Gagal menghapus.');
                     return;
                 }
                 lastRequestKey = '';
                 await fetchAcademicClasses();
-                await showMessageModal('Deleted', 'Class data has been deleted.');
+                await showMessageModal('Dihapus', 'Data kelas telah dihapus.');
             } catch {
-                await showMessageModal('Error', 'An error occurred while deleting the class.');
+                await showMessageModal('Kesalahan', 'Terjadi kesalahan saat menghapus kelas.');
             }
         }
 

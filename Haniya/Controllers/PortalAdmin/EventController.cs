@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
@@ -170,9 +170,10 @@ namespace Haniya.Controllers.PortalAdmin
                     ' - ',
                     FORMAT(e.end_date, 'dd MMM yyyy')
                 ) AS event_date,
-                STRING_AGG(t.tag_code, ', ') AS tags
+                STRING_AGG(COALESCE(mdt.item_name, t.tag_code), ', ') AS tags
             FROM mst_events e
             LEFT JOIN mst_tag_events t ON t.event_id = e.event_id
+            LEFT JOIN mst_detail_settings mdt ON mdt.item_code = t.tag_code AND mdt.header_id = 'TAG_EVENT'
             {whereSearch}
             GROUP BY 
                 e.event_id,
@@ -257,16 +258,21 @@ namespace Haniya.Controllers.PortalAdmin
                 rd.Close();
 
                 // Tags
-                var tags = new List<string>();
-                var tagSql = "SELECT tag_code FROM mst_tag_events WHERE event_id = @id ORDER BY created_at";
+                var tags = new List<object>();
+                var tagSql = @"
+                    SELECT t.tag_code, mdt.item_name 
+                    FROM mst_tag_events t
+                    LEFT JOIN mst_detail_settings mdt ON mdt.item_code = t.tag_code AND mdt.header_id = 'TAG_EVENT'
+                    WHERE t.event_id = @id ORDER BY t.created_at";
                 using var tagCmd = new SqlCommand(tagSql, conn);
                 tagCmd.Parameters.AddWithValue("@id", id);
                 using var tagRd = tagCmd.ExecuteReader();
                 while (tagRd.Read())
                 {
                     var code = tagRd["tag_code"]?.ToString();
+                    var name = tagRd["item_name"]?.ToString() ?? code;
                     if (!string.IsNullOrWhiteSpace(code))
-                        tags.Add(code);
+                        tags.Add(new { id = code, text = name });
                 }
 
                 var holidayClasses = new List<string>();
@@ -721,3 +727,4 @@ namespace Haniya.Controllers.PortalAdmin
         }
     }
 }
+

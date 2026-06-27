@@ -390,7 +390,7 @@
                                         d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                                 </svg>
 
-                                <span>Logout</span>
+                                <span>Keluar</span>
                             </button>
                         </div>
                     </div>
@@ -398,8 +398,8 @@
             }
             else
             {
-                <a href="/LoginAdmin" class="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg font-medium transition">
-                    Login
+                    <a href="/LoginAdmin" class="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg font-medium transition">
+                    Masuk
                 </a>
             }
         </div>
@@ -571,7 +571,7 @@
                     }
                 },
                 error: function () {
-                    console.error("Failed load menu");
+                    console.error("Gagal memuat menu");
                 }
             });
         }
@@ -586,10 +586,10 @@
                 }
 
                 return window.tailwindConfirmModal({
-                    title: 'Logout Confirmation',
-                    message: 'Are you sure you want to logout?',
-                    confirmText: 'Yes, logout',
-                    cancelText: 'Cancel'
+                    title: 'Konfirmasi Keluar',
+                    message: 'Apakah Anda yakin ingin keluar?',
+                    confirmText: 'Ya, keluar',
+                    cancelText: 'Batal'
                 });
             };
 
@@ -605,7 +605,7 @@
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        <span class="ml-2">Logging out...</span>
+                        <span class="ml-2">Keluar...</span>
                     `;
                 }
 

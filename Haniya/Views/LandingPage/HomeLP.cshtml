@@ -1,11 +1,11 @@
 @{
     Layout = "~/Views/Shared/_LayoutLandingPage.cshtml";
-    ViewData["Title"] = "Home";
+    ViewData["Title"] = "Beranda";
 }
 
 <section class="relative overflow-hidden pt-28 sm:pt-32">
     <div class="absolute inset-0">
-        <img id="banner2Image" class="h-full w-full object-cover" alt="School Banner" />
+        <img id="banner2Image" class="h-full w-full object-cover" alt="Banner Sekolah" />
         <div class="absolute inset-0 bg-gradient-to-r from-brand-900/85 via-brand-800/75 to-brand-700/65"></div>
     </div>
     <div class="relative mx-auto grid min-h-[74vh] max-w-7xl items-end gap-10 px-4 pb-16 pt-12 sm:px-6 lg:grid-cols-12 lg:px-8 lg:pb-20">
@@ -14,8 +14,8 @@
             <h1 id="banner1Desc" class="mt-4 max-w-3xl text-4xl font-black leading-tight text-white sm:text-5xl lg:text-6xl"></h1>
             <p id="banner1Name" class="mt-5 max-w-2xl text-base text-blue-50 sm:text-lg"></p>
             <div class="mt-8 flex flex-wrap gap-3">
-                <a asp-controller="LandingPage" asp-action="AboutUsLP" class="rounded-xl bg-white px-6 py-3 text-sm font-bold text-brand-800 shadow-lg transition hover:-translate-y-0.5 hover:bg-slate-100">Explore School</a>
-                <a asp-controller="LandingPage" asp-action="ContactLP" class="rounded-xl border border-white/50 px-6 py-3 text-sm font-bold text-white transition hover:bg-white/10">Contact Us</a>
+                <a asp-controller="LandingPage" asp-action="AboutUsLP" class="rounded-xl bg-white px-6 py-3 text-sm font-bold text-brand-800 shadow-lg transition hover:-translate-y-0.5 hover:bg-slate-100">Jelajahi Sekolah</a>
+                <a asp-controller="LandingPage" asp-action="ContactLP" class="rounded-xl border border-white/50 px-6 py-3 text-sm font-bold text-white transition hover:bg-white/10">Hubungi Kami</a>
             </div>
         </div>
     </div>
@@ -40,7 +40,7 @@
 
 <section class="py-16 sm:py-20">
     <div class="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">Welcome</p>
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">Selamat Datang</p>
         <h2 id="welcomeName" class="mt-3 text-3xl font-black text-slate-900 sm:text-4xl"></h2>
         <p id="welcomeDesc" class="mt-4 text-base leading-relaxed text-slate-600 sm:text-lg"></p>
     </div>
@@ -50,13 +50,13 @@
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="mb-8 flex items-end justify-between">
             <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">Environment</p>
-                <h2 class="mt-2 text-3xl font-black text-slate-900">School Atmosphere</h2>
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">Lingkungan</p>
+                <h2 class="mt-2 text-3xl font-black text-slate-900">Suasana Sekolah</h2>
             </div>
         </div>
         <div class="grid gap-6 md:grid-cols-1">
             <article class="group relative overflow-hidden rounded-3xl shadow-lg">
-                <img id="school1Image" class="h-80 w-full object-cover transition duration-500 group-hover:scale-105" alt="School Image 1" />
+                <img id="school1Image" class="h-80 w-full object-cover transition duration-500 group-hover:scale-105" alt="Gambar Sekolah 1" />
                 <div class="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent"></div>
                 <div class="absolute bottom-0 p-6 text-white">
                     <h3 id="school1Name" class="text-2xl font-bold"></h3>
@@ -71,12 +71,12 @@
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="mb-8 flex flex-wrap items-center justify-between gap-3">
             <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">Highlights</p>
-                <h2 class="mt-2 text-3xl font-black text-slate-900">Stories From Haniya</h2>
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">Sorotan</p>
+                <h2 class="mt-2 text-3xl font-black text-slate-900">Kisah dari Haniya</h2>
             </div>
             <div class="flex gap-2">
-                <button onclick="prevSlide()" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Prev</button>
-                <button onclick="nextSlide()" class="rounded-xl bg-brand-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700">Next</button>
+                <button onclick="prevSlide()" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Sebelumnya</button>
+                <button onclick="nextSlide()" class="rounded-xl bg-brand-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700">Selanjutnya</button>
             </div>
         </div>
 
@@ -85,7 +85,7 @@
                 <article class="min-w-full p-6 sm:p-8 lg:p-10">
                     <div class="grid items-center gap-8 lg:grid-cols-2">
                         <div class="overflow-hidden rounded-2xl">
-                            <img id="test1Image" class="h-72 w-full object-cover sm:h-80" alt="Highlight 1" />
+                            <img id="test1Image" class="h-72 w-full object-cover sm:h-80" alt="Sorotan 1" />
                         </div>
                         <div>
                             <h3 id="test1Name" class="text-2xl font-extrabold text-slate-900 sm:text-3xl"></h3>
@@ -97,7 +97,7 @@
                 <article class="min-w-full p-6 sm:p-8 lg:p-10">
                     <div class="grid items-center gap-8 lg:grid-cols-2">
                         <div class="overflow-hidden rounded-2xl">
-                            <img id="test2Image" class="h-72 w-full object-cover sm:h-80" alt="Highlight 2" />
+                            <img id="test2Image" class="h-72 w-full object-cover sm:h-80" alt="Sorotan 2" />
                         </div>
                         <div>
                             <h3 id="test2Name" class="text-2xl font-extrabold text-slate-900 sm:text-3xl"></h3>

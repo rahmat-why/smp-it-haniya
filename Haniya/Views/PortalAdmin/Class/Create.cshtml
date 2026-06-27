@@ -1,9 +1,9 @@
 ﻿@{
     Layout = "_LayoutAdmin";
-    ViewData["Title"] = "Create Class";
+    ViewData["Title"] = "Buat Kelas";
 }
 
-<h2 class="text-xl font-semibold mb-4">Create Class</h2>
+<h2 class="text-xl font-semibold mb-4">Buat Kelas</h2>
 <div class="bg-white p-6 rounded-lg shadow w-full space-y-6">
     <form id="frm" class="space-y-6 w-full flex flex-col">
         <div class="grid grid-cols-1 md:grid-cols-12 gap-6 w-full flex-grow">
@@ -13,7 +13,7 @@
                         onclick="toggleSection('academic-info')"
                         class="w-full flex items-center justify-between px-4 py-3 bg-blue-900 hover:bg-blue-800 transition-colors duration-200 text-left">
                     <span class="font-semibold text-white">
-                        Academic Information
+                        Informasi Akademik
                     </span>
                     <svg id="icon-academic-info"
                          class="w-5 h-5 text-white transition-transform duration-300"
@@ -29,11 +29,11 @@
                     <!-- Academic Year -->
                     <div>
                         <label for="academic_year_id" class="block text-sm font-medium text-gray-700 mb-1">
-                            Academic Year <span class="text-red-500">*</span>
+                            Tahun Akademik <span class="text-red-500">*</span>
                         </label>
                         <select id="academic_year_id"
                                 class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                data-placeholder="-- Select Academic Year --"
+                                data-placeholder="-- Pilih Tahun Akademik --"
                                 data-testid="create-academic-year-select">
                         </select>
                         <p id="error-academic_year_id"
@@ -42,11 +42,11 @@
                     <!-- Class -->
                     <div>
                         <label for="class_id" class="block text-sm font-medium text-gray-700 mb-1">
-                            Class <span class="text-red-500">*</span>
+                            Kelas <span class="text-red-500">*</span>
                         </label>
                         <select id="class_id"
                                 class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                data-placeholder="-- Select Class --"
+                                data-placeholder="-- Pilih Kelas --"
                                 data-testid="create-class-select">
                         </select>
                         <p id="error-class_id"
@@ -55,11 +55,11 @@
                     <!-- Homeroom Teacher -->
                     <div>
                         <label for="homeroom_teacher_id" class="block text-sm font-medium text-gray-700 mb-1">
-                            Homeroom Teacher <span class="text-red-500">*</span>
+                            Wali Kelas <span class="text-red-500">*</span>
                         </label>
                         <select id="homeroom_teacher_id"
                                 class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                data-placeholder="-- Select Homeroom Teacher --"
+                                data-placeholder="-- Pilih Wali Kelas --"
                                 data-testid="create-homeroom-select">
                         </select>
                         <p id="error-homeroom_teacher_id"
@@ -74,7 +74,7 @@
                         onclick="toggleSection('student-section')"
                         class="w-full flex items-center justify-between px-4 py-3 bg-blue-900 hover:bg-blue-800 transition-colors duration-200 text-left">
                     <span class="font-semibold text-white">
-                        Students
+                        Siswa
                     </span>
                     <svg id="icon-student-section"
                          class="w-5 h-5 text-white transition-transform duration-300"
@@ -89,11 +89,11 @@
                      class="px-4 pb-4 pt-3 space-y-3 border-t border-gray-100 flex-grow">
                     <div class="flex items-center justify-between mb-2">
                         <span class="text-sm text-gray-700">
-                            Select students for this class
+                            Pilih siswa untuk kelas ini
                         </span>
                         <label class="inline-flex items-center text-sm text-gray-700 cursor-pointer">
                             <input type="checkbox" id="select-all-students" class="mr-1" />
-                            <span>Select All</span>
+                            <span>Pilih Semua</span>
                         </label>
                     </div>
                     <div class="border rounded-md max-h-72 overflow-auto bg-white flex-grow">
@@ -101,8 +101,8 @@
                             <thead class="bg-gray-50 sticky top-0 text-left">
                                 <tr>
                                     <th class="p-2 w-10 text-left"></th>
-                                    <th class="p-2 text-left">Student</th>
-                                    <th class="p-2 text-left">Gender</th>
+                                    <th class="p-2 text-left">Siswa</th>
+                                    <th class="p-2 text-left">Jenis Kelamin</th>
                                     <th class="p-2 text-left">Status</th>
                                 </tr>
                             </thead>
@@ -120,12 +120,12 @@
             <button type="button"
                     onclick="goBack()"
                     class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm">
-                Back
+                Kembali
             </button>
             <button type="button"
                     onclick="saveClass()"
                     class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm">
-                <span>Save</span>
+                <span>Simpan</span>
             </button>
         </div>
     </form>
@@ -168,7 +168,7 @@
                 body.append(`
                             <tr>
                                 <td colspan="4" class="p-4 text-center text-gray-500">
-                                    No unassigned students available
+                                    Tidak ada siswa yang belum ditugaskan
                                 </td>
                             </tr>
                         `);
@@ -220,20 +220,20 @@
             clearError($('#error-student_ids'));
 
             if (!yearId) {
-                showError($('#error-academic_year_id'), 'Academic year is required.');
+                showError($('#error-academic_year_id'), 'Tahun akademik wajib diisi.');
                 valid = false;
             }
             if (!classId) {
-                showError($('#error-class_id'), 'Class is required.');
+                showError($('#error-class_id'), 'Kelas wajib diisi.');
                 valid = false;
             }
             if (!homeroomId) {
-                showError($('#error-homeroom_teacher_id'), 'Homeroom teacher is required.');
+                showError($('#error-homeroom_teacher_id'), 'Wali kelas wajib diisi.');
                 valid = false;
             }
             const selectedStudents = $('.student-checkbox:checked').length;
             if (selectedStudents === 0) {
-                showError($('#error-student_ids'), 'At least one student must be selected.');
+                showError($('#error-student_ids'), 'Minimal satu siswa harus dipilih.');
                 valid = false;
             }
 
@@ -243,10 +243,10 @@
         async function saveClass() {
             if (!validateForm()) return;
             const yes = await tailwindConfirmModal({
-                title: 'Create Confirmation',
-                message: 'Are you sure you want to create this data?',
-                confirmText: 'Save',
-                cancelText: 'Cancel'
+                title: 'Konfirmasi Pembuatan',
+                message: 'Apakah Anda yakin ingin membuat data ini?',
+                confirmText: 'Simpan',
+                cancelText: 'Batal'
             });
             if (!yes) return;
 
@@ -268,14 +268,14 @@
                 contentType: false,
                 success: res => {
                     if (res.success) {
-                        tailwindMessageModal('Success', res.message || 'Class created successfully.')
+                        tailwindMessageModal('Berhasil', res.message || 'Kelas berhasil dibuat.')
                             .then(() => { window.location.href = returnUrl; });
                     } else {
-                        tailwindMessageModal('Failed', res.message || "Failed to create class");
+                        tailwindMessageModal('Gagal', res.message || "Gagal membuat kelas");
                     }
                 },
                 error: function () {
-                    tailwindMessageModal('Error', "An error occurred while creating the class.");
+                    tailwindMessageModal('Kesalahan', "Terjadi kesalahan saat membuat kelas.");
                 }
             });
         }
@@ -289,7 +289,7 @@
 
             // Initialize Select2 for Academic Year
             $('#academic_year_id').select2({
-                placeholder: "-- Select Academic Year --",
+                placeholder: "-- Pilih Tahun Akademik --",
                 allowClear: true,
                 ajax: {
                     url: '/Select2/AcademicYears',
@@ -311,7 +311,7 @@
 
             // Initialize Select2 for Class
             $('#class_id').select2({
-                placeholder: "-- Select Class --",
+                placeholder: "-- Pilih Kelas --",
                 allowClear: true,
                 ajax: {
                     url: '/Select2/Classes',
@@ -333,7 +333,7 @@
 
             // Initialize Select2 for Homeroom Teacher
             $('#homeroom_teacher_id').select2({
-                placeholder: "-- Select Homeroom Teacher --",
+                placeholder: "-- Pilih Wali Kelas --",
                 allowClear: true,
                 ajax: {
                     url: '/Select2/Teachers',
@@ -356,7 +356,7 @@
             // Load unassigned students
             $.get("/Class/GetUnassignedStudents", res => {
                 if (!res.success) {
-                    tailwindMessageModal('Failed', res.message || 'Failed to load students');
+                    tailwindMessageModal('Gagal', res.message || 'Gagal memuat siswa');
                     return;
                 }
                 renderStudents(res.data);

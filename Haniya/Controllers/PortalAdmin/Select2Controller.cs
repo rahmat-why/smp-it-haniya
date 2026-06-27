@@ -1,4 +1,4 @@
-﻿using Haniya.Models;
+using Haniya.Models;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -558,7 +558,7 @@ namespace Haniya.Controllers
                 return Json(new
                 {
                     results,
-                    pagination = new { more }  // more is bool → correct
+                    pagination = new { more }  // more is bool ? correct
                 });
             }
             catch (Exception ex)
@@ -717,7 +717,7 @@ namespace Haniya.Controllers
         }
 
         [HttpGet]
-        public IActionResult Subjects(string classLevel = null, string q = "", int page = 1, int pageSize = 20)
+        public IActionResult Subjects(string classLevel = null, string academicClassId = null, string q = "", int page = 1, int pageSize = 20)
         {
             try
             {
@@ -740,6 +740,17 @@ namespace Haniya.Controllers
                 {
                     where += " AND class_level = @classLevel";
                     parameters["@classLevel"] = classLevel;
+                }
+
+                if (!string.IsNullOrEmpty(academicClassId))
+                {
+                    where += @" AND class_level = (
+                        SELECT c.class_level 
+                        FROM mst_academic_classes ac 
+                        JOIN mst_classes c ON ac.class_id = c.class_id 
+                        WHERE ac.academic_class_id = @academicClassId
+                    )";
+                    parameters["@academicClassId"] = academicClassId;
                 }
 
                 var countSql = $"SELECT COUNT(*) FROM mst_subjects {where}";
@@ -1142,5 +1153,8 @@ namespace Haniya.Controllers
                 return Json(DTOResponse.fail(ex.Message, 500));
             }
         }
+
+        
     }
 }
+

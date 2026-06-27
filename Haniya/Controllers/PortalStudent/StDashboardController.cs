@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Data.SqlClient;
 using System.Security.Claims;
@@ -493,6 +493,142 @@ namespace Haniya.Controllers.PortalStudent
                 tags.Add(tagRd["item_desc"].ToString());
             }
             return tags;
+        }
+
+        [HttpGet]
+        public IActionResult GetReminders(int page = 1, int limit = 10)
+        {
+            try
+            {
+                var studentId = User.FindFirst("StudentId")?.Value;
+                if (string.IsNullOrEmpty(studentId)) return Json(new { success = false, message = "Unauthorized" });
+
+                var offset = (page - 1) * limit;
+
+                using var conn = GetConn();
+                conn.Open();
+
+                // Diagnostic Logging to a file
+                try
+                {
+                    var debugPath = Path.Combine(Directory.GetCurrentDirectory(), "reminder_debug.txt");
+                    var debugInfo = $"Time: {DateTime.Now}\nStudentId: {studentId ?? "NULL"}\n";
+                    
+                    using (var cmdRaw = new SqlCommand("SELECT COUNT(*) FROM txn_assignment_reminders WHERE student_id = @sid", conn))
+                    {
+                        cmdRaw.Parameters.AddWithValue("@sid", studentId ?? (object)DBNull.Value);
+                        debugInfo += $"Raw reminders count for student: {cmdRaw.ExecuteScalar()}\n";
+                    }
+                    using (var cmdRaw = new SqlCommand("SELECT nis, password FROM mst_students WHERE student_id = @sid", conn))
+                    {
+                        cmdRaw.Parameters.AddWithValue("@sid", studentId ?? (object)DBNull.Value);
+                        using var rdCreds = cmdRaw.ExecuteReader();
+                        if (rdCreds.Read())
+                        {
+                            debugInfo += $"Student NIS: {rdCreds["nis"]}, Password: {rdCreds["password"]}\n";
+                        }
+                    }
+                    using (var cmdRaw = new SqlCommand("SELECT COUNT(*) FROM txn_assignments", conn))
+                    {
+                        debugInfo += $"Total assignments in DB: {cmdRaw.ExecuteScalar()}\n";
+                    }
+                    using (var cmdRaw = new SqlCommand(@"
+                        SELECT TOP 5 r.reminder_id, r.assignment_id, r.student_id, a.assignment_id AS a_aid, a.subject_id
+                        FROM txn_assignment_reminders r
+                        LEFT JOIN txn_assignments a ON r.assignment_id = a.assignment_id
+                        WHERE r.student_id = @sid", conn))
+                    {
+                        cmdRaw.Parameters.AddWithValue("@sid", studentId ?? (object)DBNull.Value);
+                        using var rdRaw = cmdRaw.ExecuteReader();
+                        while (rdRaw.Read())
+                        {
+                            debugInfo += $"Reminder ID: {rdRaw["reminder_id"]}, Assignment ID: {rdRaw["assignment_id"]}, Student ID: {rdRaw["student_id"]}, A_AID: {rdRaw["a_aid"] ?? "NULL"}, Subject ID: {rdRaw["subject_id"] ?? "NULL"}\n";
+                        }
+                    }
+                    System.IO.File.WriteAllText(debugPath, debugInfo);
+                }
+                catch (Exception debugEx)
+                {
+                    var debugPath = Path.Combine(Directory.GetCurrentDirectory(), "reminder_debug.txt");
+                    System.IO.File.WriteAllText(debugPath, "Debug Error: " + debugEx.ToString());
+                }
+
+                using var countCmd = new SqlCommand(@"
+                    SELECT COUNT(*)
+                    FROM txn_assignment_reminders r
+                    JOIN txn_assignments a ON r.assignment_id = a.assignment_id
+                    JOIN mst_subjects s ON a.subject_id = s.subject_id
+                    WHERE r.student_id = @studentId", conn);
+                countCmd.Parameters.AddWithValue("@studentId", studentId);
+                var total = (int)countCmd.ExecuteScalar();
+
+                using var unreadCountCmd = new SqlCommand("SELECT COUNT(*) FROM txn_assignment_reminders WHERE student_id = @studentId AND is_read = 0", conn);
+                unreadCountCmd.Parameters.AddWithValue("@studentId", studentId);
+                var unreadCount = (int)unreadCountCmd.ExecuteScalar();
+
+                var sql = @"
+                    SELECT r.reminder_id, a.title, a.description, s.subject_name, a.due_date, r.is_read, a.created_at,
+                           t.first_name, t.last_name
+                    FROM txn_assignment_reminders r
+                    JOIN txn_assignments a ON r.assignment_id = a.assignment_id
+                    JOIN mst_subjects s ON a.subject_id = s.subject_id
+                    LEFT JOIN mst_teachers t ON a.teacher_id = t.teacher_id
+                    WHERE r.student_id = @studentId
+                    ORDER BY r.is_read ASC, a.created_at DESC, r.reminder_id ASC
+                    OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY";
+
+                var list = new List<object>();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@studentId", studentId);
+                    cmd.Parameters.AddWithValue("@offset", offset);
+                    cmd.Parameters.AddWithValue("@limit", limit);
+                    using var rd = cmd.ExecuteReader();
+                    while (rd.Read())
+                    {
+                        list.Add(new
+                        {
+                            reminder_id = rd["reminder_id"].ToString(),
+                            title = rd["title"].ToString(),
+                            description = rd["description"]?.ToString(),
+                            subject_name = rd["subject_name"].ToString(),
+                            teacher_name = (rd["first_name"]?.ToString() + " " + rd["last_name"]?.ToString()).Trim(),
+                            due_date = rd["due_date"] != DBNull.Value ? Convert.ToDateTime(rd["due_date"]).ToString("dd MMM yyyy") : "No Due Date",
+                            is_read = rd["is_read"] != DBNull.Value ? Convert.ToBoolean(rd["is_read"]) : false
+                        });
+                    }
+                }
+
+                var more = (page * limit) < total;
+                return Json(new { success = true, data = list, more, total, unreadCount });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+        [HttpPost]
+        public IActionResult MarkReminderRead(string id)
+        {
+            try
+            {
+                var studentId = User.FindFirst("StudentId")?.Value;
+                if (string.IsNullOrEmpty(studentId)) return Json(new { success = false, message = "Unauthorized" });
+
+                using var conn = GetConn();
+                conn.Open();
+
+                using var cmd = new SqlCommand("UPDATE txn_assignment_reminders SET is_read = 1 WHERE reminder_id = @id AND student_id = @studentId", conn);
+                cmd.Parameters.AddWithValue("@id", id);
+                cmd.Parameters.AddWithValue("@studentId", studentId);
+                var rows = cmd.ExecuteNonQuery();
+
+                return Json(new { success = rows > 0 });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
         }
     }
 }

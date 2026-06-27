@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using System.Data.SqlClient;
 
 namespace Haniya.Controllers.LandingPage
@@ -334,6 +334,7 @@ namespace Haniya.Controllers.LandingPage
                 string query = @"
                     SELECT article_id, title, image, created_at
                     FROM mst_articles
+                    WHERE UPPER(ISNULL(status, '')) = 'PUBLISHED'
                     ORDER BY created_at DESC
                     OFFSET @offset ROWS
                     FETCH NEXT @pageSize ROWS ONLY
@@ -406,3 +407,4 @@ namespace Haniya.Controllers.LandingPage
         }
     }
 }
+

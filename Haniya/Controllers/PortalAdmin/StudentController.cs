@@ -1,4 +1,4 @@
-﻿using Haniya.Models;
+using Haniya.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Data;
 using System.Data.SqlClient;
@@ -102,6 +102,10 @@ namespace Haniya.Controllers.PortalAdmin
                         ON dl.detail_id = s.level
                         AND dl.header_id = 'LEVEL_STUDENT'
                         AND dl.status = 'ACTIVE'
+                    LEFT JOIN mst_detail_settings dt
+                        ON dt.detail_id = s.tier
+                        AND dt.header_id = 'TIER_STUDENT'
+                        AND dt.status = 'ACTIVE'
                     LEFT JOIN mst_detail_settings dg
                         ON dg.item_code = s.gender
                         AND dg.header_id = 'GENDER'
@@ -129,6 +133,7 @@ namespace Haniya.Controllers.PortalAdmin
                         s.entry_date,
                         s.profile_photo,
                         dl.item_desc AS level,
+                        dt.item_desc AS tier,
                         ca.class_code AS [class]
                     FROM mst_students s
                     OUTER APPLY (
@@ -141,6 +146,10 @@ namespace Haniya.Controllers.PortalAdmin
                         ON dl.detail_id = s.level
                         AND dl.header_id = 'LEVEL_STUDENT'
                         AND dl.status = 'ACTIVE'
+                    LEFT JOIN mst_detail_settings dt
+                        ON dt.detail_id = s.tier
+                        AND dt.header_id = 'TIER_STUDENT'
+                        AND dt.status = 'ACTIVE'
                     LEFT JOIN mst_detail_settings dg
                         ON dg.item_code = s.gender
                         AND dg.header_id = 'GENDER'
@@ -172,6 +181,7 @@ namespace Haniya.Controllers.PortalAdmin
                         entry_date = rd["entry_date"],
                         profile_photo = rd["profile_photo"],
                         level = rd["level"],
+                        tier = rd["tier"],
                         @class = rd["class"] == DBNull.Value ? null : rd["class"]
                     });
                 }
@@ -195,7 +205,7 @@ namespace Haniya.Controllers.PortalAdmin
                 conn.Open();
 
                 var sql = @"
-                    SELECT s.*, g.item_desc AS gender_name, s.level as level_id, dt.item_desc as level_name
+                    SELECT s.*, g.item_desc AS gender_name, s.level as level_id, dt.item_desc as level_name, s.tier as tier_id, dtt.item_desc as tier_name
                     FROM mst_students s
                     LEFT JOIN mst_detail_settings g
                         ON g.detail_id = s.gender
@@ -205,6 +215,10 @@ namespace Haniya.Controllers.PortalAdmin
                         ON dt.detail_id = s.level
                        AND dt.header_id = 'LEVEL_STUDENT'
                        AND dt.status = 'ACTIVE'
+                    LEFT JOIN mst_detail_settings dtt
+                        ON dtt.detail_id = s.tier
+                       AND dtt.header_id = 'TIER_STUDENT'
+                       AND dtt.status = 'ACTIVE'
                     WHERE s.student_id = @id";
 
                 using var cmd = new SqlCommand(sql, conn);
@@ -238,7 +252,9 @@ namespace Haniya.Controllers.PortalAdmin
 
                     profile_photo = rd["profile_photo"]?.ToString(),
                     level_id = rd["level_id"]?.ToString(),
-                    level_name = rd["level_name"]?.ToString()
+                    level_name = rd["level_name"]?.ToString(),
+                    tier_id = rd["tier_id"]?.ToString(),
+                    tier_name = rd["tier_name"]?.ToString()
                 }));
             }
             catch (Exception ex)
@@ -293,14 +309,14 @@ namespace Haniya.Controllers.PortalAdmin
             father_name, mother_name, father_phone, mother_phone,
             father_job, mother_job,
             entry_date, graduation_date, profile_photo,
-            status, created_at, level
+            status, created_at, level, tier
         ) VALUES (
             @id, @fn, @ln, @fullname, @nis,
             @bd, @bp, @gender, @addr,
             @fan, @mon, @fph, @mph,
             @fjob, @mjob,
             @entry, @grad, @photo,
-            @status, GETDATE(), @level
+            @status, GETDATE(), @level, @tier
         )";
 
                 using var cmd = new SqlCommand(sql, conn);
@@ -328,6 +344,7 @@ namespace Haniya.Controllers.PortalAdmin
                 cmd.Parameters.AddWithValue("@photo", photoPath ?? "");
                 cmd.Parameters.AddWithValue("@status", "ACTIVE");
                 cmd.Parameters.AddWithValue("@level", f["level"].ToString());
+                cmd.Parameters.AddWithValue("@tier", f["tier"].ToString());
 
                 cmd.ExecuteNonQuery();
 
@@ -418,6 +435,7 @@ namespace Haniya.Controllers.PortalAdmin
                 entry_date=@entry,
                 graduation_date=@grad,
                 level=@level,
+                tier=@tier,
                 updated_at=GETDATE()
                 {photoSql}
             WHERE student_id=@id";
@@ -442,6 +460,7 @@ namespace Haniya.Controllers.PortalAdmin
                 cmd.Parameters.AddWithValue("@fjob", f["father_job"].ToString());
                 cmd.Parameters.AddWithValue("@mjob", f["mother_job"].ToString());
                 cmd.Parameters.AddWithValue("@level", newLevel);
+                cmd.Parameters.AddWithValue("@tier", f["tier"].ToString());
 
                 // Birth Date
                 cmd.Parameters.AddWithValue(
@@ -552,3 +571,4 @@ namespace Haniya.Controllers.PortalAdmin
         }
     }
 }
+

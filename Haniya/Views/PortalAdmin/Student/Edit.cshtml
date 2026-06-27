@@ -1,4 +1,4 @@
-﻿@{
+@{
     Layout = "_LayoutAdmin";
     ViewData["Title"] = "Edit Student";
     var id = ViewBag.studentId;
@@ -131,8 +131,8 @@
                     </div>
 
                     <div>
-                        <label for="Level" class="block text-sm font-medium text-gray-700 mb-1">
-                            Level <span class="text-red-500">*</span>
+                        <label for="level" class="block text-sm font-medium text-gray-700 mb-1">
+                            Tahsin <span class="text-red-500">*</span>
                         </label>
 
                         <select id="level"
@@ -143,6 +143,21 @@
                         <p id="error-level"
                            class="mt-1 text-xs text-red-600 hidden validation-error-message"
                            data-testid="error-level"></p>
+                    </div>
+                    <div>
+                        <label for="tier" class="block text-sm font-medium text-gray-700 mb-1">
+                            Tahfidz <span class="text-red-500">*</span>
+                        </label>
+
+                        <select id="tier"
+                                required
+                                class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                data-testid="tier-select">
+                        </select>
+
+                        <p id="error-tier"
+                           class="mt-1 text-xs text-red-600 hidden validation-error-message"
+                           data-testid="error-tier"></p>
                     </div>
 
                     <div>
@@ -347,7 +362,7 @@
         }
 
         function clearAllValidation() {
-            const fields = ['first_name', 'nis', 'birth_date', 'birth_place', 'gender', 'address', 'entry_date'];
+            const fields = ['first_name', 'nis', 'birth_date', 'birth_place', 'gender', 'address', 'entry_date', 'level', 'tier'];
             fields.forEach(function (id) {
                 const $input = $('#' + id);
                 const $error = $('#error-' + id);
@@ -426,7 +441,7 @@
             });
 
             $('#level').select2({
-                placeholder: '-- Level --',
+                placeholder: '-- Tahsin --',
                 allowClear: true,
                 ajax: {
                     url: '/Select2/LevelStudent',
@@ -448,7 +463,33 @@
                     cache: true
                 }
             }).on('change', function () {
-                clearError($('#level'), $('#level-gender'));
+                clearError($('#level'), $('#error-level'));
+            });
+
+            $('#tier').select2({
+                placeholder: '-- Tahfidz --',
+                allowClear: true,
+                ajax: {
+                    url: '/Select2/TierStudent',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) {
+                        return {
+                            q: params.term || '',
+                            page: params.page || 1
+                        };
+                    },
+                    processResults: function (data, params) {
+                        params.page = params.page || 1;
+                        return {
+                            results: data.results,
+                            pagination: data.pagination
+                        };
+                    },
+                    cache: true
+                }
+            }).on('change', function () {
+                clearError($('#tier'), $('#error-tier'));
             });
         });
 
@@ -480,6 +521,12 @@
                     var text = d.level_name;
                     var option = new Option(text, d.level_id, true, true);
                     $('#level').append(option).trigger('change');
+                }
+
+                if (d.tier_id) {
+                    var text = d.tier_name;
+                    var option = new Option(text, d.tier_id, true, true);
+                    $('#tier').append(option).trigger('change');
                 }
 
                 if (d.profile_photo) {
@@ -535,3 +582,4 @@
         }
     </script>
 }
+

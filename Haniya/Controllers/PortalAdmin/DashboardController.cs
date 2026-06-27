@@ -324,7 +324,7 @@ namespace Haniya.Controllers.PortalAdmin
             var cmd = new SqlCommand(@"
                 SELECT TOP 6 a.article_id, a.title, a.content, a.image, a.created_at
                 FROM mst_articles a
-                WHERE a.status = 'PUBLISHED'
+                WHERE UPPER(ISNULL(a.status, '')) = 'PUBLISHED'
                 ORDER BY a.created_at DESC", conn);
 
             using var rd = cmd.ExecuteReader();

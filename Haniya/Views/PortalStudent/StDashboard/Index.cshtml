@@ -3,6 +3,11 @@
     ViewData["Title"] = "My Dashboard";
 }
 
+<style>
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+
 <div class="max-w-7xl mx-auto space-y-10 py-8 px-4" id="student-dashboard">
     <div>
         <h1 class="text-3xl font-bold text-indigo-900">Student Dashboard</h1>
@@ -15,9 +20,19 @@
     </div>
 
     <div id="content" class="hidden space-y-10">
-        <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-            <h2 class="text-lg font-bold text-indigo-900 mb-4">Payment Reminder</h2>
-            <div id="payment-bills" class="grid grid-cols-1 gap-3"></div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
+                <h2 class="text-lg font-bold text-indigo-900 mb-4">Payment Reminder</h2>
+                <div id="payment-bills" class="grid grid-cols-1 gap-3"></div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100 flex flex-col">
+                <h2 class="text-lg font-bold text-indigo-900 mb-4">My Reminders</h2>
+                <div id="reminders-list" class="space-y-3 flex-1 overflow-y-auto max-h-80 pr-1 scrollbar-hide"></div>
+                <div class="text-center mt-4">
+                    <button id="loadMoreRemindersBtn" onclick="loadReminders()" class="px-4 py-2 bg-indigo-50 text-indigo-700 font-medium rounded-lg hover:bg-indigo-100 transition hidden">Load More</button>
+                </div>
+            </div>
         </div>
 
         <div class="bg-white rounded-2xl shadow-xl p-5 border border-gray-100">
@@ -40,14 +55,14 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100 lg:col-span-2">
                 <div class="space-y-4">
-                <div class="bg-gray-50 rounded-2xl p-5 border border-gray-100">
-                    <h4 class="text-lg font-bold text-indigo-900 mb-4">My Grade</h4>
-                    <canvas id="studentGradesChart" height="110"></canvas>
-                </div>
-                <div class="bg-gray-50 rounded-2xl p-5 border border-gray-100">
-                    <h4 class="text-lg font-bold text-indigo-900 mb-4">My Attendance</h4>
-                    <canvas id="studentAttendanceChart" height="110"></canvas>
-                </div>
+                    <div class="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+                        <h4 class="text-lg font-bold text-indigo-900 mb-4">My Grade</h4>
+                        <div class="relative h-80 md:h-96"><canvas id="studentGradesChart"></canvas></div>
+                    </div>
+                    <div class="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+                        <h4 class="text-lg font-bold text-indigo-900 mb-4">My Attendance</h4>
+                        <div class="relative h-80 md:h-96"><canvas id="studentAttendanceChart"></canvas></div>
+                    </div>
                 </div>
             </div>
 
@@ -104,6 +119,8 @@
     let studentAttendanceChart;
     let dashboardData = null;
     let allArticles = [];
+    let currentReminderPage = 1;
+    let isRemindersFinished = false;
 
     let academicCalendarDays = [];
     let calendarEventPinPoints = [];
@@ -135,6 +152,7 @@
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false }
                 },
@@ -159,7 +177,6 @@
     function renderStudentAttendanceChart(data) {
         const ctx = document.getElementById('studentAttendanceChart').getContext('2d');
         if (studentAttendanceChart) studentAttendanceChart.destroy();
-        console.log(data);
         const classMap = {};
         (data || []).forEach(item => {
             const kelas = item.kelas || 'Unknown';
@@ -227,6 +244,7 @@
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: { display: true }
                 },
@@ -736,7 +754,105 @@
         renderAcademicCalendar();
     }
 
+    function loadReminders() {
+        if (isRemindersFinished) return;
+        $('#loadMoreRemindersBtn').prop('disabled', true).text('Loading...');
+        $.ajax({
+            url: `/StDashboard/GetReminders?page=${currentReminderPage}&limit=10`,
+            type: 'GET',
+            success: function (res) {
+                if (!res.success) {
+                    console.error("Error fetching reminders:", res.message);
+                    alert("Error: " + res.message);
+                    return;
+                }
+                console.log(res);
+                let html = '';
+                if (res.data.length === 0 && currentReminderPage === 1) {
+                    html = '<p class="text-sm text-gray-500">Tidak ada tugas / reminders.</p>';
+                    $('#reminders-list').html(html);
+                } else {
+                    res.data.forEach(r => {
+                        const bg = r.is_read ? 'bg-gray-50 border-gray-200 opacity-60' : 'bg-rose-50 border-rose-200';
+                        const btn = r.is_read ? '' : `<button onclick="markReminderRead('${r.reminder_id}', this)" class="mt-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-md transition shadow-sm">Mark as Read</button>`;
+                        html += `
+                            <div class="p-4 rounded-xl border ${bg} transition-all duration-300">
+                                <h4 class="font-bold text-indigo-900">${r.title}</h4>
+                                <p class="text-sm text-gray-700 mt-1">Subject: <span class="font-medium">${r.subject_name}</span> | Teacher: <span class="font-medium">${r.teacher_name}</span></p>
+                                <p class="text-xs ${r.is_read ? 'text-gray-500' : 'text-red-600'} mt-1 font-semibold">Due: ${r.due_date}</p>
+                                <span class="inline-flex mt-2 text-[10px] px-2 py-0.5 rounded-full ${r.is_read ? 'bg-gray-200 text-gray-700' : 'bg-amber-100 text-amber-700'}">${r.is_read ? 'Read' : 'Unread'}</span>
+                                ${btn}
+                            </div>
+                        `;
+                    });
+                    $('#reminders-list').append(html);
+                }
+
+                if (res.more) {
+                    currentReminderPage++;
+                    $('#loadMoreRemindersBtn').removeClass('hidden').prop('disabled', false).text('Load More');
+                } else {
+                    isRemindersFinished = true;
+                    $('#loadMoreRemindersBtn').addClass('hidden');
+                }
+            },
+            complete: function() {
+                if (!isRemindersFinished) {
+                    const btn = document.getElementById('loadMoreRemindersBtn');
+                    $(btn).prop('disabled', false).text('Load More');
+                    // Unobserve and reobserve to trigger if it is still visible without scrolling
+                    if (window.reminderObserver) {
+                        window.reminderObserver.unobserve(btn);
+                        window.reminderObserver.observe(btn);
+                    }
+                }
+            }
+        });
+    }
+
+    function markReminderRead(id, btn) {
+        const parent = $(btn).closest('div');
+        parent.addClass('opacity-50 pointer-events-none');
+        $(btn).text('Marking...');
+        $.ajax({
+            url: '/StDashboard/MarkReminderRead',
+            type: 'POST',
+            data: { id: id },
+            success: function(res) {
+                if (res.success) {
+                    parent.removeClass('bg-rose-50 border-rose-200 opacity-50 pointer-events-none').addClass('bg-gray-50 border-gray-200 opacity-60');
+                    parent.find('span.rounded-full').filter(function() {
+                        return $(this).text().trim() === 'Unread';
+                    }).removeClass('bg-amber-100 text-amber-700').addClass('bg-gray-200 text-gray-700').text('Read');
+                    $(btn).remove();
+                } else {
+                    parent.removeClass('opacity-50 pointer-events-none');
+                    $(btn).text('Mark as Read');
+                }
+            }
+        });
+    }
+
     $(document).ready(function() {
         loadStudentDashboard();
+        loadReminders();
+        
+        // Infinite scroll for reminders
+        var remindersRoot = document.getElementById('reminders-list');
+        window.reminderObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const $btn = $('#loadMoreRemindersBtn');
+                    if (!isRemindersFinished && $btn.is(':visible') && !$btn.prop('disabled')) {
+                        loadReminders();
+                    }
+                }
+            });
+        }, { root: remindersRoot, rootMargin: "100px" });
+
+        const loadMoreBtn = document.getElementById('loadMoreRemindersBtn');
+        if (loadMoreBtn) {
+            window.reminderObserver.observe(loadMoreBtn);
+        }
     });
 </script>
