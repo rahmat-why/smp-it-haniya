@@ -8,12 +8,12 @@
         <div class="flex items-center justify-between">
             <div>
                 <h1 class="text-3xl font-bold text-indigo-900">Admin Dashboard</h1>
-                <p class="text-gray-600 mt-2">Welcome back, @User.FindFirst("FullName")?.Value</p>
+                <p class="text-gray-600 mt-2">Selamat Datang, @User.FindFirst("FullName")?.Value</p>
             </div>
 
             <div id="loading" class="text-center py-20">
                 <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-indigo-600"></div>
-                <p class="mt-4 text-gray-600">Loading...</p>
+                <p class="mt-4 text-gray-600">Memuat...</p>
             </div>
 
             <!-- FILTER BUTTON -->
@@ -66,19 +66,19 @@
             <div class="lg:col-span-2 bg-white rounded-2xl shadow-xl p-8 border border-gray-100" id="summaryContainer"></div>
 
             <div class="lg:col-span-1 bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-                <h2 class="text-lg font-bold text-indigo-900 mb-8">Calendar Haniya</h2>
+                <h2 class="text-lg font-bold text-indigo-900 mb-8">Kalender Haniya</h2>
                 <div class="space-y-4">
                     <div class="flex items-center justify-between">
                         <button id="calendarPrevBtn" type="button"
                                 onclick="changeCalendarMonth(-1)"
                                 class="px-3 py-1.5 rounded-lg border border-gray-300 text-sm hover:bg-gray-50">
-                            Prev
+                            Sebelumnya
                         </button>
                         <p id="calendarMonthLabel" class="text-sm font-semibold text-gray-700"></p>
                         <button id="calendarNextBtn" type="button"
                                 onclick="changeCalendarMonth(1)"
                                 class="px-3 py-1.5 rounded-lg border border-gray-300 text-sm hover:bg-gray-50">
-                            Next
+                            Selanjutnya
                         </button>
                     </div>
 
@@ -102,7 +102,7 @@
         </div>
 
         <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-            <h2 class="text-lg font-bold text-indigo-900 mb-8">Latest Articles</h2>
+            <h2 class="text-lg font-bold text-indigo-900 mb-8">Artikel Terbaru</h2>
             <div id="articles-list" class="space-y-6"></div>
             <div class="flex items-center justify-between mt-6">
                 <span id="articles-info" class="text-sm text-gray-600"></span>
@@ -188,7 +188,7 @@
                 $('#summaryContainer').html(
                     `
                         <h2 class="text-lg font-bold text-indigo-900 mb-8">
-                            Summary
+                            Ringkasan
                         </h2>
                         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             <!-- LEFT SECTION -->
@@ -196,7 +196,7 @@
                                 <!-- TOTAL BILL -->
                                 <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl p-5 sm:p-6 text-center flex flex-col justify-center">
                                     <p class="text-sm sm:text-base font-medium text-indigo-700">
-                                        Total Bill
+                                        Total Tagihan
                                     </p>
                                     <p class="text-xl sm:text-2xl lg:text-3xl font-bold text-indigo-900 mt-2 break-words">
                                         ${formatRupiah(d.payment.totalPembayaranMasuk ?? 0)}
@@ -208,7 +208,7 @@
                                 <!-- LUNAS -->
                                 <div class="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-2xl p-5 sm:p-6 flex flex-col items-center justify-center text-center">
                                     <p class="text-sm sm:text-base font-medium text-cyan-700">
-                                        Total Payment
+                                        Total Pembayaran
                                     </p>
                                     <p class="text-xl sm:text-2xl lg:text-3xl font-bold text-cyan-900 mt-2 break-words">
                                         ${formatRupiah(d.payment.totalLunas ?? 0)}
@@ -220,7 +220,7 @@
 
                                 <!-- BELUM LUNAS -->
                                 <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-5 sm:p-6 flex flex-col items-center justify-center text-center">
-                                    <p class="text-sm sm:text-base font-medium text-red-700">Total Unpaid</p>
+                                    <p class="text-sm sm:text-base font-medium text-red-700">Total Belum Dibayar</p>
                                     <p class="text-xl sm:text-2xl lg:text-3xl font-bold text-red-900 mt-2 break-words">
                                         ${formatRupiah(d.payment.totalBelumLunas ?? 0)}
                                     </p>
@@ -234,13 +234,13 @@
                                 <!-- CHARTS -->
                                 <div class="grid grid-cols-1 sm:grid-cols-1 gap-4">
                                     <div class="bg-blue-50 rounded-2xl p-4">
-                                        <h3 class="text-sm font-semibold text-blue-900 mb-2 text-center">Teachers</h3>
+                                        <h3 class="text-sm font-semibold text-blue-900 mb-2 text-center">Guru</h3>
                                         <div class="relative h-32 sm:h-40">
                                             <canvas id="teacherChart"></canvas>
                                         </div>
                                     </div>
                                     <div class="bg-green-50 rounded-2xl p-4">
-                                        <h3 class="text-sm font-semibold text-green-900 mb-2 text-center">Students</h3>
+                                        <h3 class="text-sm font-semibold text-green-900 mb-2 text-center">Siswa</h3>
                                         <div class="relative h-32 sm:h-40">
                                             <canvas id="studentChart"></canvas>
                                         </div>
@@ -306,7 +306,7 @@
         });
 
         $('#events-list').html(eventsHtml);
-        $('#events-info').text(`Showing ${startIndex + 1} to ${Math.min(endIndex, allEvents.length)} of ${allEvents.length} events`);
+        $('#events-info').text(`Menampilkan ${startIndex + 1} sampai ${Math.min(endIndex, allEvents.length)} dari ${allEvents.length} artikel`);
 
         let paginationHtml = '';
         for (let i = 1; i <= totalPages; i++) {
@@ -355,7 +355,7 @@
         articlesHtml += '</div>';
 
         $('#articles-list').html(articlesHtml);
-        $('#articles-info').text(`Showing ${startIndex + 1} to ${Math.min(endIndex, allArticles.length)} of ${allArticles.length} articles`);
+        $('#articles-info').text(`Menampilkan ${startIndex + 1} sampai ${Math.min(endIndex, allArticles.length)} dari ${allArticles.length} artikel`);
 
         let paginationHtml = '';
         for (let i = 1; i <= totalPages; i++) {

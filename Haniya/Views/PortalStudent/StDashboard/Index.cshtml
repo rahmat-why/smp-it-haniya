@@ -10,8 +10,8 @@
 
 <div class="max-w-7xl mx-auto space-y-10 py-8 px-4" id="student-dashboard">
     <div>
-        <h1 class="text-3xl font-bold text-indigo-900">Student Dashboard</h1>
-        <p class="text-gray-600 mt-2">Welcome back, @User.FindFirst("FullName")?.Value</p>
+        <h1 class="text-3xl font-bold text-indigo-900">Dasbor Siswa</h1>
+        <p class="text-gray-600 mt-2">Selamat Datang, @User.FindFirst("FullName")?.Value</p>
     </div>
 
     <div id="loading" class="text-center py-20">
@@ -22,12 +22,12 @@
     <div id="content" class="hidden space-y-10">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-                <h2 class="text-lg font-bold text-indigo-900 mb-4">Payment Reminder</h2>
+                <h2 class="text-lg font-bold text-indigo-900 mb-4">Pengingat Pembayaran</h2>
                 <div id="payment-bills" class="grid grid-cols-1 gap-3"></div>
             </div>
 
             <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100 flex flex-col">
-                <h2 class="text-lg font-bold text-indigo-900 mb-4">My Reminders</h2>
+                <h2 class="text-lg font-bold text-indigo-900 mb-4">Pengingat Tugas</h2>
                 <div id="reminders-list" class="space-y-3 flex-1 overflow-y-auto max-h-80 pr-1 scrollbar-hide"></div>
                 <div class="text-center mt-4">
                     <button id="loadMoreRemindersBtn" onclick="loadReminders()" class="px-4 py-2 bg-indigo-50 text-indigo-700 font-medium rounded-lg hover:bg-indigo-100 transition hidden">Load More</button>
@@ -36,15 +36,15 @@
         </div>
 
         <div class="bg-white rounded-2xl shadow-xl p-5 border border-gray-100">
-            <h3 class="text-lg font-bold text-indigo-900 mb-4">My Schedule</h3>
+            <h3 class="text-lg font-bold text-indigo-900 mb-4">Jadwal Pelajaran</h3>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
                     <thead class="bg-gray-50 text-gray-700 uppercase text-xs">
                         <tr>
-                            <th class="px-6 py-4">Day</th>
-                            <th class="px-6 py-4">Time</th>
-                            <th class="px-6 py-4">Subject</th>
-                            <th class="px-6 py-4">Teacher</th>
+                            <th class="px-6 py-4">Hari</th>
+                            <th class="px-6 py-4">Jam</th>
+                            <th class="px-6 py-4">Mata Pelajaran</th>
+                            <th class="px-6 py-4">Guru</th>
                         </tr>
                     </thead>
                     <tbody id="weekly-schedule"></tbody>
@@ -56,30 +56,30 @@
             <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100 lg:col-span-2">
                 <div class="space-y-4">
                     <div class="bg-gray-50 rounded-2xl p-5 border border-gray-100">
-                        <h4 class="text-lg font-bold text-indigo-900 mb-4">My Grade</h4>
+                        <h4 class="text-lg font-bold text-indigo-900 mb-4">Nilai Saya</h4>
                         <div class="relative h-80 md:h-96"><canvas id="studentGradesChart"></canvas></div>
                     </div>
                     <div class="bg-gray-50 rounded-2xl p-5 border border-gray-100">
-                        <h4 class="text-lg font-bold text-indigo-900 mb-4">My Attendance</h4>
+                        <h4 class="text-lg font-bold text-indigo-900 mb-4">Absensi Saya</h4>
                         <div class="relative h-80 md:h-96"><canvas id="studentAttendanceChart"></canvas></div>
                     </div>
                 </div>
             </div>
 
             <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 lg:col-span-1">
-                <h2 class="text-lg font-bold text-indigo-900 mb-8">My Calendar</h2>
+                <h2 class="text-lg font-bold text-indigo-900 mb-8">Kalender Akademik</h2>
                 <div class="space-y-4">
                     <div class="flex items-center justify-between">
                         <button id="calendarPrevBtn" type="button"
                                 onclick="changeCalendarMonth(-1)"
                                 class="px-3 py-1.5 rounded-lg border border-gray-300 text-sm hover:bg-gray-50">
-                            Prev
+                            Sebelumnya
                         </button>
                         <p id="calendarMonthLabel" class="text-sm font-semibold text-gray-700"></p>
                         <button id="calendarNextBtn" type="button"
                                 onclick="changeCalendarMonth(1)"
                                 class="px-3 py-1.5 rounded-lg border border-gray-300 text-sm hover:bg-gray-50">
-                            Next
+                            Selanjutnya
                         </button>
                     </div>
 
@@ -87,13 +87,13 @@
 
                     <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100">
                         <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-gray-500 mb-2">
-                            <div>Mon</div>
-                            <div>Tue</div>
-                            <div>Wed</div>
-                            <div>Thu</div>
-                            <div>Fri</div>
-                            <div>Sat</div>
-                            <div>Sun</div>
+                            <div>Senin</div>
+                            <div>Selasa</div>
+                            <div>Rabu</div>
+                            <div>Kamis</div>
+                            <div>Jumat</div>
+                            <div>Sabtu</div>
+                            <div>Minggu</div>
                         </div>
                         <div id="academicCalendarGrid" class="grid grid-cols-7 gap-1"></div>
                     </div>
@@ -103,7 +103,7 @@
         </div>
 
         <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-            <h2 class="text-lg font-bold text-indigo-900 mb-8">Latest Articles</h2>
+            <h2 class="text-lg font-bold text-indigo-900 mb-8">Informasi & Pengumuman</h2>
             <div id="articles-list" class="space-y-6"></div>
             <div class="flex items-center justify-between mt-6">
                 <span id="articles-info" class="text-sm text-gray-600"></span>
@@ -337,8 +337,8 @@
                     note: 'Belum ada pembayaran, segera lakukan pembayaran sebelum jatuh tempo.'
                 };
             const overdueText = overdue
-                ? '<span class="text-red-700 font-semibold">Description: Overdue</span>'
-                : `<span>Description: ${tone.note}</span>`;
+                ? '<span class="text-red-700 font-semibold">Abaikan pesan ini apabila pembayaran telah dilakukan</span>'
+                : `<span>${tone.note}</span>`;
 
             container.append(`
                 <div class="rounded-xl border ${tone.border} ${tone.bg} p-4 space-y-2">
@@ -349,10 +349,10 @@
                         </span>
                     </div>
                     <div>
-                        <p class="text-xs text-gray-600">Remaining Payment</p>
+                        <p class="text-xs text-gray-600">Sisa Pembayaran</p>
                         <p class="text-base font-bold ${tone.nominalText}">${nominal}</p>
                     </div>
-                    <p class="text-xs text-gray-600">Due Date: <span class="font-semibold ${overdue ? 'text-red-700' : 'text-gray-800'}">${dueDateText}${overdue ? ' (Overdue)' : ''}</span></p>
+                    <p class="text-xs text-gray-600">Jatuh Tempo: <span class="font-semibold ${overdue ? 'text-red-700' : 'text-gray-800'}">${dueDateText}${overdue ? ' (Terlambat)' : ''}</span></p>
                     <p class="text-xs text-gray-600">${overdueText}</p>
                 </div>
             `);
@@ -503,7 +503,7 @@
         articlesHtml += '</div>';
 
         $('#articles-list').html(articlesHtml);
-        $('#articles-info').text(`Showing ${startIndex + 1} to ${Math.min(endIndex, allArticles.length)} of ${allArticles.length} articles`);
+        $('#articles-info').text(`Menampilkan ${startIndex + 1} hingga ${Math.min(endIndex, allArticles.length)} dari ${allArticles.length} artikel`);
 
         let paginationHtml = '';
         for (let i = 1; i <= totalPages; i++) {
@@ -774,13 +774,13 @@
                 } else {
                     res.data.forEach(r => {
                         const bg = r.is_read ? 'bg-gray-50 border-gray-200 opacity-60' : 'bg-rose-50 border-rose-200';
-                        const btn = r.is_read ? '' : `<button onclick="markReminderRead('${r.reminder_id}', this)" class="mt-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-md transition shadow-sm">Mark as Read</button>`;
+                        const btn = r.is_read ? '' : `<button onclick="markReminderRead('${r.reminder_id}', this)" class="mt-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-md transition shadow-sm">Tandai sudah dibaca</button>`;
                         html += `
                             <div class="p-4 rounded-xl border ${bg} transition-all duration-300">
                                 <h4 class="font-bold text-indigo-900">${r.title}</h4>
-                                <p class="text-sm text-gray-700 mt-1">Subject: <span class="font-medium">${r.subject_name}</span> | Teacher: <span class="font-medium">${r.teacher_name}</span></p>
-                                <p class="text-xs ${r.is_read ? 'text-gray-500' : 'text-red-600'} mt-1 font-semibold">Due: ${r.due_date}</p>
-                                <span class="inline-flex mt-2 text-[10px] px-2 py-0.5 rounded-full ${r.is_read ? 'bg-gray-200 text-gray-700' : 'bg-amber-100 text-amber-700'}">${r.is_read ? 'Read' : 'Unread'}</span>
+                                <p class="text-sm text-gray-700 mt-1"><span class="font-medium">${r.subject_name}</span> | <span class="font-medium">${r.teacher_name}</span></p>
+                                <p class="text-xs ${r.is_read ? 'text-gray-500' : 'text-red-600'} mt-1 font-semibold">Jatuh tempo: ${r.due_date}</p>
+                                <span class="inline-flex mt-2 text-[10px] px-2 py-0.5 rounded-full ${r.is_read ? 'bg-gray-200 text-gray-700' : 'bg-amber-100 text-amber-700'}">${r.is_read ? 'Dibaca' : 'Belum dibaca'}</span>
                                 ${btn}
                             </div>
                         `;
@@ -790,7 +790,7 @@
 
                 if (res.more) {
                     currentReminderPage++;
-                    $('#loadMoreRemindersBtn').removeClass('hidden').prop('disabled', false).text('Load More');
+                    $('#loadMoreRemindersBtn').removeClass('hidden').prop('disabled', false).text('Muat lebih banyak');
                 } else {
                     isRemindersFinished = true;
                     $('#loadMoreRemindersBtn').addClass('hidden');
@@ -799,7 +799,7 @@
             complete: function() {
                 if (!isRemindersFinished) {
                     const btn = document.getElementById('loadMoreRemindersBtn');
-                    $(btn).prop('disabled', false).text('Load More');
+                    $(btn).prop('disabled', false).text('Muat lebih banyak');
                     // Unobserve and reobserve to trigger if it is still visible without scrolling
                     if (window.reminderObserver) {
                         window.reminderObserver.unobserve(btn);

@@ -1,39 +1,39 @@
 <!-- ~/Views/PortalAdmin/Schedule/Create.cshtml -->
 @{
     Layout = "_LayoutAdmin";
-    ViewData["Title"] = "Create Schedule";
+    ViewData["Title"] = "Tambah Jadwal";
 }
 
-<h2 class="text-2xl font-bold text-gray-800 mb-6">Create Schedule</h2>
+<h2 class="text-2xl font-bold text-gray-800 mb-6">Tambah Jadwal</h2>
 
 <div class="bg-white p-6 rounded-xl shadow-lg w-full">
     <form id="scheduleForm" class="space-y-8">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
                 <label for="academic_class_id" class="block text-sm font-medium text-gray-700 mb-2">
-                    Class <span class="text-red-600">*</span>
+                    Kelas <span class="text-red-600">*</span>
                 </label>
                 <select id="academic_class_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                        data-placeholder="-- Select Academic Class --" required></select>
+                        data-placeholder="-- Pilih Kelas --" required></select>
                 <p id="error-class" class="mt-1 text-sm text-red-600 hidden"></p>
             </div>
 
             <div>
                 <label for="day" class="block text-sm font-medium text-gray-700 mb-2">
-                    Day <span class="text-red-600">*</span>
+                    Hari <span class="text-red-600">*</span>
                 </label>
                 <select id="day" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                        data-placeholder="-- Select Day --" required></select>
+                        data-placeholder="-- Pilih Hari --" required></select>
                 <p id="error-day" class="mt-1 text-sm text-red-600 hidden"></p>
             </div>
         </div>
 
         <div class="space-y-4">
             <div class="flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-gray-800">Schedule Detail</h3>
+                <h3 class="text-lg font-semibold text-gray-800">Detail Jadwal</h3>
                 <button type="button" onclick="addDetailRow()"
                         class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md">
-                    + Add Subject
+                    + Tambah Mapel
                 </button>
             </div>
 
@@ -41,11 +41,11 @@
                 <table class="min-w-full divide-y divide-gray-200 table-fixed">
                     <thead class="bg-gray-100 sticky top-0 z-10">
                         <tr>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-4/12">Subject</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-4/12">Teacher</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-2/12">Start Time</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-2/12">End Time</th>
-                            <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Action</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-4/12">Mata Pelajaran</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-4/12">Guru</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-2/12">Jam Mulai</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-2/12">Jam Selesai</th>
+                            <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Aksi</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-details"></tbody>
@@ -59,10 +59,10 @@
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                 </svg>
-                Back
+                Kembali
             </button>
             <button type="button" onclick="saveSchedule()" class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
-                Save
+                Simpan
                 <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                 </svg>
@@ -80,10 +80,10 @@
             const row = `
                         <tr class="hover:bg-gray-50 border-b last:border-0">
                             <td class="px-4 py-3">
-                                <select class="subject-select w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" data-placeholder="-- Select Subject --"></select>
+                                <select class="subject-select w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" data-placeholder="-- Pilih Mapel --"></select>
                             </td>
                             <td class="px-4 py-3">
-                                <select class="teacher-select w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" data-placeholder="-- Select Teacher --"></select>
+                                <select class="teacher-select w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" data-placeholder="-- Pilih Guru --"></select>
                             </td>
                             <td class="px-4 py-3">
                                 <input type="time" class="start-time w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition" />
@@ -103,7 +103,7 @@
 
             const $newRow = $('#tbody-details tr:last');
             $newRow.find('.subject-select').select2({
-                placeholder: "-- Select Subject --",
+                placeholder: "-- Pilih Mapel --",
                 allowClear: true,
                 width: '100%',
                 ajax: {
@@ -118,7 +118,7 @@
             });
 
             $newRow.find('.teacher-select').select2({
-                placeholder: "-- Select Teacher --",
+                placeholder: "-- Pilih Guru --",
                 allowClear: true,
                 width: '100%',
                 ajax: {

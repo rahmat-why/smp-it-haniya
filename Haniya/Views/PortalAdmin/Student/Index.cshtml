@@ -1,13 +1,13 @@
 @{
     Layout = "_LayoutAdmin";
-    ViewData["Title"] = "Student";
+    ViewData["Title"] = "Siswa";
 }
 
 <div class="flex justify-between items-center mb-4">
-    <h2 class="text-xl font-semibold">Student List</h2>
+    <h2 class="text-xl font-semibold">Siswa</h2>
     <a id="student-add-link" href="/Student/Create"
        class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
-        + Add Student
+        + Tambah Siswa
     </a>
 </div>
 <div class="bg-white rounded-lg shadow">
@@ -25,15 +25,15 @@
         <table id="student-table" class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
-                    <th data-sort="student" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 250px;">Student</th>
-                    <th data-sort="birthDate" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 130px;">Birth Date</th>
-                    <th data-sort="birthPlace" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 130px;">Birth Place</th>
-                    <th data-sort="gender" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center cursor-pointer select-none" style="width: 80px;">Gender</th>
-                    <th data-sort="address" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Address</th>
-                    <th data-sort="entryDate" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 130px;">Entry Date</th>
+                    <th data-sort="student" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 250px;">Siswa</th>
+                    <th data-sort="birthDate" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 130px;">Tanggal Lahir</th>
+                    <th data-sort="birthPlace" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 130px;">Tempat Lahir</th>
+                    <th data-sort="gender" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center cursor-pointer select-none" style="width: 80px;">Jenis Kelamin</th>
+                    <th data-sort="address" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Alamat</th>
+                    <th data-sort="entryDate" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 130px;">Tanggal Masuk</th>
                     <th data-sort="level" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 130px;">Level</th>
-                    <th data-sort="class" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 90px;">Class</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 110px;">Action</th>
+                    <th data-sort="class" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 90px;">Kelas</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 110px;">Aksi</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100"></tbody>
@@ -94,12 +94,12 @@
         const searchValue = (pageState.filters.search || '').replace(/"/g, '&quot;');
         $('#student-table-toolbar').html(`
             <div class="flex items-center gap-2 text-sm text-gray-600">
-                Show
+                Tampilkan
                 <select id="list-limit" class="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:ring-2 focus:ring-blue-500">
                     <option value="10">10</option>
                     <option value="25">25</option>
                     <option value="50">50</option>
-                </select> rows
+                </select> data
             </div>
             <div class="relative">
                 <button id="studentFilterToggleBtn" type="button" class="flex items-center gap-2 bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition">
@@ -113,7 +113,7 @@
                     </div>
                     <div class="px-5 py-4 space-y-4">
                         <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_level">Level</label><select id="filter_level" class="w-full"></select></div>
-                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_gender">Gender</label><select id="filter_gender" class="w-full"></select></div>
+                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_gender">Jenis Kelamin</label><select id="filter_gender" class="w-full"></select></div>
                         <div class="w-full"><label class="block text-xs font-medium mb-1" for="student_search_filter">Search</label><input id="student_search_filter" type="text" value="${searchValue}" class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Search..." /></div>
                     </div>
                     <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
@@ -207,7 +207,7 @@
                 <tr>
                     <td colspan="9" class="px-4 py-10 text-center">
                         <div class="flex flex-col items-center gap-2 text-gray-500">
-                            <div class="text-sm font-semibold text-gray-700">Tidak ada data student</div>
+                            <div class="text-sm font-semibold text-gray-700">Tidak ada data siswa</div>
                             <div class="text-xs">Coba ubah kata kunci pencarian atau filter yang digunakan.</div>
                         </div>
                     </td>
@@ -273,11 +273,11 @@
 
         $('#table-pagination-container').html(`
             <div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-                <button id="page-first" class="px-3 py-2 text-sm ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>First</button>
-                <button id="page-prev" class="px-3 py-2 text-sm border-l border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Prev</button>
+                <button id="page-first" class="px-3 py-2 text-sm ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Awal</button>
+                <button id="page-prev" class="px-3 py-2 text-sm border-l border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Sebelumnya</button>
                 ${pageButtons.join('')}
-                <button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Next</button>
-                <button id="page-last" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Last</button>
+                <button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Berikutnya</button>
+                <button id="page-last" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Terakhir</button>
             </div>
         `);
 

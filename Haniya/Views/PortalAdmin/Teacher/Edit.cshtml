@@ -1,9 +1,9 @@
 ﻿@{
     Layout = "_LayoutAdmin";
-    ViewData["Title"] = "Edit Teacher";
+    ViewData["Title"] = "Ubah Guru";
 }
 
-<h2 class="text-xl font-semibold mb-4">Edit Teacher</h2>
+<h2 class="text-xl font-semibold mb-4">Ubah Guru</h2>
 
 <div class="bg-white p-6 rounded-lg shadow w-full space-y-6">
 
@@ -20,7 +20,7 @@
                         class="w-full flex items-center justify-between px-4 py-3 bg-blue-900 hover:bg-blue-800 transition-colors duration-200 text-left"
                         data-testid="teacher-edit-personal-toggle">
                     <span class="font-semibold text-white">
-                        Teacher Information
+                        Data Guru
                     </span>
                     <svg id="icon-teacher-personal"
                          class="w-5 h-5 text-white transition-transform duration-300"
@@ -38,7 +38,7 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <label for="first_name" class="block text-sm font-medium text-gray-700 mb-1">
-                                First Name <span class="text-red-500">*</span>
+                                Nama Depan <span class="text-red-500">*</span>
                             </label>
                             <input id="first_name"
                                    class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -49,7 +49,7 @@
                         </div>
                         <div>
                             <label for="last_name" class="block text-sm font-medium text-gray-700 mb-1">
-                                Last Name
+                                Nama Belakang
                             </label>
                             <input id="last_name"
                                    class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -72,7 +72,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
                             <label for="birth_date" class="block text-sm font-medium text-gray-700 mb-1">
-                                Birth Date <span class="text-red-500">*</span>
+                                Tanggal Lahir <span class="text-red-500">*</span>
                             </label>
                             <input type="date"
                                    id="birth_date"
@@ -84,7 +84,7 @@
                         </div>
                         <div>
                             <label for="birth_place" class="block text-sm font-medium text-gray-700 mb-1">
-                                Birth Place <span class="text-red-500">*</span>
+                                Tempat Lahir <span class="text-red-500">*</span>
                             </label>
                             <input id="birth_place"
                                    class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -98,7 +98,7 @@
                     <!-- GENDER DROPDOWN -->
                     <div>
                         <label for="gender" class="block text-sm font-medium text-gray-700 mb-1">
-                            Gender <span class="text-red-500">*</span>
+                            Jenis Kelamin <span class="text-red-500">*</span>
                         </label>
 
                         <select id="gender"
@@ -113,7 +113,7 @@
 
                     <div>
                         <label for="address" class="block text-sm font-medium text-gray-700 mb-1">
-                            Address <span class="text-red-500">*</span>
+                            Alamat <span class="text-red-500">*</span>
                         </label>
                         <textarea id="address"
                                   class="w-full border border-gray-300 rounded-md p-2 min-h-[80px] resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -125,7 +125,7 @@
 
                     <div>
                         <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">
-                            Phone <span class="text-red-500">*</span>
+                            Nomor Telepon <span class="text-red-500">*</span>
                         </label>
                         <input id="phone"
                                class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -144,7 +144,7 @@
                         class="w-full flex items-center justify-between px-4 py-3 bg-blue-900 hover:bg-blue-800 transition-colors duration-200 text-left"
                         data-testid="teacher-edit-employment-toggle">
                     <span class="font-semibold text-white">
-                        Employment Information
+                        Informasi Kepegawaian
                     </span>
                     <svg id="icon-teacher-employment"
                          class="w-5 h-5 text-white transition-transform duration-300"
@@ -161,7 +161,7 @@
                      data-testid="teacher-edit-employment-section">
                     <div>
                         <label for="entry_date" class="block text-sm font-medium text-gray-700 mb-1">
-                            Entry Date <span class="text-red-500">*</span>
+                            Tanggal Masuk <span class="text-red-500">*</span>
                         </label>
                         <input type="date"
                                id="entry_date"
@@ -174,7 +174,7 @@
 
                     <div>
                         <label for="level" class="block text-sm font-medium text-gray-700 mb-1">
-                            Employment <span class="text-red-500">*</span>
+                            Jenis Kepegawaian <span class="text-red-500">*</span>
                         </label>
 
                         <select id="level"
@@ -190,18 +190,18 @@
                     <!-- Photo (optional) -->
                     <div>
                         <label for="photo" class="block text-sm font-medium text-gray-700 mb-1">
-                            Photo
+                            Foto
                         </label>
                         <div class="flex items-center gap-3">
                             <label for="photo"
                                    class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900"
                                    data-testid="teacher-edit-photo-choose">
-                                Choose File
+                                Pilih File
                             </label>
                             <span id="photo-filename"
                                   class="text-sm text-gray-600 truncate max-w-[200px]"
                                   data-testid="teacher-edit-photo-filename">
-                                No file chosen
+                                Belum ada file
                             </span>
                             <input type="file"
                                    id="photo"
@@ -237,14 +237,14 @@
                                       stroke-width="2"
                                       d="M15 19l-7-7 7-7" />
                             </svg>
-                            <span>Back</span>
+                            <span>Kembali</span>
                         </a>
 
                         <button type="button"
                                 onclick="updateTeacher()"
                                 class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900"
                                 data-testid="teacher-edit-save-button">
-                            <span>Save</span>
+                            <span>Ubah</span>
                             <svg class="w-4 h-4 ml-2 text-white"
                                  fill="none"
                                  viewBox="0 0 24 24"

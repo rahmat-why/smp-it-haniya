@@ -1,10 +1,10 @@
 @{
     Layout = "_LayoutStudent";
-    ViewData["Title"] = "My Grades";
+    ViewData["Title"] = "Nilai Saya";
 }
 
 <div class="flex justify-between items-center mb-4">
-    <h2 class="text-xl font-semibold">My Grade List</h2>
+    <h2 class="text-xl font-semibold">Nilai Saya</h2>
 </div>
 
 <div class="bg-white rounded-lg shadow">
@@ -16,20 +16,20 @@
             <div id="st-grade-table-loading" class="hidden absolute inset-0 z-20 bg-white/80 backdrop-blur-[1px] flex items-center justify-center">
                 <div class="flex flex-col items-center gap-3 text-gray-600">
                     <div class="w-8 h-8 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin"></div>
-                    <p class="text-sm font-medium">Loading grade data...</p>
+                    <p class="text-sm font-medium">Memuat data nilai...</p>
                 </div>
             </div>
             <table id="student-grade-table" class="w-full text-sm text-left text-gray-700 border-collapse">
                 <thead class="bg-gray-50 text-gray-600 border-b border-gray-200">
                     <tr>
-                        <th data-sort="date" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Date</th>
-                        <th data-sort="class" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Class</th>
-                        <th data-sort="subject" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Subject</th>
-                        <th data-sort="teacher" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Teacher</th>
-                        <th data-sort="type" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Type</th>
-                        <th data-sort="min" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Min</th>
-                        <th data-sort="score" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Score</th>
-                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Notes</th>
+                        <th data-sort="date" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Tanggal</th>
+                        <th data-sort="class" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Kelas</th>
+                        <th data-sort="subject" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Mata Pelajaran</th>
+                        <th data-sort="teacher" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Guru</th>
+                        <th data-sort="type" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Jenis</th>
+                        <th data-sort="min" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Nilai KKM</th>
+                        <th data-sort="score" class="px-5 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">Nilai</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider">Catatan</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white"></tbody>
@@ -86,15 +86,15 @@
         const searchVal = (pageState.filters.search || '').replace(/"/g, '&quot;');
         $('#grade-toolbar').html(`
             <div class="flex items-center gap-2 text-sm text-gray-600">
-                Show
+                Tampilkan
                 <select id="list-limit" class="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="10">10</option>
                     <option value="25">25</option>
                     <option value="50">50</option>
-                </select> rows
+                </select> data
             </div>
             <div class="w-full md:w-80">
-                <input id="grade_search_filter" type="text" value="${searchVal}" class="w-full border border-gray-300 rounded-md p-2 text-sm" placeholder="Search grade..." />
+                <input id="grade_search_filter" type="text" value="${searchVal}" class="w-full border border-gray-300 rounded-md p-2 text-sm" placeholder="Cari nilai..." />
             </div>
         `);
 
@@ -173,11 +173,11 @@
 
         $('#table-pagination').html(`
             <div class="inline-flex items-center border border-gray-300 rounded-md overflow-hidden min-w-max">
-                <button id="page-first" class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900'}" ${prevDisabled ? 'disabled' : ''}>First</button>
-                <button id="page-prev" class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900'}" ${prevDisabled ? 'disabled' : ''}>Prev</button>
+                <button id="page-first" class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900'}" ${prevDisabled ? 'disabled' : ''}>Awal</button>
+                <button id="page-prev" class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900'}" ${prevDisabled ? 'disabled' : ''}>Sebelumnya</button>
                 ${pageButtons.join('')}
-                <button id="page-next" class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900'}" ${nextDisabled ? 'disabled' : ''}>Next</button>
-                <button id="page-last" class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900'}" ${nextDisabled ? 'disabled' : ''}>Last</button>
+                <button id="page-next" class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium border-r border-gray-300 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900'}" ${nextDisabled ? 'disabled' : ''}>Berikutnya</button>
+                <button id="page-last" class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-blue-900'}" ${nextDisabled ? 'disabled' : ''}>Terakhir</button>
             </div>
         `);
 

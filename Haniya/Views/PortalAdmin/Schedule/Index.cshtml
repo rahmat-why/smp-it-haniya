@@ -1,13 +1,13 @@
 @{
     Layout = "_LayoutAdmin";
-    ViewData["Title"] = "Schedules";
+    ViewData["Title"] = "Jadwal";
 }
 
 <div class="flex justify-between items-center mb-4">
-    <h2 class="text-xl font-semibold">Schedule List</h2>
+    <h2 class="text-xl font-semibold">Jadwal</h2>
     <a id="schedule-add-link" href="/Schedule/Create"
        class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
-        + Add Schedule
+        + Tambah Jadwal
     </a>
 </div>
 
@@ -20,18 +20,18 @@
         <div id="schedule-table-loading" class="hidden absolute inset-0 z-20 bg-white/80 backdrop-blur-[1px] flex items-center justify-center">
             <div class="flex flex-col items-center gap-3 text-gray-600">
                 <div class="w-8 h-8 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin"></div>
-                <p class="text-sm font-medium">Loading schedule data...</p>
+                <p class="text-sm font-medium">Memuat data jadwal...</p>
             </div>
         </div>
         <table id="schedule-table" class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
-                    <th data-sort="academicYear" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Academic Year</th>
+                    <th data-sort="academicYear" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Tahun Akademik</th>
                     <th data-sort="semester" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Semester</th>
-                    <th data-sort="class" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Class</th>
-                    <th data-sort="day" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Day</th>
-                    <th data-sort="totalSubject" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center cursor-pointer select-none">Total Subject</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 110px;">Action</th>
+                    <th data-sort="class" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Kelas</th>
+                    <th data-sort="day" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Hari</th>
+                    <th data-sort="totalSubject" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center cursor-pointer select-none">Total Mapel</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 110px;">Aksi</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100"></tbody>
@@ -131,10 +131,10 @@
                         <button type="button" id="scheduleFilterCloseBtn" class="text-gray-400 hover:text-gray-600 transition p-1 rounded-lg hover:bg-gray-100">?</button>
                     </div>
                     <div class="px-5 py-4 space-y-4">
-                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_academic_year">Academic Year</label><select id="filter_academic_year" class="w-full"></select></div>
-                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_class">Academic Class</label><select id="filter_class" class="w-full"></select></div>
-                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_day">Day</label><select id="filter_day" class="w-full"></select></div>
-                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="schedule_search_filter">Search</label><input id="schedule_search_filter" type="text" value="${searchValue}" class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Search..." /></div>
+                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_academic_year">Tahun Akademik</label><select id="filter_academic_year" class="w-full"></select></div>
+                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_class">Kelas</label><select id="filter_class" class="w-full"></select></div>
+                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_day">Hari</label><select id="filter_day" class="w-full"></select></div>
+                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="schedule_search_filter">Cari</label><input id="schedule_search_filter" type="text" value="${searchValue}" class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Cari..." /></div>
                     </div>
                     <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
                         <button type="button" id="apply-schedule-filter-btn" class="px-5 py-2 rounded-full text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 transition">Filter</button>
@@ -294,11 +294,11 @@
 
         $('#table-pagination-container').html(`
             <div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-                <button id="page-first" class="px-3 py-2 text-sm ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>First</button>
-                <button id="page-prev" class="px-3 py-2 text-sm border-l border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Prev</button>
+                <button id="page-first" class="px-3 py-2 text-sm ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Awal</button>
+                <button id="page-prev" class="px-3 py-2 text-sm border-l border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Sebelumnya</button>
                 ${pageButtons.join('')}
-                <button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Next</button>
-                <button id="page-last" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Last</button>
+                <button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Selanjutnya</button>
+                <button id="page-last" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Akhir</button>
             </div>
         `);
 
