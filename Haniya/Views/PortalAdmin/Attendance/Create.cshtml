@@ -1,42 +1,42 @@
 @{
     Layout = "_LayoutAdmin";
-    ViewData["Title"] = "Create Attendance";
+    ViewData["Title"] = "Tambah Absensi";
 }
 
-<h2 class="text-2xl font-bold text-gray-800 mb-6">Create Attendance</h2>
+<h2 class="text-2xl font-bold text-gray-800 mb-6">Tambah Absensi</h2>
 
 <div class="bg-white p-6 rounded-xl shadow-lg w-full">
     <form id="attendanceForm" class="space-y-8">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-                <label for="attendance_date" class="block text-sm font-medium text-gray-700 mb-2">Attendance Date <span class="text-red-600">*</span></label>
+                <label for="attendance_date" class="block text-sm font-medium text-gray-700 mb-2">Tanggal Absensi <span class="text-red-600">*</span></label>
                 <input type="date" id="attendance_date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" required />
                 <p id="error-date" class="mt-1 text-sm text-red-600 hidden"></p>
             </div>
 
             <div>
-                <label for="academic_class_id" class="block text-sm font-medium text-gray-700 mb-2">Class <span class="text-red-600">*</span></label>
+                <label for="academic_class_id" class="block text-sm font-medium text-gray-700 mb-2">Kelas <span class="text-red-600">*</span></label>
                 <select id="academic_class_id" class="w-full"></select>
                 <p id="error-class" class="mt-1 text-sm text-red-600 hidden"></p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Teacher <span class="text-red-600">*</span></label>
-                <div id="teacher_display" class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">-- Select Class First --</div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Guru <span class="text-red-600">*</span></label>
+                <div id="teacher_display" class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">-- Pilih Kelas Terlebih Dahulu --</div>
                 <input type="hidden" id="teacher_id" name="teacher_id" />
                 <p id="error-teacher" class="mt-1 text-sm text-red-600 hidden"></p>
             </div>
         </div>
 
         <div class="space-y-4">
-            <h3 class="text-lg font-semibold text-gray-800">Attendance Detail</h3>
+            <h3 class="text-lg font-semibold text-gray-800">Detail Absensi</h3>
             <div class="overflow-x-auto border border-gray-200 rounded-lg max-h-[500px] shadow-inner">
                 <table class="min-w-full divide-y divide-gray-200 table-fixed">
                     <thead class="bg-gray-100 sticky top-0 z-10">
                         <tr>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-5/12 uppercase">Student</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-5/12 uppercase">Siswa</th>
                             <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-3/12 uppercase">Status</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-4/12 uppercase">Notes</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-4/12 uppercase">Catatan</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-details"></tbody>
@@ -47,10 +47,10 @@
 
         <div class="flex justify-end gap-4 pt-6 border-t border-gray-200">
             <button type="button" onclick="goBackAttendance()" class="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md text-sm font-medium shadow-sm">
-                Back
+                Kembali
             </button>
             <button type="button" onclick="saveAttendance()" class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm">
-                Save
+                Simpan
             </button>
         </div>
     </form>
@@ -178,7 +178,7 @@
 
     $(document).ready(function () {
         $('#academic_class_id').select2({
-            placeholder: '-- Select Academic Class --',
+            placeholder: '-- Pilih Kelas --',
             allowClear: true,
             width: '100%',
             ajax: {
@@ -195,7 +195,7 @@
         $('#academic_class_id').on('change', function () {
             const classId = $(this).val();
             if (!classId) {
-                $('#teacher_display').text('-- Select Class First --');
+                $('#teacher_display').text('-- Pilih Kelas Terlebih Dahulu --');
                 $('#teacher_id').val('');
                 $('#tbody-details').empty();
                 return;
@@ -206,19 +206,19 @@
                     $('#teacher_display').text(res.data.text);
                     $('#teacher_id').val(res.data.id);
                 } else {
-                    $('#teacher_display').text('No homeroom teacher assigned');
+                    $('#teacher_display').text('Tidak ada wali kelas yang ditugaskan');
                     $('#teacher_id').val('');
                 }
-            }).fail(function () { $('#teacher_display').text('Error loading teacher'); });
+            }).fail(function () { $('#teacher_display').text('Gagal memuat data'); });
 
             $.getJSON(`/Attendance/GetStudentsByClass?academicClassId=${classId}`, function (res) {
                 if (res.success) {
                     renderStudents(res.data || []);
                 } else {
-                    $('#tbody-details').html('<tr><td colspan="3" class="px-6 py-8 text-center text-red-600">Error loading students</td></tr>');
+                    $('#tbody-details').html('<tr><td colspan="3" class="px-6 py-8 text-center text-red-600">Gagal memuat data</td></tr>');
                 }
             }).fail(function () {
-                $('#tbody-details').html('<tr><td colspan="3" class="px-6 py-8 text-center text-red-600">Error loading students</td></tr>');
+                $('#tbody-details').html('<tr><td colspan="3" class="px-6 py-8 text-center text-red-600">Gagal memuat data</td></tr>');
             });
         });
     });

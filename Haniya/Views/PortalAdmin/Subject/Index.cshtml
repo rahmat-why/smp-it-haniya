@@ -1,13 +1,13 @@
 @{
     Layout = "_LayoutAdmin";
-    ViewData["Title"] = "Subject";
+    ViewData["Title"] = "Mata Pelajaran";
 }
 
 <div class="flex justify-between items-center mb-4">
-    <h2 class="text-xl font-semibold">Subject List</h2>
+    <h2 class="text-xl font-semibold">Mata Pelajaran</h2>
     <a id="subject-add-link" href="/Subject/Create"
        class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
-        + Add Subject
+        + Tambah Mata Pelajaran
     </a>
 </div>
 
@@ -20,18 +20,18 @@
         <div id="subject-table-loading" class="hidden absolute inset-0 z-20 bg-white/80 backdrop-blur-[1px] flex items-center justify-center">
             <div class="flex flex-col items-center gap-3 text-gray-600">
                 <div class="w-8 h-8 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin"></div>
-                <p class="text-sm font-medium">Loading subject data...</p>
+                <p class="text-sm font-medium">Memuat data mata pelajaran...</p>
             </div>
         </div>
         <table id="subject-table" class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
-                    <th data-sort="subject" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Subject</th>
-                    <th data-sort="code" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 140px;">Code</th>
-                    <th data-sort="class" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 140px;">Class</th>
-                    <th data-sort="minimumValue" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 120px;">Minimum Value</th>
-                    <th data-sort="description" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Description</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 110px;">Action</th>
+                    <th data-sort="subject" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Mata Pelajaran</th>
+                    <th data-sort="code" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 140px;">Kode</th>
+                    <th data-sort="class" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 140px;">Kelas</th>
+                    <th data-sort="minimumValue" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 120px;">Nilai Minimum</th>
+                    <th data-sort="description" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Deskripsi</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 110px;">Aksi</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100"></tbody>
@@ -85,12 +85,12 @@
         const searchValue = (pageState.filters.search || '').replace(/"/g, '&quot;');
         $('#subject-table-toolbar').html(`
             <div class="flex items-center gap-2 text-sm text-gray-600">
-                Show
+                Tampilkan
                 <select id="list-limit" class="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:ring-2 focus:ring-blue-500">
                     <option value="10">10</option>
                     <option value="25">25</option>
                     <option value="50">50</option>
-                </select> rows
+                </select> data
             </div>
             <div class="w-full md:w-80">
                 <input id="subject_search_filter" type="text" value="${searchValue}" class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Search..." />
@@ -179,11 +179,11 @@
 
         $('#table-pagination-container').html(`
             <div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-                <button id="page-first" class="px-3 py-2 text-sm ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>First</button>
-                <button id="page-prev" class="px-3 py-2 text-sm border-l border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Prev</button>
+                <button id="page-first" class="px-3 py-2 text-sm ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Awal</button>
+                <button id="page-prev" class="px-3 py-2 text-sm border-l border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Sebelumnya</button>
                 ${pageButtons.join('')}
-                <button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Next</button>
-                <button id="page-last" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Last</button>
+                <button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Selanjutnya</button>
+                <button id="page-last" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Akhir</button>
             </div>
         `);
 

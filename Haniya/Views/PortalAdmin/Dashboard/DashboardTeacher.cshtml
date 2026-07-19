@@ -6,13 +6,13 @@
 <div class="max-w-7xl mx-auto space-y-10 py-8 px-4" id="teacher-dashboard">
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-indigo-900">Teacher Dashboard</h1>
-            <p class="text-gray-600 mt-2">Welcome back!, @User.FindFirst("FullName")?.Value</p>
+            <h1 class="text-3xl font-bold text-indigo-900">Dashboard Guru</h1>
+            <p class="text-gray-600 mt-2">Selamat datang kembali!, @User.FindFirst("FullName")?.Value</p>
         </div>
 
         <div id="loading" class="text-center py-20">
             <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-indigo-600"></div>
-            <p class="mt-4 text-gray-600">Loading...</p>
+            <p class="mt-4 text-gray-600">Memuat...</p>
         </div>
 
         <!-- FILTER BUTTON -->
@@ -44,11 +44,11 @@
                 <!-- Fields -->
                 <div class="px-5 py-4 space-y-4">
                     <div class="w-full">
-                        <label class="text-xs font-medium" for="academic_year_filter">Academic Year</label>
+                        <label class="text-xs font-medium" for="academic_year_filter">Tahun Ajaran</label>
                         <select id="academic_year_filter" class="w-full"></select>
                     </div>
                     <div class="w-full">
-                        <label class="text-xs font-medium" for="class_level_filter">Class</label>
+                        <label class="text-xs font-medium" for="class_level_filter">Kelas</label>
                         <select id="class_level_filter" class="w-full"></select>
                     </div>
                 </div>
@@ -67,7 +67,7 @@
         <!-- Row 1: Schedule -->
         <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:p-8 border border-gray-100">
             <h2 class="text-lg font-bold text-indigo-900 mb-8">
-                Schedule
+                Jadwal Mengajar
             </h2>
             <div class="mb-6">
                 <div class="overflow-x-auto">
@@ -78,10 +78,10 @@
                 <table class="w-full text-left">
                     <thead class="bg-gray-50 text-gray-700 uppercase text-xs">
                         <tr>
-                            <th class="px-3 sm:px-6 py-3">Day</th>
-                            <th class="px-3 sm:px-6 py-3">Time</th>
-                            <th class="px-3 sm:px-6 py-3">Subject</th>
-                            <th class="px-3 sm:px-6 py-3">Teacher</th>
+                            <th class="px-3 sm:px-6 py-3">Hari</th>
+                            <th class="px-3 sm:px-6 py-3">Jam</th>
+                            <th class="px-3 sm:px-6 py-3">Mata Pelajaran</th>
+                            <th class="px-3 sm:px-6 py-3">Guru</th>
                         </tr>
                     </thead>
                     <tbody id="weekly-schedule"></tbody>
@@ -93,7 +93,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100 lg:col-span-2">
                 <h2 class="text-lg font-bold text-indigo-900 mb-8">
-                    Grade
+                    Nilai
                 </h2>
                 <div class="bg-gray-50 rounded-2xl p-5 border border-gray-100">
                     <div class="relative h-32 sm:h-40">
@@ -103,7 +103,7 @@
                 </div>
 
                 <h2 class="text-lg font-bold text-indigo-900 mt-8 mb-8">
-                    Attendance
+                    Absensi
                 </h2>
                 <div class="bg-gray-50 rounded-2xl p-5 border border-gray-100 mb-2">
                     <div class="relative h-32 sm:h-40">
@@ -127,19 +127,19 @@
             </div>
 
             <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-                <h2 class="text-lg font-bold text-indigo-900 mb-8">Calendar Haniya</h2>
+                <h2 class="text-lg font-bold text-indigo-900 mb-8">Kalender Haniya</h2>
                 <div class="space-y-4">
                     <div class="flex items-center justify-between">
                         <button id="calendarPrevBtn" type="button"
                                 onclick="changeCalendarMonth(-1)"
                                 class="px-3 py-1.5 rounded-lg border border-gray-300 text-sm hover:bg-gray-50">
-                            Prev
+                            Sebelumnya
                         </button>
                         <p id="calendarMonthLabel" class="text-sm font-semibold text-gray-700"></p>
                         <button id="calendarNextBtn" type="button"
                                 onclick="changeCalendarMonth(1)"
                                 class="px-3 py-1.5 rounded-lg border border-gray-300 text-sm hover:bg-gray-50">
-                            Next
+                            Selanjutnya
                         </button>
                     </div>
 
@@ -147,13 +147,13 @@
 
                     <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100">
                         <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-gray-500 mb-2">
-                            <div>Mon</div>
-                            <div>Tue</div>
-                            <div>Wed</div>
-                            <div>Thu</div>
-                            <div>Fri</div>
-                            <div>Sat</div>
-                            <div>Sun</div>
+                            <div>Senin</div>
+                            <div>Selasa</div>
+                            <div>Rabu</div>
+                            <div>Kamis</div>
+                            <div>Jumat</div>
+                            <div>Sabtu</div>
+                            <div>Minggu</div>
                         </div>
                         <div id="academicCalendarGrid" class="grid grid-cols-7 gap-1"></div>
                     </div>
@@ -165,7 +165,7 @@
         <div class="grid grid-cols-1 gap-8">
             <!-- Articles -->
             <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-                <h2 class="text-lg font-bold text-indigo-900 mb-8">Latest Articles</h2>
+                <h2 class="text-lg font-bold text-indigo-900 mb-8">Informasi Terbaru</h2>
                 <div id="articles-list" class="space-y-6"></div>
                 <div class="flex items-center justify-between mt-6">
                     <span id="articles-info" class="text-sm text-gray-600"></span>
@@ -331,9 +331,9 @@
                 const isHighlighted = isToday || isUpcoming;
 
                 const dayLabel = isToday
-                    ? '<span class="ml-1 text-xs font-semibold text-amber-700">(Today)</span>'
+                    ? '<span class="ml-1 text-xs font-semibold text-amber-700">(Hari Ini)</span>'
                     : (isUpcoming
-                        ? '<span class="ml-1 text-xs font-semibold text-amber-700">(Upcoming)</span>'
+                        ? '<span class="ml-1 text-xs font-semibold text-amber-700">(Akan Datang)</span>'
                         : '');
 
                 items.forEach((i, index) => {

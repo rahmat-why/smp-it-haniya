@@ -27,15 +27,15 @@
                class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
-                    <th data-sort="dueDate" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 130px;">Due Date</th>
-                    <th data-sort="student" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 250px;">Student</th>
-                    <th data-sort="class" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 120px;">Class</th>
-                    <th data-sort="type" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Type</th>
-                    <th data-sort="bill" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right !text-right cursor-pointer select-none" style="width: 130px;">Bill</th>
-                    <th data-sort="paid" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right !text-right cursor-pointer select-none" style="width: 130px;">Paid</th>
-                    <th data-sort="remaining" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right !text-right cursor-pointer select-none" style="width: 130px;">Remaining</th>
+                    <th data-sort="dueDate" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 130px;">Tenggat Waktu</th>
+                    <th data-sort="student" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 250px;">Siswa</th>
+                    <th data-sort="class" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none" style="width: 120px;">Kelas</th>
+                    <th data-sort="type" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Tipe</th>
+                    <th data-sort="bill" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right !text-right cursor-pointer select-none" style="width: 130px;">Total Tagihan</th>
+                    <th data-sort="paid" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right !text-right cursor-pointer select-none" style="width: 130px;">Dibayar</th>
+                    <th data-sort="remaining" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-right !text-right cursor-pointer select-none" style="width: 130px;">Sisa Tagihan</th>
                     <th data-sort="status" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center cursor-pointer select-none" style="width: 100px;">Status</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 180px;">Action</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 180px;">Aksi</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100"></tbody>
@@ -132,12 +132,12 @@
         const searchValue = (pageState.filters.search || '').replace(/"/g, '&quot;');
         $('#payment-table-toolbar').html(`
             <div class="flex items-center gap-2 text-sm text-gray-600">
-                Show
+                Tampilkan
                 <select id="list-limit" class="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:ring-2 focus:ring-blue-500">
                     <option value="10">10</option>
                     <option value="25">25</option>
                     <option value="50">50</option>
-                </select> rows
+                </select> data
             </div>
 
             <div class="relative">
@@ -166,32 +166,32 @@
                     </div>
                     <div class="px-5 py-4 space-y-4">
                         <div class="w-full">
-                            <label class="block text-xs font-medium mb-1" for="filter_class">Class</label>
+                            <label class="block text-xs font-medium mb-1" for="filter_class">Kelas</label>
                             <select id="filter_class" class="w-full"></select>
                         </div>
                         <div class="w-full">
                             <label class="block text-xs font-medium mb-1" for="filter_status">Status</label>
                             <select id="filter_status" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 <option value="">-- All Status --</option>
-                                <option value="PAID">PAID</option>
-                                <option value="PARTIAL">PARTIAL</option>
-                                <option value="UNPAID">UNPAID</option>
+                                <option value="PAID">LUNAS</option>
+                                <option value="PARTIAL">CICILAN</option>
+                                <option value="UNPAID">BELUM LUNAS</option>
                             </select>
                         </div>
                         <div class="w-full">
-                            <label class="block text-xs font-medium mb-1" for="filter_type">Type</label>
+                            <label class="block text-xs font-medium mb-1" for="filter_type">Jenis Pembayaran</label>
                             <select id="filter_type" class="w-full"></select>
                         </div>
                         <div class="w-full">
-                            <label class="block text-xs font-medium mb-1" for="payment_search_filter">Search</label>
+                            <label class="block text-xs font-medium mb-1" for="payment_search_filter">Cari</label>
                             <input id="payment_search_filter"
                                    type="text"
                                    value="${searchValue}"
                                    class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                   placeholder="Search by student name / NIS..." />
+                                   placeholder="Cari Nama Siswa / NIS..." />
                         </div>
                         <div class="w-full">
-                            <label class="block text-xs font-medium mb-1" for="filter_monthyear">Month & Year</label>
+                            <label class="block text-xs font-medium mb-1" for="filter_monthyear">Bulan & Tahun</label>
                             <input id="filter_monthyear" type="month" class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
                         </div>
                     </div>
@@ -443,11 +443,11 @@
 
         $('#table-pagination-container').html(`
             <div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-                <button id="page-first" class="px-3 py-2 text-sm ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>First</button>
-                <button id="page-prev" class="px-3 py-2 text-sm border-l border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Prev</button>
+                <button id="page-first" class="px-3 py-2 text-sm ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Awal</button>
+                <button id="page-prev" class="px-3 py-2 text-sm border-l border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Sebelumnya</button>
                 ${pageButtons.join('')}
-                <button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Next</button>
-                <button id="page-last" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Last</button>
+                <button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Selanjutnya</button>
+                <button id="page-last" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Terakhir</button>
             </div>
         `);
 
@@ -527,7 +527,7 @@
             if (pageState.filters.month && pageState.filters.year && result.totalPaymentForMonth !== undefined) {
                 const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
                 const mName = monthNames[parseInt(pageState.filters.month, 10) - 1];
-                $summary.html(`Total pembayaran (PAID & PARTIAL) pada bulan ${mName} ${pageState.filters.year}: <span class="text-green-700 ml-2">Rp ${Number(result.totalPaymentForMonth).toLocaleString('id-ID')}</span>`);
+                $summary.html(`Total pembayaran (LUNAS & CICIL) pada bulan ${mName} ${pageState.filters.year}: <span class="text-green-700 ml-2">Rp ${Number(result.totalPaymentForMonth).toLocaleString('id-ID')}</span>`);
                 $summary.removeClass('hidden');
             } else {
                 $summary.addClass('hidden');

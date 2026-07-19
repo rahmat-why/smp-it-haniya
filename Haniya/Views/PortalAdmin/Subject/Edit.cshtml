@@ -1,13 +1,13 @@
 ﻿@{
     Layout = "_LayoutAdmin";
-    ViewData["Title"] = "Edit Subject";
+    ViewData["Title"] = "Ubah Mata Pelajaran";
     var id = ViewBag.subjectId;
     var subjectTypes = ViewBag.SubjectTypes as System.Collections.Generic.List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>
         ?? new System.Collections.Generic.List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
 }
 <input type="hidden" id="subject_id" name="subject_id" value="@id">
 
-<h2 class="text-xl font-semibold mb-4">Edit Subject</h2>
+<h2 class="text-xl font-semibold mb-4">Ubah Mata Pelajaran</h2>
 <div class="bg-white p-6 rounded-lg shadow w-full space-y-6">
     <form id="frm" class="space-y-6 w-full">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
@@ -18,7 +18,7 @@
                         class="w-full flex items-center justify-between px-4 py-3 bg-blue-900 hover:bg-blue-800 transition-colors duration-200 text-left"
                         data-testid="subject-info-toggle">
                     <span class="font-semibold text-white">
-                        Subject Information
+                        Informasi Mata Pelajaran
                     </span>
                     <svg id="icon-subject-info"
                          class="w-5 h-5 text-white transition-transform duration-300"
@@ -34,7 +34,7 @@
                      data-testid="subject-info-section">
                     <div>
                         <label for="subject_name" class="block text-sm font-medium text-gray-700 mb-1">
-                            Subject Name <span class="text-red-500">*</span>
+                            Nama Mata Pelajaran <span class="text-red-500">*</span>
                         </label>
                         <input id="subject_name"
                                class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -45,7 +45,7 @@
                     </div>
                     <div>
                         <label for="subject_code" class="block text-sm font-medium text-gray-700 mb-1">
-                            Subject Code <span class="text-red-500">*</span>
+                            Kode Mata Pelajaran <span class="text-red-500">*</span>
                         </label>
                         <input id="subject_code"
                                class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -56,12 +56,12 @@
                     </div>
                     <div>
                         <label for="subject_type" class="block text-sm font-medium text-gray-700 mb-1">
-                            Subject Type <span class="text-red-500">*</span>
+                            Jenis Mata Pelajaran <span class="text-red-500">*</span>
                         </label>
                         <select id="subject_type"
                                 class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 data-testid="subject-type-select">
-                            <option value="">Select subject type</option>
+                            <option value="">Pilih jenis mata pelajaran</option>
                             @foreach (var item in subjectTypes)
                             {
                                 <option value="@item.Value">@item.Text</option>
@@ -73,7 +73,7 @@
                     </div>
                     <div>
                         <label for="class_level" class="block text-sm font-medium text-gray-700 mb-1">
-                            Class Level <span class="text-red-500">*</span>
+                            Tingkat Kelas <span class="text-red-500">*</span>
                         </label>
                         <input id="class_level"
                                type="number"
@@ -86,7 +86,7 @@
                     </div>
                     <div>
                         <label for="minimum_value" class="block text-sm font-medium text-gray-700 mb-1">
-                            Minimum Value <span class="text-red-500">*</span>
+                            Nilai Minimum <span class="text-red-500">*</span>
                         </label>
                         <input id="minimum_value"
                                type="number"
@@ -107,7 +107,7 @@
                         class="w-full flex items-center justify-between px-4 py-3 bg-blue-900 hover:bg-blue-800 transition-colors duration-200 text-left"
                         data-testid="subject-extra-toggle">
                     <span class="font-semibold text-white">
-                        Additional Information
+                        Informasi Tambahan
                     </span>
                     <svg id="icon-subject-extra"
                          class="w-5 h-5 text-white transition-transform duration-300"
@@ -123,7 +123,7 @@
                      data-testid="subject-extra-section">
                     <div>
                         <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
-                            Description <span class="text-red-500">*</span>
+                            Deskripsi <span class="text-red-500">*</span>
                         </label>
                         <textarea id="description"
                                   class="w-full border border-gray-300 rounded-md p-2 min-h-[120px] resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -146,13 +146,13 @@
                                       stroke-width="2"
                                       d="M15 19l-7-7 7-7" />
                             </svg>
-                            <span>Back</span>
+                            <span>Kembali</span>
                         </button>
                         <button type="button"
                                 onclick="updateSubject()"
                                 class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900"
                                 data-testid="subject-update-button">
-                            <span>Update</span>
+                            <span>Ubah</span>
                             <svg class="w-4 h-4 ml-2 text-white"
                                  fill="none"
                                  viewBox="0 0 24 24"

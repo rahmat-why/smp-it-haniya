@@ -1,62 +1,62 @@
 @{
     Layout = "_LayoutAdmin";
-    ViewData["Title"] = "Create Assignment";
+    ViewData["Title"] = "Buat Tugas";
 }
 
-<h2 class="text-2xl font-bold text-gray-800 mb-6">Create Assignment (Tugas)</h2>
+<h2 class="text-2xl font-bold text-gray-800 mb-6">Buat Tugas</h2>
 
 <div class="bg-white p-6 rounded-xl shadow-lg w-full">
     <form id="assignmentForm" class="space-y-8">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
                 <label for="title" class="block text-sm font-medium text-gray-700 mb-2">
-                    Title <span class="text-red-600">*</span>
+                    Judul <span class="text-red-600">*</span>
                 </label>
                 <input type="text" id="title" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                       placeholder="Enter assignment title" required />
+                       placeholder="Masukkan judul tugas" required />
                 <p id="error-title" class="mt-1 text-sm text-red-600 hidden"></p>
             </div>
 
             <div>
                 <label for="academic_class_id" class="block text-sm font-medium text-gray-700 mb-2">
-                    Class <span class="text-red-600">*</span>
+                    Kelas <span class="text-red-600">*</span>
                 </label>
                 <select id="academic_class_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                        data-placeholder="-- Select Class --" required></select>
+                        data-placeholder="-- Pilih Kelas --" required></select>
                 <p id="error-class" class="mt-1 text-sm text-red-600 hidden"></p>
             </div>
 
             <div>
                 <label for="subject_id" class="block text-sm font-medium text-gray-700 mb-2">
-                    Subject <span class="text-red-600">*</span>
+                    Mata Pelajaran <span class="text-red-600">*</span>
                 </label>
                 <select id="subject_id" disabled class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
-                        data-placeholder="-- Select Subject --" required></select>
+                        data-placeholder="-- Pilih Mata Pelajaran --" required></select>
                 <p id="error-subject" class="mt-1 text-sm text-red-600 hidden"></p>
             </div>
 
             <div>
                 <label for="teacher_id" class="block text-sm font-medium text-gray-700 mb-2">
-                    Teacher <span class="text-red-600">*</span>
+                    Guru <span class="text-red-600">*</span>
                 </label>
                 <select id="teacher_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                        data-placeholder="-- Select Teacher --" required></select>
+                        data-placeholder="-- Pilih Guru --" required></select>
                 <p id="error-teacher" class="mt-1 text-sm text-red-600 hidden"></p>
             </div>
 
             <div>
                 <label for="due_date" class="block text-sm font-medium text-gray-700 mb-2">
-                    Due Date
+                    Tenggat Waktu
                 </label>
                 <input type="date" id="due_date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
             </div>
 
             <div class="md:col-span-2">
                 <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
-                    Description
+                    Deskripsi
                 </label>
                 <textarea id="description" rows="5" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                          placeholder="Enter assignment description..."></textarea>
+                          placeholder="Masukkan deskripsi tugas..."></textarea>
             </div>
         </div>
 
@@ -65,10 +65,10 @@
                 <svg class="w-4 h-4 mr-2 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                 </svg>
-                Back
+                Kembali
             </button>
             <button type="button" onclick="saveAssignment()" class="inline-flex items-center justify-center bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
-                Save
+                Simpan
                 <svg class="w-4 h-4 ml-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                 </svg>

@@ -1,13 +1,13 @@
 @{
     Layout = "_LayoutAdmin";
-    ViewData["Title"] = "Assignments (Tugas)";
+    ViewData["Title"] = "Tugas";
 }
 
 <div class="flex justify-between items-center mb-4">
-    <h2 class="text-xl font-semibold">Assignment List</h2>
+    <h2 class="text-xl font-semibold">Tugas</h2>
     <a id="assignment-add-link" href="/Assignment/Create"
        class="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900">
-        + Add Assignment
+        + Tambah Tugas
     </a>
 </div>
 
@@ -20,19 +20,19 @@
         <div id="assignment-table-loading" class="hidden absolute inset-0 z-20 bg-white/80 backdrop-blur-[1px] flex items-center justify-center">
             <div class="flex flex-col items-center gap-3 text-gray-600">
                 <div class="w-8 h-8 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin"></div>
-                <p class="text-sm font-medium">Loading Assignment data...</p>
+                <p class="text-sm font-medium">Memuat data tugas...</p>
             </div>
         </div>
         <table id="assignment-table" class="min-w-full text-sm text-left text-gray-700 border-collapse">
             <thead class="bg-gray-100 border-y border-gray-200">
                 <tr>
-                    <th data-sort="created_at" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Created At</th>
-                    <th data-sort="title" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Title</th>
-                    <th data-sort="class" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Class</th>
-                    <th data-sort="subject" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Subject</th>
-                    <th data-sort="teacher" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Teacher</th>
-                    <th data-sort="due_date" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center cursor-pointer select-none">Due Date</th>
-                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 110px;">Action</th>
+                    <th data-sort="created_at" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Dibuat Pada</th>
+                    <th data-sort="title" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Judul</th>
+                    <th data-sort="class" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Kelas</th>
+                    <th data-sort="subject" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Mata Pelajaran</th>
+                    <th data-sort="teacher" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase cursor-pointer select-none">Guru</th>
+                    <th data-sort="due_date" class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center cursor-pointer select-none">Batas Waktu</th>
+                    <th class="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-center" style="width: 110px;">Aksi</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100"></tbody>
@@ -104,12 +104,12 @@
         const searchValue = (pageState.filters.search || '').replace(/"/g, '&quot;');
         $('#assignment-table-toolbar').html(`
             <div class="flex items-center gap-2 text-sm text-gray-600">
-                Show
+                Tampilkan
                 <select id="list-limit" class="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white text-gray-700 focus:ring-2 focus:ring-blue-500">
                     <option value="10">10</option>
                     <option value="25">25</option>
                     <option value="50">50</option>
-                </select> rows
+                </select> data
             </div>
             <div class="relative">
                 <button id="assignmentFilterToggleBtn" type="button" class="flex items-center gap-2 bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition">
@@ -122,10 +122,10 @@
                         <button type="button" id="assignmentFilterCloseBtn" class="text-gray-400 hover:text-gray-600 transition p-1 rounded-lg hover:bg-gray-100">?</button>
                     </div>
                     <div class="px-5 py-4 space-y-4">
-                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_academic_year">Academic Year</label><select id="filter_academic_year" class="w-full"></select></div>
-                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_class">Class</label><select id="filter_class" class="w-full"></select></div>
-                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_teacher">Teacher</label><select id="filter_teacher" class="w-full"></select></div>
-                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="assignment_search_filter">Search</label><input id="assignment_search_filter" type="text" value="${searchValue}" class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Search..." /></div>
+                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_academic_year">Tahun Akademik</label><select id="filter_academic_year" class="w-full"></select></div>
+                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_class">Kelas</label><select id="filter_class" class="w-full"></select></div>
+                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="filter_teacher">Guru</label><select id="filter_teacher" class="w-full"></select></div>
+                        <div class="w-full"><label class="block text-xs font-medium mb-1" for="assignment_search_filter">Cari</label><input id="assignment_search_filter" type="text" value="${searchValue}" class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Cari..." /></div>
                     </div>
                     <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
                         <button type="button" id="apply-assignment-filter-btn" class="px-5 py-2 rounded-full text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 transition">Filter</button>
@@ -283,11 +283,11 @@
 
         $('#table-pagination-container').html(`
             <div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-                <button id="page-first" class="px-3 py-2 text-sm ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>First</button>
-                <button id="page-prev" class="px-3 py-2 text-sm border-l border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Prev</button>
+                <button id="page-first" class="px-3 py-2 text-sm ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Awal</button>
+                <button id="page-prev" class="px-3 py-2 text-sm border-l border-gray-200 ${prevDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${prevDisabled ? 'disabled' : ''}>Sebelumnya</button>
                 ${pageButtons.join('')}
-                <button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Next</button>
-                <button id="page-last" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Last</button>
+                <button id="page-next" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Selanjutnya</button>
+                <button id="page-last" class="px-3 py-2 text-sm border-l border-gray-200 ${nextDisabled ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}" ${nextDisabled ? 'disabled' : ''}>Terakhir</button>
             </div>
         `);
 
