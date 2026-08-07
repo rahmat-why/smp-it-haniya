@@ -136,14 +136,14 @@ namespace Haniya.Controllers.PortalAdmin
                 if (!string.IsNullOrWhiteSpace(searchValue))
                 {
                     whereSearch += @" AND (
-                event_name LIKE @search OR
-                location LIKE @search OR
-                status LIKE @search OR
-                description LIKE @search
+                e.event_name LIKE @search OR
+                e.location LIKE @search OR
+                e.status LIKE @search OR
+                e.description LIKE @search
             )";
                 }
                 if (!string.IsNullOrWhiteSpace(statusFilter))
-                    whereSearch += " AND status = @statusFilter ";
+                    whereSearch += " AND e.status = @statusFilter ";
 
                 var filteredCmd = new SqlCommand("SELECT COUNT(*) FROM mst_events" + whereSearch, conn);
                 if (!string.IsNullOrWhiteSpace(searchValue))
@@ -313,6 +313,7 @@ namespace Haniya.Controllers.PortalAdmin
         /* ===================== API (Create/Update) ===================== */
 
         [HttpPost]
+        [RequestSizeLimit(50 * 1024 * 1024)] // 50MB
         public IActionResult Create(DTORequest req)
         {
             try
@@ -498,6 +499,7 @@ namespace Haniya.Controllers.PortalAdmin
         }
 
         [HttpPost]
+        [RequestSizeLimit(50 * 1024 * 1024)] // 50MB
         public IActionResult Update(DTORequest req)
         {
             try

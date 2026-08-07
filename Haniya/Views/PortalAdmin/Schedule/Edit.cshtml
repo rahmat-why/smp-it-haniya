@@ -112,6 +112,7 @@
                 placeholder: "-- Pilih Mapel --",
                 allowClear: true,
                 width: '100%',
+                dropdownParent: $('body'),
                 ajax: {
                     url: '/Select2/Subjects',
                     dataType: 'json',
@@ -127,6 +128,7 @@
                 placeholder: "-- Pilih Guru --",
                 allowClear: true,
                 width: '100%',
+                dropdownParent: $('body'),
                 ajax: {
                     url: '/Select2/Teachers',
                     dataType: 'json',
@@ -137,6 +139,7 @@
                 },
                 minimumInputLength: 0
             });
+
 
             if (prefill.subject_id && prefill.subject_name) {
                 $subject.append(new Option(prefill.subject_name, prefill.subject_id, true, true)).trigger('change');

@@ -264,6 +264,7 @@ namespace Haniya.Controllers.PortalAdmin
         }
 
         [HttpPost]
+        [RequestSizeLimit(50 * 1024 * 1024)] // 50MB
         public IActionResult Create(DTORequest req)
         {
             try
@@ -357,6 +358,7 @@ namespace Haniya.Controllers.PortalAdmin
         }
 
         [HttpPost]
+        [RequestSizeLimit(50 * 1024 * 1024)] // 50MB
         public IActionResult Update(DTORequest req)
         {
             try

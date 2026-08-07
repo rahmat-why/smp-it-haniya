@@ -196,6 +196,8 @@
                         Tidak ada kelas untuk filter ini
                     </td>
                 </tr>`);
+            $('#loading').addClass('hidden');
+            $('#content').removeClass('hidden');
             return;
         }
 
@@ -255,12 +257,16 @@
             success: function (res) {
                 if (!res || !res.success) {
                     $('#classFilterButtons').empty();
+                    $('#loading').addClass('hidden');
+                    $('#content').removeClass('hidden');
                     return;
                 }
                 renderClassButtons(res.data || [], preferredClassName);
             },
             error: function () {
                 $('#classFilterButtons').empty();
+                $('#loading').addClass('hidden');
+                $('#content').removeClass('hidden');
             }
         });
     }
@@ -446,9 +452,11 @@
         if (window.attendanceChart instanceof Chart) window.attendanceChart.destroy();
 
         const classMap = {};
+        const statusMap = { 'PRESENT': 'HADIR', 'ABSENT': 'ALPA', 'EXCUSED': 'IZIN', 'SICK': 'SAKIT' };
         (data || []).forEach(item => {
             const cls = item.class_name || 'Unknown';
-            const status = (item.attendance_status || '').toUpperCase().trim();
+            const rawStatus = (item.attendance_status || '').toUpperCase().trim();
+            const status = statusMap[rawStatus] || rawStatus;
             const count = Number(item.total_attendance || 0);
 
             if (!classMap[cls]) {
@@ -819,33 +827,40 @@
             success: function (res) {
                 if (!res.success) {
                     alert(res.message);
+                    $('#loading').addClass('hidden');
+                    $('#content').removeClass('hidden');
                     return;
                 }
 
                 fullData = res.data;
 
-                renderWeeklySchedule(fullData.weeklySchedule);
-                renderAttendanceChart(fullData.attendanceChart);
-                renderGradesChart(fullData.gradesChart);
-                renderGradesLegend(fullData.gradesChart);
-                academicCalendarDays = fullData.calendarDays || [];
-                calendarEventPinPoints = fullData.calendarEvents || [];
-                const bounds = getCalendarBounds();
-                if (bounds) {
-                    const currentMonth = new Date(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth(), 1);
-                    if (currentMonth.getTime() < bounds.minMonth.getTime()) currentCalendarDate = new Date(bounds.minMonth);
-                    if (currentMonth.getTime() > bounds.maxMonth.getTime()) currentCalendarDate = new Date(bounds.maxMonth);
-                }
-                renderAcademicCalendar();
+                try {
+                    renderWeeklySchedule(fullData.weeklySchedule);
+                    renderAttendanceChart(fullData.attendanceChart);
+                    renderGradesChart(fullData.gradesChart);
+                    renderGradesLegend(fullData.gradesChart);
+                    academicCalendarDays = fullData.calendarDays || [];
+                    calendarEventPinPoints = fullData.calendarEvents || [];
+                    const bounds = getCalendarBounds();
+                    if (bounds) {
+                        const currentMonth = new Date(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth(), 1);
+                        if (currentMonth.getTime() < bounds.minMonth.getTime()) currentCalendarDate = new Date(bounds.minMonth);
+                        if (currentMonth.getTime() > bounds.maxMonth.getTime()) currentCalendarDate = new Date(bounds.maxMonth);
+                    }
+                    renderAcademicCalendar();
 
-                allArticles = fullData.articles || [];
-                renderArticles(1);
+                    allArticles = fullData.articles || [];
+                    renderArticles(1);
+                } catch (e) {
+                    console.error('Render error:', e);
+                }
 
                 $('#loading').addClass('hidden');
                 $('#content').removeClass('hidden');
             },
             error: function () {
-                Swal.fire('Error!', 'Gagal memuat data.', 'error');
+                alert('Gagal memuat data dashboard.');
+                $('#loading').addClass('hidden');
             }
         });
     }
@@ -949,10 +964,15 @@
                     $('#academic_year_filter').append(option).trigger('change');
                     currentAcademicYearId = data.id;
                     loadClassTabsByFilter();
+                } else {
+                    $('#loading').addClass('hidden');
+                    $('#content').removeClass('hidden');
                 }
             },
             error: function (err) {
                 console.error('Failed to fetch default academic year:', err);
+                $('#loading').addClass('hidden');
+                $('#content').removeClass('hidden');
             }
         });
     });
